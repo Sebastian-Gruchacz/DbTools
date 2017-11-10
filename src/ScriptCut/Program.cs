@@ -11,12 +11,14 @@
 
         static Program()
         {
-            TableEndRegex = new Regex(@"SET IDENTITY_INSERT \[dbo\]\.\[([^\]]*)\] OFF", RegexOptions.Compiled | RegexOptions.IgnoreCase);
-            TableStartRegex = new Regex(@"SET IDENTITY_INSERT \[dbo\]\.\[([^\]]*)\] ON", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+            TableEndRegex = new Regex(@"[\s]*SET IDENTITY_INSERT \[dbo\]\.\[([^\]]*)\] OFF", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+            TableStartRegex = new Regex(@"[\s]*SET IDENTITY_INSERT \[dbo\]\.\[([^\]]*)\] ON", RegexOptions.Compiled | RegexOptions.IgnoreCase);
         }
 
         static void Main(string[] args)
         {
+            bool useEndRegex = false; // previous file ends at beginning of the previous one.
+
             string source = @"J:\SQL Scripts\script.sql"; // default
             if (args.Length > 0 && !string.IsNullOrWhiteSpace(args[1]))
             {
@@ -48,37 +50,57 @@
             string currentTable = null;
             StreamWriter sw = null;
 
-            using (var sourceStream = ifo.OpenText())
+            try
             {
-                string line = null;
-
-                while ((line = sourceStream.ReadLine()) != null)
+                using (var sourceStream = ifo.OpenText())
                 {
-                    if (currentTable == null)
-                    {
-                        var match = TableStartRegex.Match(line);
-                        if (match.Success)
-                        {
-                            currentTable = match.Groups[1].Value;
-                            sw = new StreamWriter(Path.Combine(targetsFolder, currentTable + ".sql"));
+                    string line = null;
 
-                            Console.WriteLine("Started extracting '{0}' table script into file", currentTable);
+                    while ((line = sourceStream.ReadLine()) != null)
+                    {
+                        if (!useEndRegex || currentTable == null)
+                        {
+                            var match = TableStartRegex.Match(line);
+                            if (match.Success)
+                            {
+                                if (!useEndRegex)
+                                {
+                                    sw?.Flush();
+                                    sw?.Close();
+                                }
+
+                                currentTable = match.Groups[1].Value;
+                                Console.WriteLine("Started extracting '{0}' table script into file", currentTable);
+                                sw = new StreamWriter(Path.Combine(targetsFolder, currentTable + ".sql"), append: true);
+                            }
+                        }
+
+                        if (currentTable != null)
+                        {
+                            sw.WriteLine(line);
+
+                            if (useEndRegex)
+                            {
+                                var match = TableEndRegex.Match(line);
+                                if (match.Success)
+                                {
+                                    currentTable = null;
+                                    sw.Flush();
+                                    sw.Close();
+                                    sw = null;
+                                }
+                            }
                         }
                     }
-                    
-                    if (currentTable != null)
-                    {
-                        sw.WriteLine(line);
+                }
 
-                        var match = TableEndRegex.Match(line);
-                        if (match.Success)
-                        {
-                            currentTable = null;
-                            sw.Flush();
-                            sw.Close();
-                            sw = null;
-                        }
-                    }
+            }
+            finally
+            {
+                if (!useEndRegex)
+                {
+                    sw?.Flush();
+                    sw?.Close();
                 }
             }
 
