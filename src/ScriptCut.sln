@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 15
+VisualStudioVersion = 15.0.27004.2008
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ScriptCut", "ScriptCut\ScriptCut.csproj", "{C32C7014-26A5-4EC7-8FC8-4BD2C38C580E}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{C32C7014-26A5-4EC7-8FC8-4BD2C38C580E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C32C7014-26A5-4EC7-8FC8-4BD2C38C580E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C32C7014-26A5-4EC7-8FC8-4BD2C38C580E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C32C7014-26A5-4EC7-8FC8-4BD2C38C580E}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {E951A53D-C55F-44C0-99AB-510AA0078893}
+	EndGlobalSection
+EndGlobal
