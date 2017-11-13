@@ -23,9 +23,14 @@
             bool useEndRegex = false; // previous file ends at beginning of the previous one.
 
             string source = @"C:\SQL Scripts\data-script.sql"; // default
-            if (args.Length > 0 && !string.IsNullOrWhiteSpace(args[1]))
+            string dbName = "_database_";
+            if (args.Length > 0 && !string.IsNullOrWhiteSpace(args[0]))
             {
                 source = args[0];
+            }
+            if (args.Length > 1 && !string.IsNullOrWhiteSpace(args[1]))
+            {
+                dbName = args[1];
             }
 
             FileInfo ifo;
@@ -93,6 +98,7 @@
                                     Console.WriteLine("Started extracting '{0}' table script into file", currentTable);
 
                                     sw = new StreamWriter(targetFullPath, append: false);
+                                    sw.WriteLine($"USE [{dbName}]");
                                 }
                             }
                         }
