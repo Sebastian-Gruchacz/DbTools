@@ -128,6 +128,8 @@
 
             using (var batchFile = new StreamWriter(Path.Combine(targetsFolder, "insert_all.bat"), append: false))
             {
+                batchFile.WriteLine("md output");
+
                 foreach (var sqlFile in sqlFiles)
                 {
                     string targetFullPath = Path.Combine(targetsFolder, sqlFile);
