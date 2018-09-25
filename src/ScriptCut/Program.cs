@@ -22,7 +22,9 @@
         {
             bool useEndRegex = false; // previous file ends at beginning of the previous one.
 
-            string source = @"C:\SQL Scripts\data-script.sql"; // default
+            // TODO: Use ObscureWare.Console.Command nugget when new one is available to process command line and use for flags and switches...
+
+            string source = @"C:\SQL Scripts\scripted-data.sql"; // default
             string dbName = "_database_";
             if (args.Length > 0 && !string.IsNullOrWhiteSpace(args[0]))
             {
@@ -84,9 +86,7 @@
                                 {
                                     if (!useEndRegex)
                                     {
-                                        sw?.Flush();
-                                        sw?.Close();
-                                        tableIndex++;
+                                        FinalizePartFile(ref sw, ref currentTable, ref tableIndex);
                                     }
 
                                     currentTable = potentiallyNewTableName;
@@ -95,10 +95,7 @@
 
                                     sqlFiles.Add(fileName);
 
-                                    Console.WriteLine("Started extracting '{0}' table script into file", currentTable);
-
-                                    sw = new StreamWriter(targetFullPath, append: false);
-                                    sw.WriteLine($"USE [{dbName}]");
+                                    sw = StartNewPartFile(sw, targetFullPath, dbName, currentTable);
                                 }
                             }
                         }
@@ -112,11 +109,7 @@
                                 var match = TableEndRegex.Match(line);
                                 if (match.Success)
                                 {
-                                    currentTable = null;
-                                    sw.Flush();
-                                    sw.Close();
-                                    sw = null;
-                                    tableIndex++;
+                                    FinalizePartFile(ref sw, ref currentTable, ref tableIndex);
                                 }
                             }
                         }
@@ -127,11 +120,17 @@
             {
                 if (!useEndRegex)
                 {
-                    sw?.Flush();
-                    sw?.Close();
+                    FinalizePartFile(ref sw, ref currentTable, ref tableIndex);
                 }
             }
 
+            GenerateRunAllFile(targetsFolder, sqlFiles); // TODO: make switch-optional (default - YES)
+
+            Console.WriteLine("DONE!");
+        }
+
+        private static void GenerateRunAllFile(string targetsFolder, List<string> sqlFiles)
+        {
             using (var batchFile = new StreamWriter(Path.Combine(targetsFolder, "insert_all.bat"), append: false))
             {
                 batchFile.WriteLine("md output");
@@ -139,13 +138,41 @@
                 foreach (var sqlFile in sqlFiles)
                 {
                     string targetFullPath = Path.Combine(targetsFolder, sqlFile);
-                    string outputFullPath = Path.Combine(targetsFolder, "output", $"{Path.GetFileNameWithoutExtension(sqlFile)}.txt");
+                    string outputFullPath =
+                        Path.Combine(targetsFolder, "output", $"{Path.GetFileNameWithoutExtension(sqlFile)}.txt");
 
                     batchFile.WriteLine($"sqlcmd -S .\\SQLEXPRESS -i \"{targetFullPath}\" -o \"{outputFullPath}\"");
                 }
             }
+        }
 
-            Console.WriteLine("DONE!");
+        private static void FinalizePartFile(ref StreamWriter sw, ref string currentTable, ref int tableIndex)
+        {
+            if (sw != null)
+            {
+                sw.WriteLine($"ENABLE TRIGGER ALL ON [dbo].[{currentTable}]");// TODO: triggers optional
+                sw.Write("GO");
+
+                sw.Flush();
+                sw.Close();
+                sw = null;
+            }
+
+            currentTable = null;
+            tableIndex++;
+        }
+
+        private static StreamWriter StartNewPartFile(StreamWriter sw, string targetFullPath, string dbName, string currentTable)
+        {
+            Console.WriteLine("Started extracting '{0}' table script into file", currentTable);
+
+            sw = new StreamWriter(targetFullPath, append: false);
+
+            sw.WriteLine($"USE [{dbName}]");
+            sw.Write("GO");
+            sw.WriteLine($"DISABLE TRIGGER ALL ON [dbo].[{currentTable}]"); // TODO: triggers optional
+            sw.Write("GO");
+            return sw;
         }
     }
 }
