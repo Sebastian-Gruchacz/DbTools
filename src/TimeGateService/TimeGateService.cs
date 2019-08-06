@@ -1,23 +1,32 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.ComponentModel;
+using System.Linq;
 using System.Management;
 using System.ServiceProcess;
+
+using TimeGateService.Rules;
 
 namespace TimeGateService
 {
     public partial class TimeGateService : ServiceBase
     {
         private readonly BackgroundWorker _backgroundMonitor;
-        private readonly TimeSpan MAX_TIME_ALLOWED = new TimeSpan(23,0,0);
-        private readonly TimeSpan MIN_TIME_ALLOWED = new TimeSpan(7, 0, 0);
+        private readonly TimeSpan TAMPER_LIMIT =  new TimeSpan(0, 0, 30);
 
         private DateTime _lastSnapshot;
+        private readonly List<IRule> _rules = new List<IRule>();
+        private readonly IRule _defaultRule = new DefaultRule();
 
         public TimeGateService()
         {
             InitializeComponent();
 
             _lastSnapshot = DateTime.Now;
+
+            _rules.Add(new VacationRule());
+            _rules.Add(new WeekendRule());
+            // ...
 
             this._backgroundMonitor = new BackgroundWorker();
             this._backgroundMonitor.DoWork += BackgroundMonitorOnDoWork;
@@ -32,15 +41,15 @@ namespace TimeGateService
                 var snapshot = DateTime.Now;
 
                 // tamper protect
-                if ((_lastSnapshot - snapshot) > new TimeSpan(0, 0, 2))
+                if ((_lastSnapshot - snapshot) > TAMPER_LIMIT)
                 {
                     DoShutdown();
                     return;
                 }
 
                 // normal time-check
-                var currentTimePart = snapshot.TimeOfDay;
-                if (currentTimePart <= MIN_TIME_ALLOWED || currentTimePart >= MAX_TIME_ALLOWED)
+                var rule = GetRule(snapshot);
+                if (rule.IsRuleBroken(snapshot))
                 {
                     DoShutdown();
                     return;
@@ -50,6 +59,11 @@ namespace TimeGateService
 
                 System.Threading.Thread.Sleep(1000);
             }
+        }
+
+        private IRule GetRule(DateTime snapshot)
+        {
+            return _rules.FirstOrDefault(r => r.Matches(snapshot)) ?? _defaultRule;
         }
 
         private void DoShutdown()
