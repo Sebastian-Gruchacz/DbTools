@@ -1,9 +1,19 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 15
-VisualStudioVersion = 15.0.27004.2008
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31912.275
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ScriptCut", "ScriptCut\ScriptCut.csproj", "{C32C7014-26A5-4EC7-8FC8-4BD2C38C580E}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ScriptCut", "ScriptCut\ScriptCut.csproj", "{C32C7014-26A5-4EC7-8FC8-4BD2C38C580E}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Anonymyzer", "Anonymyzer", "{A37A2EDC-0572-4CBB-BA4A-FD7D03CCBE35}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Anonymyzer.Base", "Anonymyzer\Anonymyzer.Interfaces\Anonymyzer.Base.csproj", "{6CBCD865-4FD6-4547-8634-2CE7262371D9}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Anonymyzer.SqlServer", "Anonymyzer\Anonymyzer.SqlServer\Anonymyzer.SqlServer.csproj", "{4AF84B01-E1A2-4821-8D25-82795EA27D14}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Anonymyzer.Console", "Anonymyzer\Anonymyzer.Console\Anonymyzer.Console.csproj", "{C8026121-E0AA-4EAE-9219-1639D2F6832B}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Anonymyzer.Generators.Simple", "Anonymyzer\Generators\Anonymyzer.Generators.Simple\Anonymyzer.Generators.Simple.csproj", "{CFA36A3C-19C8-4FE9-A5AF-186877ABC3AA}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -15,9 +25,31 @@ Global
 		{C32C7014-26A5-4EC7-8FC8-4BD2C38C580E}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{C32C7014-26A5-4EC7-8FC8-4BD2C38C580E}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{C32C7014-26A5-4EC7-8FC8-4BD2C38C580E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6CBCD865-4FD6-4547-8634-2CE7262371D9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6CBCD865-4FD6-4547-8634-2CE7262371D9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6CBCD865-4FD6-4547-8634-2CE7262371D9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6CBCD865-4FD6-4547-8634-2CE7262371D9}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4AF84B01-E1A2-4821-8D25-82795EA27D14}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4AF84B01-E1A2-4821-8D25-82795EA27D14}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4AF84B01-E1A2-4821-8D25-82795EA27D14}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4AF84B01-E1A2-4821-8D25-82795EA27D14}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C8026121-E0AA-4EAE-9219-1639D2F6832B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C8026121-E0AA-4EAE-9219-1639D2F6832B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C8026121-E0AA-4EAE-9219-1639D2F6832B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C8026121-E0AA-4EAE-9219-1639D2F6832B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CFA36A3C-19C8-4FE9-A5AF-186877ABC3AA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CFA36A3C-19C8-4FE9-A5AF-186877ABC3AA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CFA36A3C-19C8-4FE9-A5AF-186877ABC3AA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CFA36A3C-19C8-4FE9-A5AF-186877ABC3AA}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{6CBCD865-4FD6-4547-8634-2CE7262371D9} = {A37A2EDC-0572-4CBB-BA4A-FD7D03CCBE35}
+		{4AF84B01-E1A2-4821-8D25-82795EA27D14} = {A37A2EDC-0572-4CBB-BA4A-FD7D03CCBE35}
+		{C8026121-E0AA-4EAE-9219-1639D2F6832B} = {A37A2EDC-0572-4CBB-BA4A-FD7D03CCBE35}
+		{CFA36A3C-19C8-4FE9-A5AF-186877ABC3AA} = {A37A2EDC-0572-4CBB-BA4A-FD7D03CCBE35}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {E951A53D-C55F-44C0-99AB-510AA0078893}
