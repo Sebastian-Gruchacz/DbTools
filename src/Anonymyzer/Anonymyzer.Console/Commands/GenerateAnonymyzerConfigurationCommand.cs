@@ -2,17 +2,22 @@
 
 using System.Data;
 using System.Text;
-using System.Text.Json;
-
+using System.Text.Json.Nodes;
 using Anonymyzer.Base;
 using Anonymyzer.Console.CommandLibraryElements;
 using Anonymyzer.Console.Configuration;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 internal class GenerateAnonymyzerConfigurationCommand// : ICommand<GenerateAnonymyzerConfigurationCommandParameters>
 {
     private readonly IDbConnectionFactory _dbConnectionFactory;
     private readonly IEngineFactory _engineFactory;
     private readonly ICommandLogger _logger;
+    private readonly JsonSerializer _serializer = new JsonSerializer()
+    {
+        Formatting = Formatting.Indented
+    };
 
     public GenerateAnonymyzerConfigurationCommand(IDbConnectionFactory dbConnectionFactory, IEngineFactory engineFactory,
         ICommandLogger logger)
@@ -112,7 +117,12 @@ internal class GenerateAnonymyzerConfigurationCommand// : ICommand<GenerateAnony
         foreach (ITableInfo tableInfo in tables)
         {
             var tableConfig = CreateConfigForTable(engine, tableInfo);
-            outputConfigs.Add(tableConfig);
+
+            // Only write tables with at least one anonymyzable column TODO: configurable?
+            if (tableConfig.Columns.Any())
+            {
+                outputConfigs.Add(tableConfig);
+            }
         }
 
         var config = new AnonymyzationConfiguration()
@@ -120,11 +130,7 @@ internal class GenerateAnonymyzerConfigurationCommand// : ICommand<GenerateAnony
             Tables = outputConfigs.ToArray()
         };
 
-        JsonSerializer.Serialize(stream.BaseStream, config,
-            new JsonSerializerOptions
-            {
-                WriteIndented = true
-            });
+        _serializer.Serialize(stream, config);
 
         return (int)ErrorCodes.Success;
     }
@@ -136,13 +142,25 @@ internal class GenerateAnonymyzerConfigurationCommand// : ICommand<GenerateAnony
         var columns = engine.ListTextColumns(tableInfo);
         foreach (IColumnInfo column in columns)
         {
+            // TODO: for now only setting text, non-PK fields
+            if (column.IsPartOfThePrimaryKey || column.DataType != DbDataType.Text)
+            {
+                continue;
+            }
+
             var columnInfo = new ColumnProcessingOptions
             {
                 ColumnName = column.Name,
                 DataType = column.DataType.ToString(),
                 MaxLength = column.MaxLength,
-                Unicode = column.IsUnicode,
-                Ignore = true, // TODO: use "AI"
+                Unicode = column.IsUnicodeText,
+
+                Enabled = false, // TODO: use "AI" to enable obvious fields?
+                // TODO: use AI strategies to obtain start / default configuration
+                Generator = new ColumnGeneratorConfiguration
+                {
+                    Name = @"TextShuffler:Default"
+                }
             };
 
             config.Columns.Add(columnInfo);

@@ -6,9 +6,11 @@ public interface IColumnInfo
 
     DbDataType DataType { get; }
 
-    bool Nullable { get; }
+    bool IsNullable { get; }
+
+    bool IsPartOfThePrimaryKey { get; }
+
+    bool IsUnicodeText { get; }
 
     int MaxLength { get; }
-
-    bool IsUnicode { get; }
 }

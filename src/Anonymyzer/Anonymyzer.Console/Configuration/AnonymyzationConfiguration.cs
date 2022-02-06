@@ -1,6 +1,7 @@
 ﻿namespace Anonymyzer.Console.Configuration;
 
 using Anonymyzer.Base;
+using Anonymyzer.Base.Generation;
 using Anonymyzer.Console.GenerateConfiguration;
 
 /// <summary>

@@ -16,7 +16,9 @@ public class SqlColumnInfo : IColumnInfo
 
     public int MaxLength { get; set; }
 
-    public bool IsUnicode { get; set; } = false;
+    public bool IsPartOfThePrimaryKey { get; set; } = false;
 
-    public bool Nullable { get; set; } = false;
+    public bool IsUnicodeText { get; set; } = false;
+
+    public bool IsNullable { get; set; } = false;
 }
