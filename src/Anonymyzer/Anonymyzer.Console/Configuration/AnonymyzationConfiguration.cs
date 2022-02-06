@@ -1,8 +1,6 @@
 ﻿namespace Anonymyzer.Console.Configuration;
 
-using Anonymyzer.Base;
-using Anonymyzer.Base.Generation;
-using Anonymyzer.Console.GenerateConfiguration;
+using Newtonsoft.Json.Linq;
 
 /// <summary>
 /// Configuration for anonymyzation operation
@@ -11,5 +9,5 @@ internal class AnonymyzationConfiguration
 {
     public string Version { get; set; } = @"0.1.0";
     public TableProcessingOptions[] Tables { get; set; } = Array.Empty<TableProcessingOptions>();
-    public Dictionary<string, GeneratorConfiguration> Generators { get; set; } = new();
+    public Dictionary<string, JObject> Generators { get; set; } = new();
 }

@@ -4,8 +4,10 @@ using System.Data;
 using System.Text;
 using System.Text.Json.Nodes;
 using Anonymyzer.Base;
+using Anonymyzer.Base.Generation;
 using Anonymyzer.Console.CommandLibraryElements;
 using Anonymyzer.Console.Configuration;
+using Anonymyzer.Console.InternalInterfaces;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
@@ -13,6 +15,7 @@ internal class GenerateAnonymyzerConfigurationCommand// : ICommand<GenerateAnony
 {
     private readonly IDbConnectionFactory _dbConnectionFactory;
     private readonly IEngineFactory _engineFactory;
+    private readonly IGeneratorsProvider _generatorsProvider;
     private readonly ICommandLogger _logger;
     private readonly JsonSerializer _serializer = new JsonSerializer()
     {
@@ -20,10 +23,11 @@ internal class GenerateAnonymyzerConfigurationCommand// : ICommand<GenerateAnony
     };
 
     public GenerateAnonymyzerConfigurationCommand(IDbConnectionFactory dbConnectionFactory, IEngineFactory engineFactory,
-        ICommandLogger logger)
+        IGeneratorsProvider generatorsProvider, ICommandLogger logger)
     {
         _dbConnectionFactory = dbConnectionFactory ?? throw new ArgumentNullException(nameof(dbConnectionFactory));
         _engineFactory = engineFactory ?? throw new ArgumentNullException(nameof(engineFactory));
+        _generatorsProvider = generatorsProvider ?? throw new ArgumentNullException(nameof(generatorsProvider));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
@@ -127,12 +131,20 @@ internal class GenerateAnonymyzerConfigurationCommand// : ICommand<GenerateAnony
 
         var config = new AnonymyzationConfiguration()
         {
+            Generators = BuildDefaultGeneratorsConfiguration(),
             Tables = outputConfigs.ToArray()
         };
 
         _serializer.Serialize(stream, config);
 
         return (int)ErrorCodes.Success;
+    }
+
+    private Dictionary<string, JObject> BuildDefaultGeneratorsConfiguration()
+    {
+        return _generatorsProvider.GetAllGenerators().ToDictionary(
+            g => $"{g.Name}:Default",
+            g => g.GetDefaultConfig());
     }
 
     private TableProcessingOptions CreateConfigForTable(IAnonymyzerEngine engine, ITableInfo tableInfo)

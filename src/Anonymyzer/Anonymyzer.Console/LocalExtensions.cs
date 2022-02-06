@@ -6,6 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 namespace Anonymyzer.Console;
 
 using Anonymyzer.Console.Implementation;
+using Anonymyzer.Console.InternalInterfaces;
 
 internal static class LocalExtensions
 {

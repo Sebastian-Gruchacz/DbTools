@@ -10,7 +10,7 @@
         {
             // TODO: manual or reflection - other types in assembly
 
-            serviceCollection.AddTransient<ShufflingTextGenerator>();
+            serviceCollection.AddTransient<IGenerator, ShufflingTextGenerator>();
 
 
 
