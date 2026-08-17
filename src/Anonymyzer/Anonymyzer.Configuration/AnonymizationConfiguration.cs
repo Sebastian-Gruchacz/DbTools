@@ -5,7 +5,7 @@
 /// </summary>
 public sealed class AnonymizationConfiguration
 {
-    public const string CurrentVersion = "0.3.0";
+    public const string CurrentVersion = "0.4.0";
 
     public string Version { get; set; } = CurrentVersion;
 

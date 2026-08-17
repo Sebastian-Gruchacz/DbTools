@@ -1,17 +1,27 @@
 ﻿namespace Anonymyzer.PostgreSql.Tests;
 
+using Anonymyzer.Console.Safety;
 using Npgsql;
 
 public sealed class PostgreSqlAnonymyzerEngineIntegrationTests
 {
     [Fact]
+    public void ReadsDetachedCopyMarker()
+    {
+        string connectionString = RequireConnectionString();
+        using var connection = new NpgsqlConnection(connectionString);
+        connection.Open();
+
+        DetachedCopyMarker marker = new DetachedCopyMarkerReader().Read("PostgreSql", connection);
+
+        Assert.Equal(Guid.Parse("11111111-2222-3333-4444-555555555555"), marker.MarkerId);
+        Assert.Equal("anonymyzer_test", marker.DatabaseName);
+    }
+
+    [Fact]
     public void ReadsTablesAndTextColumnMetadata()
     {
-        var connectionString = Environment.GetEnvironmentVariable("ANONYMYZER_POSTGRES_CONNECTION");
-        if (string.IsNullOrWhiteSpace(connectionString))
-        {
-            Assert.Skip("Set ANONYMYZER_POSTGRES_CONNECTION to run the PostgreSQL integration test.");
-        }
+        string connectionString = RequireConnectionString();
 
         using var connection = new NpgsqlConnection(connectionString);
         connection.Open();
@@ -37,5 +47,16 @@ public sealed class PostgreSqlAnonymyzerEngineIntegrationTests
         var code = Assert.Single(labelColumns, column => column.Name == "code");
         Assert.True(code.IsPartOfThePrimaryKey);
         Assert.False(code.IsNullable);
+    }
+
+    private static string RequireConnectionString()
+    {
+        string? connectionString = Environment.GetEnvironmentVariable("ANONYMYZER_POSTGRES_CONNECTION");
+        if (string.IsNullOrWhiteSpace(connectionString))
+        {
+            Assert.Skip("Set ANONYMYZER_POSTGRES_CONNECTION to run the PostgreSQL integration test.");
+        }
+
+        return connectionString;
     }
 }

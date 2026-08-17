@@ -7,6 +7,7 @@ using Anonymyzer.Base;
 using Anonymyzer.Console.Commands;
 using Anonymyzer.Console.Implementation;
 using Anonymyzer.Console.InternalInterfaces;
+using Anonymyzer.Console.Safety;
 using Anonymyzer.Generators.Person;
 using Anonymyzer.Generators.Simple;
 using Anonymyzer.LanguagePack.Polish;
@@ -28,6 +29,8 @@ internal static class LocalExtensions
 
     public static IServiceCollection AddCommands(this IServiceCollection services)
     {
+        services.AddSingleton<IDetachedCopyMarkerReader, DetachedCopyMarkerReader>();
+        services.AddSingleton<DetachedCopySafetyValidator>();
         services.AddTransient<GenerateAnonymyzerConfigurationCommand>();
         services.AddTransient<ProcessAnonymyzerCommand>();
 

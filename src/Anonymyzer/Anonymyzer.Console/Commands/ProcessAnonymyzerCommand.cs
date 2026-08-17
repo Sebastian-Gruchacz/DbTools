@@ -1,61 +1,113 @@
 ﻿namespace Anonymyzer.Console.Commands;
 
-using Anonymyzer.Base;
+using System.Data;
+using Anonymyzer.Base.Generation;
 using Anonymyzer.Configuration;
 using Anonymyzer.Console.CommandLibraryElements;
 using Anonymyzer.Console.InternalInterfaces;
+using Anonymyzer.Console.Safety;
+using Newtonsoft.Json;
 
-internal class ProcessAnonymyzerCommand // : ICommand<ProcessAnonymyzerCommandParameters>
+internal sealed class ProcessAnonymyzerCommand
 {
     private readonly IDbConnectionFactory _dbConnectionFactory;
-    private readonly IEngineFactory _engineFactory;
     private readonly IGeneratorsProvider _generatorsProvider;
     private readonly ICommandLogger _logger;
+    private readonly DetachedCopySafetyValidator _safetyValidator;
 
-    public ProcessAnonymyzerCommand(IDbConnectionFactory dbConnectionFactory, IEngineFactory engineFactory,
-        IGeneratorsProvider generatorsProvider, ICommandLogger logger)
+    public ProcessAnonymyzerCommand(
+        IDbConnectionFactory dbConnectionFactory,
+        IGeneratorsProvider generatorsProvider,
+        ICommandLogger logger,
+        DetachedCopySafetyValidator safetyValidator)
     {
         _dbConnectionFactory = dbConnectionFactory ?? throw new ArgumentNullException(nameof(dbConnectionFactory));
-        _engineFactory = engineFactory ?? throw new ArgumentNullException(nameof(engineFactory));
         _generatorsProvider = generatorsProvider ?? throw new ArgumentNullException(nameof(generatorsProvider));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _safetyValidator = safetyValidator ?? throw new ArgumentNullException(nameof(safetyValidator));
     }
 
-    // TODO: implementation & configuration
     public int Process(ProcessAnonymyzerCommandParameters parameters)
     {
-        //var configFile = ;
+        if (!parameters.DryRun)
+        {
+            _logger.Error("Data modification is not implemented. Use --dry-run to validate a detached clone.");
+            return (int)ErrorCodes.ConfigurationError;
+        }
 
-        //AnonymizationConfiguration config;
+        AnonymizationConfiguration configuration = LoadConfiguration(parameters.ConfigurationFilePath);
+        ConfigurationValidator.EnsureValid(configuration);
+        DetachedCopySafetyValidator.EnsureConfigurationDoesNotTargetMarker(configuration);
+        ValidateGenerators(configuration);
 
-        // The detached-copy connection must come from runtime arguments or a secret provider.
-        // It must never be read from the anonymyzation configuration file.
-        //var dbConnection = _dbConnectionFactory.CreateMainConnection(parameters);
+        parameters.DatabaseEngine = configuration.Database.DatabaseEngine;
+        parameters.DatabaseName = configuration.Database.DatabaseName;
+        using IDbConnection connection = _dbConnectionFactory.CreateMainConnection(parameters)
+            ?? throw new InvalidOperationException(
+                $"Database engine '{configuration.Database.DatabaseEngine}' is not installed.");
 
-        //var engine = _engineFactory.CreateEngine(config.Database.DatabaseEngine, dbConnection);
+        if (connection.State != ConnectionState.Open)
+        {
+            connection.Open();
+        }
 
-        // 1. check-build all generators, using global settings
+        DetachedCopyMarker marker = _safetyValidator.Validate(
+            configuration.Database,
+            parameters.ExpectedMarkerId,
+            connection);
+        int enabledTables = configuration.Tables.Count(table => table.Enabled);
+        int enabledColumns = configuration.Tables.Sum(table => table.Columns.Count(column => column.Enabled));
 
-        // 2. run through all tables
-
-
-        // 2a. build all generator functions for all columns using global generators & local configurations (if any)
-
-        // 2a. Disable indexes
-
-        // 2b. run all rows, applying generators
-
-        // 3c Re-enable / recalculate indexes
-
-
+        _logger.Info(
+            $"Dry-run passed for {configuration.Database.DatabaseEngine} database " +
+            $"'{configuration.Database.DatabaseName}', marker {marker.MarkerId:D}, " +
+            $"{enabledTables} enabled table(s), {enabledColumns} enabled column(s). No data was modified.");
         return (int)ErrorCodes.Success;
+    }
+
+    private static AnonymizationConfiguration LoadConfiguration(string path)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            throw new InvalidOperationException("Configuration file path is required.");
+        }
+
+        string json = File.ReadAllText(Path.GetFullPath(path));
+        return JsonConvert.DeserializeObject<AnonymizationConfiguration>(json)
+            ?? throw new InvalidOperationException("Configuration file is empty.");
+    }
+
+    private void ValidateGenerators(AnonymizationConfiguration configuration)
+    {
+        Dictionary<(string Type, string Version), IGenerator> generators = _generatorsProvider.GetAllGenerators()
+            .ToDictionary(
+                generator => (generator.Descriptor.Type.ToUpperInvariant(), generator.Descriptor.Version),
+                generator => generator);
+
+        foreach (GeneratorProfileConfiguration profile in configuration.GeneratorProfiles)
+        {
+            if (!generators.TryGetValue((profile.GeneratorType.ToUpperInvariant(), profile.GeneratorVersion), out IGenerator? generator))
+            {
+                throw new InvalidOperationException(
+                    $"Generator {profile.GeneratorType} {profile.GeneratorVersion} required by profile '{profile.Id}' is not installed.");
+            }
+
+            object options = generator.Configuration.Deserialize(profile.Options);
+            IReadOnlyList<string> errors = generator.Configuration.Validate(options);
+            if (errors.Count > 0)
+            {
+                throw new InvalidOperationException(
+                    $"Generator profile '{profile.Id}' is invalid: {string.Join("; ", errors)}");
+            }
+        }
     }
 }
 
-internal class ProcessAnonymyzerCommandParameters
+internal sealed class ProcessAnonymyzerCommandParameters : DbParameters
 {
-    /// <summary>
-    /// Gets or sets path to the generated anonymyzer configuration file
-    /// </summary>
     public string ConfigurationFilePath { get; set; } = string.Empty;
+
+    public Guid ExpectedMarkerId { get; set; }
+
+    public bool DryRun { get; set; }
 }

@@ -2,6 +2,8 @@
 
 internal class GenerateAnonymyzerConfigurationCommandParameters : DbParameters
 {
+    public Guid ExpectedMarkerId { get; set; }
+
     /// <summary>
     /// Gets or sets path, where generated anonymyzer configuration file will be saved.
     /// </summary>
