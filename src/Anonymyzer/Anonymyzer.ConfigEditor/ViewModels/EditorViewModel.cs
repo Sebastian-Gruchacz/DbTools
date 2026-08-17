@@ -111,17 +111,35 @@ internal sealed class EditorViewModel : INotifyPropertyChanged
             ? null
             : $"{SelectedTable.Model.SchemaName}.{SelectedTable.Model.TableName}";
 
-        RebuildAllTables();
+        RebuildAllTables(preserveVisibleColumns: true);
         ApplyTableFilter(selectedTableKey);
     }
 
-    private void RebuildAllTables()
+    private void RebuildAllTables(bool preserveVisibleColumns = false)
     {
+        Dictionary<string, IReadOnlySet<string>> visibleColumns = preserveVisibleColumns
+            ? _allTables.ToDictionary(
+                table => table.QualifiedName,
+                table => (IReadOnlySet<string>)table.Columns
+                    .Select(column => column.ColumnName)
+                    .ToHashSet(StringComparer.OrdinalIgnoreCase),
+                StringComparer.OrdinalIgnoreCase)
+            : new Dictionary<string, IReadOnlySet<string>>(StringComparer.OrdinalIgnoreCase);
+
         _allTables.Clear();
         _allTables.AddRange(Configuration.Tables
             .OrderBy(table => table.SchemaName)
             .ThenBy(table => table.TableName)
-            .Select(table => new TableViewModel(table, Configuration.GeneratorProfiles, SemanticRoleGroups)));
+            .Select(table =>
+            {
+                string key = $"{table.SchemaName}.{table.TableName}";
+                visibleColumns.TryGetValue(key, out IReadOnlySet<string>? previouslyVisible);
+                return new TableViewModel(
+                    table,
+                    Configuration.GeneratorProfiles,
+                    SemanticRoleGroups,
+                    previouslyVisible);
+            }));
     }
 
     private void ApplyTableFilter(string? preferredTableKey = null)

@@ -144,11 +144,54 @@ public partial class MainWindow : Window
     private void AddColumns_Click(object sender, RoutedEventArgs e)
     {
         TableViewModel? table = _viewModel.SelectedTable;
-        if (table is null)
+        if (table is null || sender is not Button button)
         {
             return;
         }
 
+        var menu = new ContextMenu
+        {
+            PlacementTarget = button,
+            Placement = PlacementMode.Bottom
+        };
+
+        foreach (ColumnViewModel column in table.HiddenColumns.OrderBy(column => column.Ordinal))
+        {
+            var item = new MenuItem
+            {
+                Header = $"{column.ColumnName}  ({column.TypeDisplay})",
+                ToolTip = $"Column #{column.Ordinal} from the saved analysis"
+            };
+            item.Click += (_, _) => RevealColumn(table, column);
+            menu.Items.Add(item);
+        }
+
+        if (table.HiddenColumns.Count == 0)
+        {
+            menu.Items.Add(new MenuItem
+            {
+                Header = "No hidden analyzed columns",
+                IsEnabled = false
+            });
+        }
+
+        menu.Items.Add(new Separator());
+        var loadItem = new MenuItem { Header = "Load more from database..." };
+        loadItem.Click += (_, _) => LoadColumnsFromDatabase(table);
+        menu.Items.Add(loadItem);
+
+        button.ContextMenu = menu;
+        menu.IsOpen = true;
+    }
+
+    private void RevealColumn(TableViewModel table, ColumnViewModel column)
+    {
+        table.RevealColumn(column);
+        _viewModel.Status = $"Column {column.ColumnName} is now visible for configuration.";
+    }
+
+    private void LoadColumnsFromDatabase(TableViewModel table)
+    {
         var dialog = new AddColumnsWindow(_viewModel.Configuration, table.Model)
         {
             Owner = this
@@ -160,7 +203,7 @@ public partial class MainWindow : Window
 
         foreach (AvailableColumn column in dialog.SelectedColumns)
         {
-            table.Model.Columns.Add(new ColumnProcessingOptions
+            table.AddColumn(new ColumnProcessingOptions
             {
                 Ordinal = column.Ordinal,
                 ColumnName = column.ColumnName,
@@ -170,8 +213,6 @@ public partial class MainWindow : Window
             });
         }
 
-        table.Model.Columns = table.Model.Columns.OrderBy(column => column.Ordinal).ToList();
-        _viewModel.RefreshTables();
         _viewModel.Status = $"Added {dialog.SelectedColumns.Count} column(s). Save the configuration to persist changes.";
     }
 

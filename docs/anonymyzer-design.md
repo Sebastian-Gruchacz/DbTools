@@ -144,10 +144,12 @@ surowych wartości `non-null` z odłączonego klona. Jest to narzędzie inspekcy
 nie podgląd wyniku generatora `Column`: UI nadal nie symuluje shuffle ani
 generatorów `Relational`. Podgląd nigdy nie może modyfikować bazy.
 
-`Add column...` ponownie waliduje nazwę i marker klona, a następnie pokazuje
-brakujące kolumny niebędące PK. Dodanie zmienia wyłącznie model konfiguracji w
-pamięci; pola pozostają wyłączone i bez generatora aż do jawnej decyzji
-operatora.
+Grid pokazuje początkowo kandydatów oraz kolumny już skonfigurowane. `Add column`
+rozwija pozostałe kolumny zapisane podczas analizy i ujawnia wybraną bez dostępu
+do bazy. Ostatnia pozycja menu ponownie waliduje nazwę i marker klona, a następnie
+pokazuje brakujące kolumny niebędące PK. Dodanie zmienia wyłącznie model
+konfiguracji w pamięci; pola pozostają wyłączone i bez generatora aż do jawnej
+decyzji operatora.
 
 ### Kontrakt pluginu generatora
 

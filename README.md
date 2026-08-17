@@ -139,8 +139,9 @@ językowe opisuje [docs/anonymyzer-design.md](docs/anonymyzer-design.md).
   także dla pól liczbowych, np. PESEL, NIP i telefonów;
 - zgodność roli z typem oraz negatywne tokeny odrzucające m.in. booleanowe
   ustawienia, liczbowe FK z dodatkowym `id` i pola kontrolne;
-- ręczne `Add column...`, które po walidacji klona pokazuje brakujące kolumny
-  niebędące PK i dodaje wybrane jako domyślnie wyłączone;
+- rozwijane `Add column`, które pokazuje ukryte kolumny zapisane podczas analizy,
+  a na końcu pozwala po walidacji klona wczytać z bazy brakujące kolumny
+  niebędące PK; dodane pola są domyślnie wyłączone;
 - CLI `generate-config` i `run --dry-run`, które pobiera connection string
   wyłącznie ze wskazanej zmiennej środowiskowej;
 - potrójna walidacja markera odłączonej kopii: argument operatora, konfiguracja
@@ -243,10 +244,13 @@ kopiować dane, ale sample nie trafiają do konfiguracji, logów ani plików. Je
 zapytanie trwa najwyżej 15 sekund, a pojedyncza wyświetlana wartość jest obcinana
 po 32 768 znakach i oznaczana jako skrócona.
 
-`Add column...` używa tego samego bezpiecznego połączenia i walidacji markera.
-Pokazuje wyłącznie kolumny istniejące w wybranej tabeli klona, których nie ma
-jeszcze w konfiguracji, z pominięciem klucza głównego. Dodane pola są wyłączone
-i nie dostają generatora automatycznie; operator wybiera rolę i profil jawnie.
+`Add column` rozwija najpierw kolumny zapisane w konfiguracji podczas analizy,
+które nie są kandydatami ani nie zostały jeszcze skonfigurowane. Wybranie pozycji
+pokazuje ją w gridzie bez ponownego połączenia z bazą. Ostatnia pozycja menu używa
+tego samego bezpiecznego połączenia i walidacji markera, aby pokazać kolumny
+istniejące w wybranej tabeli klona, których nie ma w konfiguracji, z pominięciem
+klucza głównego. Dodane pola są wyłączone i nie dostają generatora automatycznie;
+operator wybiera rolę i profil jawnie.
 
 Najprostsze bezpieczne wywołanie integracji tworzy osobny kontener z lokalnego
 obrazu, ładuje fixture i zawsze usuwa kontener w bloku `finally`:
