@@ -1,13 +1,15 @@
 CREATE TABLE public.customer_data (
     id integer PRIMARY KEY,
     display_name varchar(64),
-    notes text
+    notes text,
+    pesel bigint,
+    preferences jsonb
 );
 
-INSERT INTO public.customer_data (id, display_name, notes)
+INSERT INTO public.customer_data (id, display_name, notes, pesel, preferences)
 VALUES
-    (1, 'Ada', 'first note'),
-    (2, 'Grace', 'second note');
+    (1, 'Ada', 'first note', 44051401458, '{"contact": "email"}'),
+    (2, 'Grace', 'second note', 52030512345, '{"contact": "phone"}');
 
 CREATE TABLE public.__anonymyzer_detached_copy (
     marker_id uuid PRIMARY KEY,

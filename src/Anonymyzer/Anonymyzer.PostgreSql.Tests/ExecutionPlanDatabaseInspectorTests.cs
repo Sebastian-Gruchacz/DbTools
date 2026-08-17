@@ -119,13 +119,14 @@ public sealed class ExecutionPlanDatabaseInspectorTests
     {
         public IEnumerable<ITableInfo> ListTables(bool listSystemTables = false) => new[] { table };
 
-        public IEnumerable<IColumnInfo> ListTextColumns(ITableInfo tableInfo) => new[] { column };
+        public IEnumerable<IColumnInfo> ListColumns(ITableInfo tableInfo) => new[] { column };
     }
 
     private sealed record StubTable(string Name, string SchemaName, long EstimatedRowCount) : ITableInfo;
 
     private sealed class StubColumn(string name, int maxLength, bool unicode) : IColumnInfo
     {
+        public int Ordinal => 1;
         public string Name { get; } = name;
         public DbDataType DataType => DbDataType.Text;
         public bool IsNullable => true;

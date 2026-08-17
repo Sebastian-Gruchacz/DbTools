@@ -2,6 +2,8 @@
 
 public interface IColumnInfo
 {
+    int Ordinal { get; }
+
     string Name { get; }
 
     DbDataType DataType { get; }

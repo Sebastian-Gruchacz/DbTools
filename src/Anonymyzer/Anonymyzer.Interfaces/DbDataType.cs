@@ -2,5 +2,16 @@
 
 public enum DbDataType
 {
-    Text
+    Text,
+    Integer,
+    Decimal,
+    Boolean,
+    DateTime,
+    Date,
+    Time,
+    Guid,
+    Binary,
+    Json,
+    Xml,
+    Other
 }

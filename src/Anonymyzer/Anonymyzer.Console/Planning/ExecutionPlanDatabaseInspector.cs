@@ -72,7 +72,7 @@ internal sealed class ExecutionPlanDatabaseInspector
 
         snapshot = new TableSnapshot(
             table,
-            engine.ListTextColumns(table).ToDictionary(column => column.Name, StringComparer.OrdinalIgnoreCase));
+            engine.ListColumns(table).ToDictionary(column => column.Name, StringComparer.OrdinalIgnoreCase));
         snapshots.Add(key, snapshot);
         return snapshot;
     }

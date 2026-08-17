@@ -21,6 +21,8 @@ public sealed class ColumnCandidateDetectorTests
     [InlineData("adresEmail", "Contact.Email", "pl:adres_email", "pl")]
     [InlineData("imię", "Person.FirstName", "pl:imie", "pl")]
     [InlineData("dcd_NIPDostawcy", "Company.TaxId", "pl:nip", "pl")]
+    [InlineData("customer_phone_number", "Contact.Phone", "en:phone_number", "en")]
+    [InlineData("NumerTelefonu", "Contact.Phone", "pl:numer_telefonu", "pl")]
     [InlineData("billing_postal_code", "Address.PostalCode", "en:postal_code", "en")]
     public void DetectsEnglishAndPolishNames(
         string columnName,

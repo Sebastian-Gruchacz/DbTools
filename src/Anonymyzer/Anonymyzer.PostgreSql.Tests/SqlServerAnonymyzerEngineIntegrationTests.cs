@@ -1,5 +1,6 @@
 ﻿namespace Anonymyzer.PostgreSql.Tests;
 
+using Anonymyzer.Base;
 using Anonymyzer.Configuration;
 using Anonymyzer.Configuration.Safety;
 using Anonymyzer.DatabaseAccess;
@@ -9,7 +10,7 @@ using Microsoft.Data.SqlClient;
 public sealed class SqlServerAnonymyzerEngineIntegrationTests
 {
     [Fact]
-    public void ReadsTableRowEstimatesAndTextColumnMetadata()
+    public void ReadsTableRowEstimatesAndColumnMetadata()
     {
         string connectionString = RequireConnectionString();
         using var connection = new SqlConnection(connectionString);
@@ -26,7 +27,8 @@ public sealed class SqlServerAnonymyzerEngineIntegrationTests
             table.SchemaName == "dbo" && table.Name == "__AnonymyzerDetachedCopy");
         Assert.Equal(1, markerTable.EstimatedRowCount);
 
-        Assert.Contains(tables, table => engine.ListTextColumns(table).Any());
+        Assert.Contains(tables, table => engine.ListColumns(table).Any());
+        Assert.Contains(tables.SelectMany(engine.ListColumns), column => column.DataType == DbDataType.Integer);
     }
 
     [Fact]
@@ -39,7 +41,11 @@ public sealed class SqlServerAnonymyzerEngineIntegrationTests
         DetachedCopyMarker marker = new DetachedCopyMarkerReader().Read("SqlServer", connection);
         var selected = engine.ListTables().ToArray()
             .Where(table => table.Name != "__AnonymyzerDetachedCopy")
-            .Select(table => new { Table = table, Column = engine.ListTextColumns(table).FirstOrDefault() })
+            .Select(table => new
+            {
+                Table = table,
+                Column = engine.ListColumns(table).FirstOrDefault(column => column.DataType == DbDataType.Text)
+            })
             .First(item => item.Column is not null);
         var column = new ColumnProcessingOptions
         {

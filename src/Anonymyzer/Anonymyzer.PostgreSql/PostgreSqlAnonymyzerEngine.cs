@@ -39,16 +39,19 @@ public sealed class PostgreSqlAnonymyzerEngine : IAnonymyzerEngine
         }
     }
 
-    public IEnumerable<IColumnInfo> ListTextColumns(ITableInfo tableInfo)
+    public IEnumerable<IColumnInfo> ListColumns(ITableInfo tableInfo)
     {
         ArgumentNullException.ThrowIfNull(tableInfo);
 
         using var command = _connection.CreateCommand();
         command.CommandText = """
             SELECT
+                column_info.ordinal_position,
                 column_info.column_name,
                 column_info.character_maximum_length,
                 column_info.is_nullable,
+                column_info.data_type,
+                column_info.udt_name,
                 EXISTS (
                     SELECT 1
                     FROM information_schema.table_constraints AS constraint_info
@@ -64,7 +67,6 @@ public sealed class PostgreSqlAnonymyzerEngine : IAnonymyzerEngine
             FROM information_schema.columns AS column_info
             WHERE column_info.table_schema = @schema_name
               AND column_info.table_name = @table_name
-              AND column_info.data_type IN ('character', 'character varying', 'text')
             ORDER BY column_info.ordinal_position;
             """;
         command.Parameters.AddWithValue("schema_name", tableInfo.SchemaName);
@@ -73,21 +75,45 @@ public sealed class PostgreSqlAnonymyzerEngine : IAnonymyzerEngine
         using var reader = command.ExecuteReader();
         while (reader.Read())
         {
-            yield return new PostgreSqlColumnInfo(reader.GetString(0), DbDataType.Text)
+            string dataType = reader.GetString(4);
+            string udtName = reader.GetString(5);
+            DbDataType classifiedType = Classify(dataType, udtName);
+            yield return new PostgreSqlColumnInfo(reader.GetInt32(0), reader.GetString(1), classifiedType)
             {
-                MaxLength = reader.IsDBNull(1) ? 0 : reader.GetInt32(1),
-                IsNullable = reader.GetString(2).Equals("YES", StringComparison.OrdinalIgnoreCase),
-                IsPartOfThePrimaryKey = reader.GetBoolean(3),
-                IsUnicodeText = true
+                MaxLength = reader.IsDBNull(2) ? 0 : reader.GetInt32(2),
+                IsNullable = reader.GetString(3).Equals("YES", StringComparison.OrdinalIgnoreCase),
+                IsPartOfThePrimaryKey = reader.GetBoolean(6),
+                IsUnicodeText = classifiedType is DbDataType.Text or DbDataType.Json or DbDataType.Xml
             };
         }
+    }
+
+    private static DbDataType Classify(string dataType, string udtName)
+    {
+        return dataType.ToLowerInvariant() switch
+        {
+            "character" or "character varying" or "text" => DbDataType.Text,
+            "smallint" or "integer" or "bigint" => DbDataType.Integer,
+            "numeric" or "decimal" or "real" or "double precision" => DbDataType.Decimal,
+            "boolean" => DbDataType.Boolean,
+            "timestamp without time zone" or "timestamp with time zone" => DbDataType.DateTime,
+            "date" => DbDataType.Date,
+            "time without time zone" or "time with time zone" or "interval" => DbDataType.Time,
+            "uuid" => DbDataType.Guid,
+            "bytea" => DbDataType.Binary,
+            "json" or "jsonb" => DbDataType.Json,
+            "xml" => DbDataType.Xml,
+            "user-defined" when udtName.Equals("citext", StringComparison.OrdinalIgnoreCase) => DbDataType.Text,
+            _ => DbDataType.Other
+        };
     }
 }
 
 internal sealed record PostgreSqlTableInfo(string Name, string SchemaName, long EstimatedRowCount) : ITableInfo;
 
-internal sealed class PostgreSqlColumnInfo(string name, DbDataType dataType) : IColumnInfo
+internal sealed class PostgreSqlColumnInfo(int ordinal, string name, DbDataType dataType) : IColumnInfo
 {
+    public int Ordinal { get; } = ordinal;
     public string Name { get; } = name;
     public DbDataType DataType { get; } = dataType;
     public bool IsNullable { get; init; }

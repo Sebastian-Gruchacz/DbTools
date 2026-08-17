@@ -1,5 +1,6 @@
 ﻿namespace Anonymyzer.PostgreSql.Tests;
 
+using Anonymyzer.Base;
 using Anonymyzer.Configuration.Safety;
 using Npgsql;
 
@@ -19,7 +20,7 @@ public sealed class PostgreSqlAnonymyzerEngineIntegrationTests
     }
 
     [Fact]
-    public void ReadsTablesAndTextColumnMetadata()
+    public void ReadsTablesAndColumnMetadata()
     {
         string connectionString = RequireConnectionString();
 
@@ -35,8 +36,15 @@ public sealed class PostgreSqlAnonymyzerEngineIntegrationTests
         Assert.Equal(2, customerTable.EstimatedRowCount);
         Assert.Equal(1, labelTable.EstimatedRowCount);
 
-        var customerColumns = engine.ListTextColumns(customerTable).ToArray();
+        var customerColumns = engine.ListColumns(customerTable).ToArray();
+        var id = Assert.Single(customerColumns, column => column.Name == "id");
+        Assert.Equal(1, id.Ordinal);
+        Assert.Equal(DbDataType.Integer, id.DataType);
+        Assert.True(id.IsPartOfThePrimaryKey);
+
         var displayName = Assert.Single(customerColumns, column => column.Name == "display_name");
+        Assert.Equal(2, displayName.Ordinal);
+        Assert.Equal(DbDataType.Text, displayName.DataType);
         Assert.Equal(64, displayName.MaxLength);
         Assert.True(displayName.IsNullable);
         Assert.True(displayName.IsUnicodeText);
@@ -45,7 +53,13 @@ public sealed class PostgreSqlAnonymyzerEngineIntegrationTests
         var notes = Assert.Single(customerColumns, column => column.Name == "notes");
         Assert.Equal(0, notes.MaxLength);
 
-        var labelColumns = engine.ListTextColumns(labelTable).ToArray();
+        var pesel = Assert.Single(customerColumns, column => column.Name == "pesel");
+        Assert.Equal(DbDataType.Integer, pesel.DataType);
+
+        var preferences = Assert.Single(customerColumns, column => column.Name == "preferences");
+        Assert.Equal(DbDataType.Json, preferences.DataType);
+
+        var labelColumns = engine.ListColumns(labelTable).ToArray();
         var code = Assert.Single(labelColumns, column => column.Name == "code");
         Assert.True(code.IsPartOfThePrimaryKey);
         Assert.False(code.IsNullable);

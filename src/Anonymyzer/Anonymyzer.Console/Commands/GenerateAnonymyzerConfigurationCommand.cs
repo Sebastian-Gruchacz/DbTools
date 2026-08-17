@@ -15,7 +15,7 @@ internal class GenerateAnonymyzerConfigurationCommand// : ICommand<GenerateAnony
 {
     private const string DEFAULT = @"Default";
     private readonly IDbConnectionFactory _dbConnectionFactory;
-    private readonly ColumnCandidateDetector _candidateDetector;
+    private readonly ColumnConfigurationBuilder _columnConfigurationBuilder;
     private readonly IEngineFactory _engineFactory;
     private readonly IGeneratorsProvider _generatorsProvider;
     private readonly ICommandLogger _logger;
@@ -34,7 +34,8 @@ internal class GenerateAnonymyzerConfigurationCommand// : ICommand<GenerateAnony
         DetachedCopySafetyValidator safetyValidator)
     {
         _dbConnectionFactory = dbConnectionFactory ?? throw new ArgumentNullException(nameof(dbConnectionFactory));
-        _candidateDetector = candidateDetector ?? throw new ArgumentNullException(nameof(candidateDetector));
+        _columnConfigurationBuilder = new ColumnConfigurationBuilder(
+            candidateDetector ?? throw new ArgumentNullException(nameof(candidateDetector)));
         _engineFactory = engineFactory ?? throw new ArgumentNullException(nameof(engineFactory));
         _generatorsProvider = generatorsProvider ?? throw new ArgumentNullException(nameof(generatorsProvider));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
@@ -136,7 +137,7 @@ internal class GenerateAnonymyzerConfigurationCommand// : ICommand<GenerateAnony
 
         foreach (ITableInfo tableInfo in tables)
         {
-            var tableConfig = CreateConfigForTable(engine, tableInfo);
+            var tableConfig = _columnConfigurationBuilder.CreateTable(engine, tableInfo);
 
             // Only write tables with at least one anonymyzable column TODO: configurable?
             if (tableConfig.Columns.Any())
@@ -176,42 +177,4 @@ internal class GenerateAnonymyzerConfigurationCommand// : ICommand<GenerateAnony
             .ToList();
     }
 
-    private TableProcessingOptions CreateConfigForTable(IAnonymyzerEngine engine, ITableInfo tableInfo)
-    {
-        var config = TableProcessingOptions.DefaultForTable(tableInfo.Name, tableInfo.SchemaName);
-
-        var columns = engine.ListTextColumns(tableInfo);
-        int ordinal = 0;
-        foreach (IColumnInfo column in columns)
-        {
-            ordinal++;
-            // TODO: for now only setting text, non-PK fields
-            if (column.IsPartOfThePrimaryKey || column.DataType != DbDataType.Text)
-            {
-                continue;
-            }
-
-            var columnInfo = new ColumnProcessingOptions
-            {
-                Ordinal = ordinal,
-                ColumnName = column.Name,
-                DataType = column.DataType.ToString(),
-                MaxLength = column.MaxLength,
-                Unicode = column.IsUnicodeText,
-
-                Enabled = false,
-                Detection = _candidateDetector.Detect(column.Name),
-                Generator = new ColumnGeneratorConfiguration
-                {
-                    GeneratorType = "TextShuffler",
-                    GeneratorVersion = "1.0.0",
-                    ProfileId = $"TextShuffler:{DEFAULT}"
-                }
-            };
-
-            config.Columns.Add(columnInfo);
-        }
-
-        return config;
-    }
 }
