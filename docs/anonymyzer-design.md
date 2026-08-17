@@ -48,6 +48,10 @@ transakcji obejmującej całą bazę.
 - Marker ma identyfikator wymagany również w parametrach uruchomienia; sama
   nazwa w stylu `database_copy` nie jest wystarczającym zabezpieczeniem.
 - Domyślny `generate-config` i inspekcja schematu nie modyfikują danych.
+- Ręczny podgląd wartości w edytorze jest tylko do odczytu, wymaga ponownej
+  walidacji nazwy i markera klona, ma limit 50 wierszy i 15 sekund na zapytanie.
+  Pojedyncza wartość jest ucinana po 32 768 znakach. Wyniki nie są utrwalane;
+  operator może jawnie skopiować wyświetlone dane do schowka.
 - `run` nie tworzy automatycznie backupu źródła i nigdy nie przełącza się na
   inną bazę po błędzie połączenia.
 - Tryb testowy nie używa istniejących baz użytkownika. Tworzy fixture od zera
@@ -122,9 +126,10 @@ Edytor WPF operuje wyłącznie na niesekretnym JSON. Oznacza wykrytych kandydat�
 ale pokazuje również wszystkie pozostałe tabele i kolumny. Obsługuje pliki,
 podstawowy grid, profile oraz mapowanie wyjść grup wielokolumnowych na kolumny.
 Podgląd generatorów `Row` uruchamia ich rzeczywistą sesję w pamięci, bez dostępu
-do bazy. Generatory `Column` i `Relational` wymagają danych z odłączonego klona;
-do czasu dodania bezpiecznego źródła tylko do odczytu UI nie symuluje ich wyniku
-i pokazuje tę zależność operatorowi. Podgląd nigdy nie może modyfikować bazy.
+do bazy. Dla pojedynczej kolumny operator może otworzyć kilka niemodalnych okien
+surowych wartości `non-null` z odłączonego klona. Jest to narzędzie inspekcyjne,
+nie podgląd wyniku generatora `Column`: UI nadal nie symuluje shuffle ani
+generatorów `Relational`. Podgląd nigdy nie może modyfikować bazy.
 
 ### Kontrakt pluginu generatora
 
@@ -244,3 +249,9 @@ jak `enabled`, `required`, `type`, `status` i `flag` odrzucają dopasowanie.
 Reguła ogólnego angielskiego `address` została celowo zastąpiona formami
 `street_address`, `mailing_address` i `postal_address`, ponieważ na realnym
 schemacie myliła adres pocztowy z adresem strony, sieci i nadawcy e-maila.
+
+Aktualny generator konfiguracji pobiera wyłącznie kolumny tekstowe. Detekcja po
+nazwie musi docelowo działać również na typach liczbowych, ponieważ spotykane są
+bazy przechowujące PESEL, NIP i numery telefonu jako liczby. Takie pola powinny
+być widoczne do ręcznego dodania, ale generator musi uwzględnić utracone zera
+wiodące i ograniczenia typu docelowego.

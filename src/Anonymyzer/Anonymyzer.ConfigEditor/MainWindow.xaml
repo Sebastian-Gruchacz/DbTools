@@ -72,7 +72,7 @@
                     </DataGridTemplateColumn>
                     <DataGridTextColumn Header="#" Binding="{Binding Ordinal}" IsReadOnly="True" Width="45" />
                     <DataGridTextColumn Header="Column" Binding="{Binding ColumnName}" IsReadOnly="True" Width="1.4*" />
-                    <DataGridTextColumn Header="Type" Binding="{Binding DataType}" IsReadOnly="True" Width="90" />
+                    <DataGridTextColumn Header="Type" Binding="{Binding TypeDisplay}" IsReadOnly="True" Width="105" />
                     <DataGridCheckBoxColumn Header="Anonymize" Binding="{Binding Enabled}" Width="80" />
                     <DataGridTemplateColumn Header="Semantic role" Width="1.3*">
                         <DataGridTemplateColumn.CellTemplate>
@@ -100,6 +100,13 @@
                         </DataGridTemplateColumn.CellTemplate>
                     </DataGridTemplateColumn>
                     <DataGridTextColumn Header="Sample" Binding="{Binding Sample}" IsReadOnly="True" Width="1.2*" />
+                    <DataGridTemplateColumn Header="Values" IsReadOnly="True" Width="72">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <Button Padding="5,1" Content="View..." Click="ViewValues_Click" />
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
                 </DataGrid.Columns>
             </DataGrid>
         </Grid>

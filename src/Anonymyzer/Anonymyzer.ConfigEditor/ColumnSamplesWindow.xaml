@@ -1,0 +1,62 @@
+﻿<Window x:Class="Anonymyzer.ConfigEditor.ColumnSamplesWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Column samples"
+        Width="720"
+        Height="460"
+        MinWidth="520"
+        MinHeight="320"
+        ShowInTaskbar="False"
+        WindowStyle="ToolWindow">
+    <DockPanel Margin="10">
+        <StackPanel DockPanel.Dock="Top">
+            <TextBlock FontWeight="SemiBold" Text="{Binding TargetName}" />
+            <TextBlock Margin="0,2,0,10"
+                       Foreground="DimGray"
+                       Text="Read-only values from the validated detached clone. Samples are never saved; long values are truncated." />
+            <Grid Margin="0,0,0,10">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="220" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="60" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBlock Grid.Column="0" Margin="0,0,8,0" VerticalAlignment="Center" Text="Connection env:" />
+                <TextBox x:Name="ConnectionEnvironmentTextBox" Grid.Column="1" Text="ANONYMYZER_CONNECTION" />
+                <TextBlock Grid.Column="2" Margin="14,0,8,0" VerticalAlignment="Center" Text="Rows:" />
+                <TextBox x:Name="MaximumRowsTextBox" Grid.Column="3" Text="10" />
+                <Button x:Name="LoadButton" Grid.Column="4" Width="80" Margin="12,0,8,0" Content="Load" Click="Load_Click" />
+                <Button Grid.Column="5" Width="80" Content="Copy all" Click="CopyAll_Click" />
+            </Grid>
+        </StackPanel>
+
+        <StatusBar DockPanel.Dock="Bottom">
+            <TextBlock Text="{Binding Status}" />
+        </StatusBar>
+
+        <DataGrid ItemsSource="{Binding Samples}"
+                  AutoGenerateColumns="False"
+                  CanUserAddRows="False"
+                  CanUserDeleteRows="False"
+                  IsReadOnly="True"
+                  SelectionMode="Extended"
+                  SelectionUnit="FullRow">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="#" Binding="{Binding Number}" Width="45" />
+                <DataGridTemplateColumn Header="Value" Width="*">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <TextBox BorderThickness="0"
+                                     Background="Transparent"
+                                     IsReadOnly="True"
+                                     Text="{Binding DisplayValue}"
+                                     TextWrapping="Wrap" />
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+            </DataGrid.Columns>
+        </DataGrid>
+    </DockPanel>
+</Window>

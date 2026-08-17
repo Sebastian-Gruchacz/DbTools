@@ -130,6 +130,10 @@ językowe opisuje [docs/anonymyzer-design.md](docs/anonymyzer-design.md).
   `example.invalid` jest celowo niedostarczalna;
 - dedykowany panel WPF konfiguracji `PersonIdentity`;
 - bezpieczny podgląd generatorów `Row` wykonywany w pamięci, bez połączenia z bazą;
+- niemodalne, tylko-odczytowe okna wartości `non-null` dla dowolnej kolumny z
+  konfiguracji: limit 1–50, wiele okien naraz, kopiowanie i ponowna walidacja
+  nazwy oraz markera klona przed każdym odczytem;
+- prezentacja tekstowego typu kolumny wraz z długością albo `MAX`;
 - CLI `generate-config` i `run --dry-run`, które pobiera connection string
   wyłącznie ze wskazanej zmiennej środowiskowej;
 - potrójna walidacja markera odłączonej kopii: argument operatora, konfiguracja
@@ -156,6 +160,9 @@ językowe opisuje [docs/anonymyzer-design.md](docs/anonymyzer-design.md).
 - podglądu generatorów `Column` i `Relational`, które wymagają odczytu danych
   z odłączonego klona;
 - pełnych, ważonych zbiorów danych regionalnych oraz generatorów PESEL/NIP;
+- metadanych kolumn nietekstowych, detekcji liczbowych PESEL/NIP/telefonów oraz
+  komendy UI `Add column...` dla pól pominiętych przez generator konfiguracji;
+- automatycznej analizy niestabilnych kolekcji, JSON, XML i tekstu swobodnego;
 - obsługi XML/JSON oraz zmian PK/FK;
 - strategii wyłączania i odbudowy indeksów, constraintów i triggerów.
 
@@ -219,6 +226,14 @@ odczytu całej kolumny z odłączonego klona. W oknie profili `Configure...`
 otwiera panel dostarczony przez dokładną wersję generatora; bez panelu nadal
 można edytować jego własny fragment `Options` jako JSON.
 
+Przycisk `View...` w wierszu kolumny otwiera niemodalne okno surowych wartości
+`non-null`. Connection string jest pobierany z podanej w oknie zmiennej
+środowiskowej (domyślnie `ANONYMYZER_CONNECTION`). Przed zapytaniem edytor
+sprawdza nazwę i marker odłączonego klona. Można otworzyć kilka takich okien i
+kopiować dane, ale sample nie trafiają do konfiguracji, logów ani plików. Jedno
+zapytanie trwa najwyżej 15 sekund, a pojedyncza wyświetlana wartość jest obcinana
+po 32 768 znakach i oznaczana jako skrócona.
+
 Najprostsze bezpieczne wywołanie integracji tworzy osobny kontener z lokalnego
 obrazu, ładuje fixture i zawsze usuwa kontener w bloku `finally`:
 
@@ -254,16 +269,18 @@ skasowany po wypchnięciu lub zarchiwizowaniu nowego repozytorium.
 
 1. Dodać testy regresyjne `ScriptCut` dla wielu tabel, tabel bez
    `IDENTITY_INSERT`, pustego wejścia i znaków niedozwolonych w nazwie pliku.
-2. Podłączyć podgląd generatorów `Column` do bezpiecznego, tylko-odczytowego
+2. Rozszerzyć metadane providerów na wszystkie typy, wykrywać po nazwie także
+   liczbowe NIP/PESEL/telefony i dodać ręczne `Add column...` w edytorze.
+3. Podłączyć podgląd generatorów `Column` do bezpiecznego, tylko-odczytowego
    źródła danych z odłączonego klona.
-3. Ujednolicić historyczne nazwy `Anonymyzer` / `Anonymization` bez zmiany
+4. Ujednolicić historyczne nazwy `Anonymyzer` / `Anonymization` bez zmiany
    zachowania.
-4. Zrealizować mały pionowy wycinek: jedna tabela, grupa `PersonIdentity`,
+5. Zrealizować mały pionowy wycinek: jedna tabela, grupa `PersonIdentity`,
    deterministyczny seed, batche, `dry-run` i test na lokalnej bazie.
-5. Rozszerzyć pakiety regionalne o ważone dane oraz generatory PESEL/NIP/SSN.
-6. Dopiero po pomiarach dodać planowanie zależności FK, mapowanie zmienianych
+6. Rozszerzyć pakiety regionalne o ważone dane oraz generatory PESEL/NIP/SSN.
+7. Dopiero po pomiarach dodać planowanie zależności FK, mapowanie zmienianych
    kluczy, indeksy, XML/JSON i generatory odwołujące się do innych wierszy.
 
 Najbardziej opłacalny następny krok to punkt 2, a potem pionowy wycinek z punktu
-4. Próba rozwiązania od razu zmian PK/FK i wszystkich wariantów indeksów
+5. Próba rozwiązania od razu zmian PK/FK i wszystkich wariantów indeksów
 utrudniłaby zweryfikowanie podstawowego przepływu.

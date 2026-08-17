@@ -23,6 +23,10 @@ internal sealed class ColumnViewModel : INotifyPropertyChanged
     public int Ordinal => _model.Ordinal;
     public string ColumnName => _model.ColumnName;
     public string DataType => _model.DataType;
+    public string TypeDisplay => _model.DataType.Equals("Text", StringComparison.OrdinalIgnoreCase)
+        ? $"{_model.DataType} ({FormatLength(_model.MaxLength)})"
+        : _model.DataType;
+    public ColumnProcessingOptions Model => _model;
     public string CandidateMark => _model.Detection.IsCandidate ? "●" : string.Empty;
     public string CandidateDetails => _model.Detection.IsCandidate
         ? $"{_model.Detection.SuggestedRole} ({_model.Detection.Confidence:P0}, {_model.Detection.MatchedRule})"
@@ -114,6 +118,9 @@ internal sealed class ColumnViewModel : INotifyPropertyChanged
     {
         return _profiles.FirstOrDefault(profile => profile.Id.Equals(profileId, StringComparison.OrdinalIgnoreCase));
     }
+
+    private static string FormatLength(int maxLength) =>
+        maxLength <= 0 || maxLength >= 1_073_741_823 ? "MAX" : maxLength.ToString();
 
     private void OnPropertyChanged([CallerMemberName] string? propertyName = null)
     {

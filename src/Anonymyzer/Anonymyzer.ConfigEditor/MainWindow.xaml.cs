@@ -12,6 +12,7 @@ using Microsoft.Win32;
 
 public partial class MainWindow : Window
 {
+    private int _sampleWindowOffset;
     private readonly ConfigurationFileService _fileService = new();
     private readonly EditorViewModel _viewModel = new();
     private readonly GeneratorCatalog _generatorCatalog = new();
@@ -135,6 +136,28 @@ public partial class MainWindow : Window
             _viewModel.Status = exception.Message;
             MessageBox.Show(this, exception.Message, "Preview error", MessageBoxButton.OK, MessageBoxImage.Error);
         }
+    }
+
+    private void ViewValues_Click(object sender, RoutedEventArgs e)
+    {
+        if (_viewModel.SelectedTable is null
+            || sender is not FrameworkElement { DataContext: ColumnViewModel column })
+        {
+            return;
+        }
+
+        var window = new ColumnSamplesWindow(
+            _viewModel.Configuration,
+            _viewModel.SelectedTable.Model,
+            column.Model)
+        {
+            Owner = this,
+            WindowStartupLocation = WindowStartupLocation.Manual,
+            Left = Left + ActualWidth + 8 + _sampleWindowOffset,
+            Top = Top + 24 + _sampleWindowOffset
+        };
+        _sampleWindowOffset = (_sampleWindowOffset + 24) % 144;
+        window.Show();
     }
 
     private void Exit_Click(object sender, RoutedEventArgs e)
