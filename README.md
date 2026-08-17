@@ -121,6 +121,8 @@ językowe opisuje [docs/anonymyzer-design.md](docs/anonymyzer-design.md).
 - edytor WPF: New/Open/Save/Save As, wybór tabeli, grid kolumn, dwupoziomowe
   menu ról semantycznych, edycja profili oraz grup wielokolumnowych z mapowaniem
   wyjść generatora na kolumny;
+- śledzenie niezapisanych zmian: gwiazdka w tytule oraz `Save / Don't Save /
+  Cancel` przed `New`, `Open` i zamknięciem aplikacji;
 - wersjonowany kontrakt generatora: własny codec JSON, walidacja, deklaracja
   wymagań danych, przygotowanie stanu i sesja wykonawcza;
 - `TextShuffler` 1.0.0: deterministyczna permutacja całej kolumny zachowująca

@@ -32,6 +32,8 @@ internal sealed class TableViewModel
         }
     }
 
+    public event EventHandler? ConfigurationChanged;
+
     public TableProcessingOptions Model { get; }
     public ObservableCollection<ColumnViewModel> Columns { get; } = new();
     public ObservableCollection<ColumnViewModel> HiddenColumns { get; } = new();
@@ -58,6 +60,7 @@ internal sealed class TableViewModel
         Model.Columns.Add(column);
         Model.Columns = Model.Columns.OrderBy(candidate => candidate.Ordinal).ToList();
         InsertVisible(CreateColumnViewModel(column));
+        OnConfigurationChanged();
     }
 
     public void ApplySamples(IReadOnlyDictionary<string, string> samples)
@@ -68,8 +71,12 @@ internal sealed class TableViewModel
         }
     }
 
-    private ColumnViewModel CreateColumnViewModel(ColumnProcessingOptions column) =>
-        new(column, _profiles, _semanticRoleGroups);
+    private ColumnViewModel CreateColumnViewModel(ColumnProcessingOptions column)
+    {
+        var viewModel = new ColumnViewModel(column, _profiles, _semanticRoleGroups);
+        viewModel.ConfigurationChanged += (_, _) => OnConfigurationChanged();
+        return viewModel;
+    }
 
     private void InsertVisible(ColumnViewModel column)
     {
@@ -87,4 +94,9 @@ internal sealed class TableViewModel
         || column.Enabled
         || !string.IsNullOrWhiteSpace(column.SemanticRole)
         || !string.IsNullOrWhiteSpace(column.GenerationGroupId);
+
+    private void OnConfigurationChanged()
+    {
+        ConfigurationChanged?.Invoke(this, EventArgs.Empty);
+    }
 }

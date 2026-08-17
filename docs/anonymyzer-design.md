@@ -138,6 +138,13 @@ konkretną rolę. Kategorie są wyłącznie organizacją UI. JSON nadal przechow
 stabilną wartość kanoniczną, np. `Address.City`; nieznane wartości z istniejących
 konfiguracji pozostają dostępne w grupie `Custom / legacy`.
 
+Edytor śledzi mutacje konfiguracji niezależnie od zmian czysto prezentacyjnych.
+Edycja kolumn, ról, profili, grup oraz doładowanie metadanych ustawia flagę dirty
+i gwiazdkę w tytule; filtrowanie, podgląd oraz ujawnienie kolumny już obecnej w
+JSON nie zmieniają dokumentu. `New`, `Open` i zamknięcie aplikacji wymagają wtedy
+decyzji `Save / Don't Save / Cancel`. Flaga jest czyszczona dopiero po udanym
+zapisie albo załadowaniu innego dokumentu.
+
 Podgląd generatorów `Row` uruchamia ich rzeczywistą sesję w pamięci, bez dostępu
 do bazy. Obejmuje grupy wielokolumnowe i generatory `Row` przypisane bezpośrednio
 do jednej kolumny; lokalne `Options` są nakładane na profil tak samo jak w

@@ -2,6 +2,7 @@
 
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.IO;
 using System.Runtime.CompilerServices;
 using Anonymyzer.Configuration;
 
@@ -11,6 +12,7 @@ internal sealed class EditorViewModel : INotifyPropertyChanged
     private TableViewModel? _selectedTable;
     private string _tableFilterText = string.Empty;
     private bool _showCandidateTablesOnly;
+    private bool _isDirty;
     private string _status = "Create or open an anonymization configuration.";
 
     public EditorViewModel()
@@ -28,6 +30,9 @@ internal sealed class EditorViewModel : INotifyPropertyChanged
     public ObservableCollection<string> ProfileIds { get; } = new();
     public IReadOnlyList<SemanticRoleGroup> SemanticRoleGroups { get; }
     public string? CurrentPath { get; private set; }
+    public bool IsDirty => _isDirty;
+    public string DocumentDisplayName => CurrentPath is null ? "Untitled" : Path.GetFileName(CurrentPath);
+    public string WindowTitle => $"{DocumentDisplayName}{(IsDirty ? " *" : string.Empty)} — Anonymyzer Configuration Editor";
     public string CandidateTablesOnlyLabel =>
         $"Only candidates ({_allTables.Count(table => table.CandidateCount > 0)})";
     public string TableFilterSummary => $"{Tables.Count} / {_allTables.Count} tables";
@@ -72,10 +77,15 @@ internal sealed class EditorViewModel : INotifyPropertyChanged
     {
         Configuration = configuration;
         CurrentPath = path;
+        _isDirty = false;
         _tableFilterText = string.Empty;
         _showCandidateTablesOnly = false;
         OnPropertyChanged(nameof(TableFilterText));
         OnPropertyChanged(nameof(ShowCandidateTablesOnly));
+        OnPropertyChanged(nameof(CurrentPath));
+        OnPropertyChanged(nameof(IsDirty));
+        OnPropertyChanged(nameof(DocumentDisplayName));
+        OnPropertyChanged(nameof(WindowTitle));
 
         RebuildAllTables();
         RefreshProfiles();
@@ -86,7 +96,24 @@ internal sealed class EditorViewModel : INotifyPropertyChanged
     public void SetCurrentPath(string path)
     {
         CurrentPath = path;
+        _isDirty = false;
+        OnPropertyChanged(nameof(CurrentPath));
+        OnPropertyChanged(nameof(IsDirty));
+        OnPropertyChanged(nameof(DocumentDisplayName));
+        OnPropertyChanged(nameof(WindowTitle));
         Status = $"Saved {path}";
+    }
+
+    public void MarkDirty()
+    {
+        if (_isDirty)
+        {
+            return;
+        }
+
+        _isDirty = true;
+        OnPropertyChanged(nameof(IsDirty));
+        OnPropertyChanged(nameof(WindowTitle));
     }
 
     public void RefreshProfiles()
@@ -134,11 +161,13 @@ internal sealed class EditorViewModel : INotifyPropertyChanged
             {
                 string key = $"{table.SchemaName}.{table.TableName}";
                 visibleColumns.TryGetValue(key, out IReadOnlySet<string>? previouslyVisible);
-                return new TableViewModel(
+                var viewModel = new TableViewModel(
                     table,
                     Configuration.GeneratorProfiles,
                     SemanticRoleGroups,
                     previouslyVisible);
+                viewModel.ConfigurationChanged += (_, _) => MarkDirty();
+                return viewModel;
             }));
     }
 

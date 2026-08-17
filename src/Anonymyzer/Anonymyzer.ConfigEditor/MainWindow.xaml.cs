@@ -1,5 +1,6 @@
 ﻿namespace Anonymyzer.ConfigEditor;
 
+using System.ComponentModel;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
@@ -12,6 +13,7 @@ using Anonymyzer.DatabaseAccess;
 using Anonymyzer.Generators.Person.Wpf;
 using Anonymyzer.Generators.Simple.Wpf;
 using Microsoft.Win32;
+using Newtonsoft.Json.Linq;
 
 public partial class MainWindow : Window
 {
@@ -39,6 +41,11 @@ public partial class MainWindow : Window
 
     private void New_Click(object sender, RoutedEventArgs e)
     {
+        if (!ConfirmSaveChanges())
+        {
+            return;
+        }
+
         _viewModel.Load(_generatorCatalog.CreateNewConfiguration(), null);
     }
 
@@ -54,21 +61,26 @@ public partial class MainWindow : Window
             return;
         }
 
+        if (!ConfirmSaveChanges())
+        {
+            return;
+        }
+
         RunFileOperation(() => _viewModel.Load(_fileService.Load(dialog.FileName), dialog.FileName));
     }
 
     private void Save_Click(object sender, RoutedEventArgs e)
     {
-        if (_viewModel.CurrentPath is null)
-        {
-            SaveAs_Click(sender, e);
-            return;
-        }
-
-        SaveTo(_viewModel.CurrentPath);
+        TrySaveDocument();
     }
 
     private void SaveAs_Click(object sender, RoutedEventArgs e)
+    {
+        CommitPendingGridEdits();
+        TrySaveAs();
+    }
+
+    private bool TrySaveAs()
     {
         var dialog = new SaveFileDialog
         {
@@ -78,14 +90,13 @@ public partial class MainWindow : Window
             FileName = _viewModel.CurrentPath is null ? "anonymyzer-config.json" : Path.GetFileName(_viewModel.CurrentPath)
         };
 
-        if (dialog.ShowDialog(this) == true)
-        {
-            SaveTo(dialog.FileName);
-        }
+        return dialog.ShowDialog(this) == true && SaveTo(dialog.FileName);
     }
 
     private void Profiles_Click(object sender, RoutedEventArgs e)
     {
+        CommitPendingGridEdits();
+        JToken originalProfiles = JToken.FromObject(_viewModel.Configuration.GeneratorProfiles);
         var dialog = new GeneratorProfilesWindow(
             _viewModel.Configuration.GeneratorProfiles,
             _generatorEditors,
@@ -97,19 +108,26 @@ public partial class MainWindow : Window
         if (dialog.ShowDialog() == true)
         {
             _viewModel.RefreshProfiles();
-            _viewModel.Status = "Generator profiles updated. Save the configuration to persist changes.";
+            if (!JToken.DeepEquals(originalProfiles, JToken.FromObject(_viewModel.Configuration.GeneratorProfiles)))
+            {
+                _viewModel.MarkDirty();
+                _viewModel.Status = "Generator profiles updated. Save the configuration to persist changes.";
+            }
         }
     }
 
     private void Groups_Click(object sender, RoutedEventArgs e)
     {
+        CommitPendingGridEdits();
         if (_viewModel.SelectedTable is null)
         {
             return;
         }
 
+        TableViewModel table = _viewModel.SelectedTable;
+        JToken originalTable = JToken.FromObject(table.Model);
         var dialog = new GenerationGroupsWindow(
-            _viewModel.SelectedTable.Model,
+            table.Model,
             _viewModel.Configuration.GeneratorProfiles,
             _generatorCatalog.Descriptors)
         {
@@ -118,8 +136,13 @@ public partial class MainWindow : Window
 
         if (dialog.ShowDialog() == true)
         {
+            bool changed = !JToken.DeepEquals(originalTable, JToken.FromObject(table.Model));
             _viewModel.RefreshTables();
-            _viewModel.Status = "Generation groups updated. Save the configuration to persist changes.";
+            if (changed)
+            {
+                _viewModel.MarkDirty();
+                _viewModel.Status = "Generation groups updated. Save the configuration to persist changes.";
+            }
         }
     }
 
@@ -284,25 +307,68 @@ public partial class MainWindow : Window
         Close();
     }
 
-    private void SaveTo(string path)
+    private void Window_Closing(object? sender, CancelEventArgs e)
     {
-        RunFileOperation(() =>
+        e.Cancel = !ConfirmSaveChanges();
+    }
+
+    private bool ConfirmSaveChanges()
+    {
+        CommitPendingGridEdits();
+        if (!_viewModel.IsDirty)
+        {
+            return true;
+        }
+
+        MessageBoxResult result = MessageBox.Show(
+            this,
+            $"Save changes to '{_viewModel.DocumentDisplayName}' before continuing?",
+            "Unsaved changes",
+            MessageBoxButton.YesNoCancel,
+            MessageBoxImage.Warning);
+        return result switch
+        {
+            MessageBoxResult.Yes => TrySaveDocument(),
+            MessageBoxResult.No => true,
+            _ => false
+        };
+    }
+
+    private bool TrySaveDocument()
+    {
+        CommitPendingGridEdits();
+        return _viewModel.CurrentPath is null
+            ? TrySaveAs()
+            : SaveTo(_viewModel.CurrentPath);
+    }
+
+    private void CommitPendingGridEdits()
+    {
+        ColumnsGrid.CommitEdit(DataGridEditingUnit.Cell, exitEditingMode: true);
+        ColumnsGrid.CommitEdit(DataGridEditingUnit.Row, exitEditingMode: true);
+    }
+
+    private bool SaveTo(string path)
+    {
+        return RunFileOperation(() =>
         {
             _fileService.Save(path, _viewModel.Configuration);
             _viewModel.SetCurrentPath(path);
         });
     }
 
-    private void RunFileOperation(Action operation)
+    private bool RunFileOperation(Action operation)
     {
         try
         {
             operation();
+            return true;
         }
         catch (Exception exception)
         {
             _viewModel.Status = exception.Message;
             MessageBox.Show(this, exception.Message, "Configuration error", MessageBoxButton.OK, MessageBoxImage.Error);
+            return false;
         }
     }
 }

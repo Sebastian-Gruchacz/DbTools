@@ -21,6 +21,7 @@ internal sealed class ColumnViewModel : INotifyPropertyChanged
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;
+    public event EventHandler? ConfigurationChanged;
 
     public int Ordinal => _model.Ordinal;
     public string ColumnName => _model.ColumnName;
@@ -54,7 +55,17 @@ internal sealed class ColumnViewModel : INotifyPropertyChanged
     public bool Enabled
     {
         get => _model.Enabled;
-        set => _model.Enabled = value;
+        set
+        {
+            if (_model.Enabled == value)
+            {
+                return;
+            }
+
+            _model.Enabled = value;
+            OnPropertyChanged();
+            OnConfigurationChanged();
+        }
     }
 
     public string SemanticRoleDisplay => FindSemanticRole(_model.SemanticRole) is { } role
@@ -75,12 +86,24 @@ internal sealed class ColumnViewModel : INotifyPropertyChanged
         _model.SemanticRole = option.Value;
         OnPropertyChanged(nameof(SemanticRoleDisplay));
         OnPropertyChanged(nameof(SemanticRoleValue));
+        OnConfigurationChanged();
     }
 
     public string GenerationGroupId
     {
         get => _model.GenerationGroupId;
-        set => _model.GenerationGroupId = value ?? string.Empty;
+        set
+        {
+            string groupId = value ?? string.Empty;
+            if (_model.GenerationGroupId == groupId)
+            {
+                return;
+            }
+
+            _model.GenerationGroupId = groupId;
+            OnPropertyChanged();
+            OnConfigurationChanged();
+        }
     }
 
     public string GeneratorType
@@ -104,6 +127,7 @@ internal sealed class ColumnViewModel : INotifyPropertyChanged
             }
 
             OnPropertyChanged();
+            OnConfigurationChanged();
         }
     }
 
@@ -128,6 +152,7 @@ internal sealed class ColumnViewModel : INotifyPropertyChanged
             }
 
             OnPropertyChanged();
+            OnConfigurationChanged();
         }
     }
 
@@ -173,5 +198,10 @@ internal sealed class ColumnViewModel : INotifyPropertyChanged
     private void OnPropertyChanged([CallerMemberName] string? propertyName = null)
     {
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+    }
+
+    private void OnConfigurationChanged()
+    {
+        ConfigurationChanged?.Invoke(this, EventArgs.Empty);
     }
 }
