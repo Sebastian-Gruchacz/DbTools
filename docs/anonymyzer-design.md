@@ -128,6 +128,9 @@ podstawowy grid, profile oraz mapowanie wyjść grup wielokolumnowych na kolumny
 Lista tabel używa osobnych pól o stałej szerokości na znacznik i licznik
 kandydatów, aby nazwy z trafieniami i bez trafień zaczynały się w tej samej
 kolumnie.
+Filtr listy działa wyłącznie w pamięci UI, dopasowuje wszystkie wpisane fragmenty
+do `schema.table` bez rozróżniania wielkości liter i opcjonalnie pokazuje tylko
+tabele zawierające kandydatów. Nie zmienia kolejności ani zawartości JSON-a.
 
 Podgląd generatorów `Row` uruchamia ich rzeczywistą sesję w pamięci, bez dostępu
 do bazy. Dla pojedynczej kolumny operator może otworzyć kilka niemodalnych okien

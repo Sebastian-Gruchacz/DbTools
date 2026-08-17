@@ -223,7 +223,9 @@ dotnet run --project .\src\Anonymyzer\Anonymyzer.ConfigEditor\Anonymyzer.ConfigE
 Kropka `●` przy tabeli lub kolumnie oznacza propozycję automatu, nie zgodę na
 anonimizację. Lista tabel pokazuje obok kropki liczbę kandydatów; oba pola mają
 stałą szerokość, więc kwalifikowane nazwy tabel pozostają wyrównane. Wszystkie
-tabele pozostają dostępne do ręcznej kontroli. Przycisk
+tabele pozostają dostępne do ręcznej kontroli. Filtr wyszukuje bez rozróżniania
+wielkości liter po `schema.table`, obsługuje kilka fragmentów rozdzielonych
+spacjami i może ograniczyć listę do tabel z kandydatami. Przycisk
 `Edit groups...` tworzy grupy wielokolumnowe i mapuje deklarowane wyjścia
 generatora na kolumny. `Refresh sample` uruchamia prawdziwą sesję generatora
 `Row` wyłącznie w pamięci. Dla generatorów `Column`, takich jak `TextShuffler`,

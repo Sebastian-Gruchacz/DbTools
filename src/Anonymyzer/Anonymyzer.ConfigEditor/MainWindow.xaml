@@ -33,6 +33,10 @@
             </Grid.RowDefinitions>
 
             <Grid Margin="0,0,0,10">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="420" />
@@ -71,7 +75,24 @@
                         </DataTemplate>
                     </ComboBox.ItemTemplate>
                 </ComboBox>
-                <StackPanel Grid.Column="2" Margin="14,0,0,0" Orientation="Horizontal">
+                <WrapPanel Grid.Column="2" Margin="14,0,0,0" VerticalAlignment="Center">
+                    <TextBlock Margin="0,0,6,0" VerticalAlignment="Center" Text="Filter:" />
+                    <TextBox Width="150"
+                             Margin="0,0,12,0"
+                             Text="{Binding TableFilterText, UpdateSourceTrigger=PropertyChanged}" />
+                    <CheckBox Margin="0,0,12,0"
+                              VerticalAlignment="Center"
+                              Content="{Binding CandidateTablesOnlyLabel}"
+                              IsChecked="{Binding ShowCandidateTablesOnly}" />
+                    <TextBlock VerticalAlignment="Center"
+                               Foreground="DimGray"
+                               Text="{Binding TableFilterSummary}" />
+                </WrapPanel>
+                <StackPanel Grid.Row="1"
+                            Grid.Column="1"
+                            Grid.ColumnSpan="2"
+                            Margin="0,8,0,0"
+                            Orientation="Horizontal">
                     <Button Width="110" Margin="0,0,8,0" Content="Edit groups..." Click="Groups_Click" />
                     <Button Width="105" Margin="0,0,8,0" Content="Add column..." Click="AddColumns_Click" />
                     <Button Width="120" Margin="0,0,14,0" Content="Refresh sample" Click="RefreshSample_Click" />
