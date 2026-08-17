@@ -1,8 +1,10 @@
 ﻿using Anonymyzer.Base;
 using Anonymyzer.Console;
 using Anonymyzer.Console.CommandLibraryElements;
+using Anonymyzer.Console.Commands;
 using Anonymyzer.Console.GenerateConfiguration;
 using Anonymyzer.Console.Implementation;
+using Anonymyzer.Console.InternalInterfaces;
 using Anonymyzer.Generators.Simple;
 using Anonymyzer.SqlServer;
 
@@ -33,8 +35,11 @@ var config = new GenerateAnonymyzerConfigurationCommandParameters
 {
     ConfigurationFilePath = @"J:\tmp\ows.anonymyse.json",
     DoOverride = true,
+    DatabaseName = @"Test_OWS",
     DatabaseEngine = @"SqlServer",
-    ConnectionString = @"Data Source=DESKTOP-NTTF649;Initial Catalog = Test_OWS;Integrated Security=True;Connect Timeout=30;Encrypt=False;TrustServerCertificate=False;ApplicationIntent=ReadWrite;MultiSubnetFailover=False"
+    StructuralConnectionString = @"Data Source=DESKTOP-NTTF649;Integrated Security=True;Connect Timeout=30;Encrypt=False;TrustServerCertificate=False;ApplicationIntent=ReadWrite;MultiSubnetFailover=False",
+    ConnectionString = @"Data Source=DESKTOP-NTTF649;Integrated Security=True;Connect Timeout=30;Encrypt=False;TrustServerCertificate=False;ApplicationIntent=ReadWrite;MultiSubnetFailover=False" 
+    //Initial Catalog = Test_OWS
 };
 var cmd = (GenerateAnonymyzerConfigurationCommand)serviceProvider.GetService(typeof(GenerateAnonymyzerConfigurationCommand));
 return cmd.Process(config);

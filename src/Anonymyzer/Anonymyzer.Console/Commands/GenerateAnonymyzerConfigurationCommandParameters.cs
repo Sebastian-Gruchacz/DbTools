@@ -1,17 +1,7 @@
-﻿namespace Anonymyzer.Console.GenerateConfiguration;
+﻿namespace Anonymyzer.Console.Commands;
 
-internal class GenerateAnonymyzerConfigurationCommandParameters
+internal class GenerateAnonymyzerConfigurationCommandParameters : DbParameters
 {
-    /// <summary>
-    /// Gets or sets name of used DatabaseEngine
-    /// </summary>
-    public string DatabaseEngine { get; set; } = string.Empty;
-
-    /// <summary>
-    /// Gets or sets connection string to the DB
-    /// </summary>
-    public string ConnectionString { get; set; } = string.Empty;
-
     /// <summary>
     /// Gets or sets path, where generated anonymyzer configuration file will be saved.
     /// </summary>

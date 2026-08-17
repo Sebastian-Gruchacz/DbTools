@@ -6,6 +6,7 @@ using System.Text.Json.Nodes;
 using Anonymyzer.Base;
 using Anonymyzer.Base.Generation;
 using Anonymyzer.Console.CommandLibraryElements;
+using Anonymyzer.Console.Commands;
 using Anonymyzer.Console.Configuration;
 using Anonymyzer.Console.InternalInterfaces;
 using Newtonsoft.Json;
@@ -13,6 +14,7 @@ using Newtonsoft.Json.Linq;
 
 internal class GenerateAnonymyzerConfigurationCommand// : ICommand<GenerateAnonymyzerConfigurationCommandParameters>
 {
+    private const string DEFAULT = @"Default";
     private readonly IDbConnectionFactory _dbConnectionFactory;
     private readonly IEngineFactory _engineFactory;
     private readonly IGeneratorsProvider _generatorsProvider;
@@ -33,7 +35,7 @@ internal class GenerateAnonymyzerConfigurationCommand// : ICommand<GenerateAnony
 
     public int Process(GenerateAnonymyzerConfigurationCommandParameters parameters)
     {
-        IDbConnection? connection = _dbConnectionFactory.CreateConnection(parameters.DatabaseEngine, parameters.ConnectionString);
+        IDbConnection? connection = _dbConnectionFactory.CreateMainConnection(parameters);
         if (connection is null)
         {
             _logger.Error(@"Could not connect to the DB.");
@@ -42,7 +44,10 @@ internal class GenerateAnonymyzerConfigurationCommand// : ICommand<GenerateAnony
 
         try
         {
-            connection.Open();
+            if (connection.State != ConnectionState.Open)
+            {
+                connection.Open();
+            }
 
             IAnonymyzerEngine? engine = _engineFactory.CreateEngine(parameters.DatabaseEngine, connection);
             if (engine is null)
@@ -75,7 +80,7 @@ internal class GenerateAnonymyzerConfigurationCommand// : ICommand<GenerateAnony
                         Share = FileShare.None
                     });
 
-                return ExportTablesForScripting(engine, tables, stream);
+                return ExportTablesForScripting(engine, tables, stream, parameters);
 
             }
             finally
@@ -114,7 +119,8 @@ internal class GenerateAnonymyzerConfigurationCommand// : ICommand<GenerateAnony
             : parameters.ConfigurationFilePath + @".json";
     }
 
-    private int ExportTablesForScripting(IAnonymyzerEngine engine, ITableInfo[] tables, StreamWriter stream)
+    private int ExportTablesForScripting(IAnonymyzerEngine engine, ITableInfo[] tables, StreamWriter stream,
+        DbParameters parameters)
     {
         List<TableProcessingOptions> outputConfigs = new();
 
@@ -131,6 +137,7 @@ internal class GenerateAnonymyzerConfigurationCommand// : ICommand<GenerateAnony
 
         var config = new AnonymyzationConfiguration()
         {
+            DbConfiguration = parameters.GetCleanParameters(),
             Generators = BuildDefaultGeneratorsConfiguration(),
             Tables = outputConfigs.ToArray()
         };
@@ -143,7 +150,7 @@ internal class GenerateAnonymyzerConfigurationCommand// : ICommand<GenerateAnony
     private Dictionary<string, JObject> BuildDefaultGeneratorsConfiguration()
     {
         return _generatorsProvider.GetAllGenerators().ToDictionary(
-            g => $"{g.Name}:Default",
+            g => $"{g.Name}:{DEFAULT}",
             g => g.GetDefaultConfig());
     }
 
@@ -171,7 +178,7 @@ internal class GenerateAnonymyzerConfigurationCommand// : ICommand<GenerateAnony
                 // TODO: use AI strategies to obtain start / default configuration
                 Generator = new ColumnGeneratorConfiguration
                 {
-                    Name = @"TextShuffler:Default"
+                    Name = $@"TextShuffler:{DEFAULT}"
                 }
             };
 

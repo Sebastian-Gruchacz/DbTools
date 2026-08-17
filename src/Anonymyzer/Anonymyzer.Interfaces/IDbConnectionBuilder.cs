@@ -6,5 +6,7 @@ public interface IDbConnectionBuilder
 {
     string Name { get; }
 
-    IDbConnection BuildConnection(string connectionString);
+    IDbConnection BuildMainConnection(string connectionString, string dbName);
+
+    IDbConnection BuildStructuralConnection(string connectionString);
 }

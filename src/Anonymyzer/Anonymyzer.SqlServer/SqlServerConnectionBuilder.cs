@@ -8,8 +8,22 @@ public class SqlServerConnectionBuilder : IDbConnectionBuilder
 {
     public string Name { get; } = LibraryConstants.EngineName;
 
-    public IDbConnection BuildConnection(string connectionString)
+    public IDbConnection BuildStructuralConnection(string connectionString)
     {
-        return new SqlConnection(connectionString);
+        var conn = new SqlConnection(connectionString);
+        
+        return conn;
+    }
+
+    public IDbConnection BuildMainConnection(string connectionString, string dbName)
+    {
+        var conn =  new SqlConnection(connectionString);
+        if (string.IsNullOrWhiteSpace(conn.Database))
+        {
+            conn.Open();
+            conn.ChangeDatabase(dbName);
+        }
+
+        return conn;
     }
 }

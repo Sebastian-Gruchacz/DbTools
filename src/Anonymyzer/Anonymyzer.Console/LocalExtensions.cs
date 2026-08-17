@@ -1,12 +1,12 @@
 ﻿using Anonymyzer.Console.GenerateConfiguration;
-using Anonymyzer.Console.Processing;
-
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Anonymyzer.Console;
 
+using Anonymyzer.Console.Commands;
 using Anonymyzer.Console.Implementation;
 using Anonymyzer.Console.InternalInterfaces;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 internal static class LocalExtensions
 {
@@ -25,7 +25,8 @@ internal static class LocalExtensions
 
         builder.Register(services);
 
-        services.AddSingleton<IGeneratorsProvider, GeneratorsProvider>();
+        services.TryAddSingleton(typeof(IGeneratorsProvider), typeof(GeneratorsProvider));
+        //services.AddSingleton<IGeneratorsProvider, GeneratorsProvider>();
 
         return services;
     }

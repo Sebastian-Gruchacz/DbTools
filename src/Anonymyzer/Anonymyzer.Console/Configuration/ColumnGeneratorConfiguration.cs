@@ -1,6 +1,5 @@
 ﻿namespace Anonymyzer.Console.Configuration;
 
-using System.Text.Json.Nodes;
 using Newtonsoft.Json.Linq;
 
 internal class ColumnGeneratorConfiguration

@@ -4,7 +4,7 @@ internal class TableProcessingOptions
 {
     public string TableName { get; set; } = string.Empty;
     
-    public bool Ignore { get; set; }
+    public bool Enabled { get; set; }
 
     public List<ColumnProcessingOptions> Columns { get; set; } = new();
 
@@ -13,7 +13,7 @@ internal class TableProcessingOptions
         return new TableProcessingOptions
         {
             TableName = tableName,
-            Ignore = true,
+            Enabled = false,
             Columns = new List<ColumnProcessingOptions>()
         };
     }

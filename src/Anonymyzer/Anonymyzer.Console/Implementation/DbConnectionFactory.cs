@@ -3,6 +3,8 @@
 namespace Anonymyzer.Console.Implementation;
 
 using Anonymyzer.Base;
+using Anonymyzer.Console.Commands;
+using Anonymyzer.Console.InternalInterfaces;
 using Microsoft.Extensions.Logging;
 
 public class DbConnectionFactory : IDbConnectionFactory
@@ -16,16 +18,31 @@ public class DbConnectionFactory : IDbConnectionFactory
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
-    public IDbConnection? CreateConnection(string engineName, string connectionString)
+    public IDbConnection? CreateMainConnection(DbParameters config)
     {
-        if (string.IsNullOrWhiteSpace(engineName))
+        if (config == null) throw new ArgumentNullException(nameof(config));
+        if (string.IsNullOrWhiteSpace(config.DatabaseEngine))
         {
-            throw new ArgumentException("Value cannot be null or whitespace.", nameof(engineName));
+            throw new ArgumentException($@"Database Engine name must be specified.", nameof(config));
         }
 
-        var builder = _builders.SingleOrDefault(b => 
-                engineName.Equals(b.Name, StringComparison.InvariantCultureIgnoreCase));
+        var builder = _builders.SingleOrDefault(b =>
+            config.DatabaseEngine.Equals(b.Name, StringComparison.InvariantCultureIgnoreCase));
 
-        return builder?.BuildConnection(connectionString);
+        return builder?.BuildMainConnection(config.ConnectionString, config.DatabaseName);
+    }
+
+    public IDbConnection? CreateStructuralConnection(DbParameters config)
+    {
+        if (config == null) throw new ArgumentNullException(nameof(config));
+        if (string.IsNullOrWhiteSpace(config.DatabaseEngine))
+        {
+            throw new ArgumentException($"Database Engine name must be specified.", nameof(config));
+        }
+
+        var builder = _builders.SingleOrDefault(b =>
+            config.DatabaseEngine.Equals(b.Name, StringComparison.InvariantCultureIgnoreCase));
+
+        return builder?.BuildStructuralConnection(config.StructuralConnectionString);
     }
 }
