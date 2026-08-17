@@ -37,6 +37,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Anonymyzer.PostgreSql.Tests
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Anonymyzer.LanguagePack.English", "Anonymyzer\LanguagePacks\Anonymyzer.LanguagePack.English\Anonymyzer.LanguagePack.English.csproj", "{47823D59-BC44-4D20-AB48-7B156C91285D}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Anonymyzer.DatabaseAccess", "Anonymyzer\Anonymyzer.DatabaseAccess\Anonymyzer.DatabaseAccess.csproj", "{68E61F36-29F3-4A43-9471-7B57E0C3518A}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -103,6 +105,10 @@ Global
 		{47823D59-BC44-4D20-AB48-7B156C91285D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{47823D59-BC44-4D20-AB48-7B156C91285D}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{47823D59-BC44-4D20-AB48-7B156C91285D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{68E61F36-29F3-4A43-9471-7B57E0C3518A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{68E61F36-29F3-4A43-9471-7B57E0C3518A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{68E61F36-29F3-4A43-9471-7B57E0C3518A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{68E61F36-29F3-4A43-9471-7B57E0C3518A}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -123,6 +129,7 @@ Global
 		{DC1C9997-9916-AB9C-1A37-E98309B47B60} = {A37A2EDC-0572-4CBB-BA4A-FD7D03CCBE35}
 		{09E559CB-EAB9-4C4A-9C8A-EF7DBCCF559C} = {DC1C9997-9916-AB9C-1A37-E98309B47B60}
 		{47823D59-BC44-4D20-AB48-7B156C91285D} = {A37A2EDC-0572-4CBB-BA4A-FD7D03CCBE35}
+		{68E61F36-29F3-4A43-9471-7B57E0C3518A} = {A37A2EDC-0572-4CBB-BA4A-FD7D03CCBE35}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {E951A53D-C55F-44C0-99AB-510AA0078893}

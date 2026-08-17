@@ -1,8 +1,8 @@
-﻿namespace Anonymyzer.Console.Safety;
+﻿namespace Anonymyzer.Configuration.Safety;
 
 using System.Data;
 
-internal interface IDetachedCopyMarkerReader
+public interface IDetachedCopyMarkerReader
 {
     DetachedCopyMarker Read(string databaseEngine, IDbConnection connection);
 }

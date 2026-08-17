@@ -1,9 +1,9 @@
-﻿namespace Anonymyzer.Console.Safety;
+﻿namespace Anonymyzer.Configuration.Safety;
 
 using System.Data;
 using System.Globalization;
 
-internal sealed class DetachedCopyMarkerReader : IDetachedCopyMarkerReader
+public sealed class DetachedCopyMarkerReader : IDetachedCopyMarkerReader
 {
     public DetachedCopyMarker Read(string databaseEngine, IDbConnection connection)
     {

@@ -8,7 +8,7 @@ using Anonymyzer.Configuration;
 using Anonymyzer.Console.CommandLibraryElements;
 using Anonymyzer.Console.Commands;
 using Anonymyzer.Console.InternalInterfaces;
-using Anonymyzer.Console.Safety;
+using Anonymyzer.Configuration.Safety;
 using Newtonsoft.Json;
 
 internal class GenerateAnonymyzerConfigurationCommand// : ICommand<GenerateAnonymyzerConfigurationCommandParameters>

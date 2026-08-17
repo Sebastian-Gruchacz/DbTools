@@ -1,9 +1,8 @@
-﻿namespace Anonymyzer.Console.Safety;
+﻿namespace Anonymyzer.Configuration.Safety;
 
 using System.Data;
-using Anonymyzer.Configuration;
 
-internal sealed class DetachedCopySafetyValidator(IDetachedCopyMarkerReader markerReader)
+public sealed class DetachedCopySafetyValidator(IDetachedCopyMarkerReader markerReader)
 {
     public static void EnsureConfigurationDoesNotTargetMarker(AnonymizationConfiguration configuration)
     {

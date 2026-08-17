@@ -3,7 +3,7 @@
 using System.Data;
 using System.Diagnostics.CodeAnalysis;
 using Anonymyzer.Configuration;
-using Anonymyzer.Console.Safety;
+using Anonymyzer.Configuration.Safety;
 
 public sealed class DetachedCopySafetyValidatorTests
 {

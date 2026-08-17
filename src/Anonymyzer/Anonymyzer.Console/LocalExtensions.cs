@@ -7,7 +7,7 @@ using Anonymyzer.Base;
 using Anonymyzer.Console.Commands;
 using Anonymyzer.Console.Implementation;
 using Anonymyzer.Console.InternalInterfaces;
-using Anonymyzer.Console.Safety;
+using Anonymyzer.Configuration.Safety;
 using Anonymyzer.Generators.Person;
 using Anonymyzer.Generators.Simple;
 using Anonymyzer.LanguagePack.English;

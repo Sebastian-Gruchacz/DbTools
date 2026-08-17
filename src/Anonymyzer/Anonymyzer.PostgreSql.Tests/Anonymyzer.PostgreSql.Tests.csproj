@@ -16,6 +16,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Anonymyzer.Configuration\Anonymyzer.Configuration.csproj" />
+    <ProjectReference Include="..\Anonymyzer.DatabaseAccess\Anonymyzer.DatabaseAccess.csproj" />
     <ProjectReference Include="..\Anonymyzer.PostgreSql\Anonymyzer.PostgreSql.csproj" />
     <ProjectReference Include="..\Anonymyzer.SqlServer\Anonymyzer.SqlServer.csproj" />
     <ProjectReference Include="..\Anonymyzer.Console\Anonymyzer.Console.csproj" />

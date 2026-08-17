@@ -1,6 +1,6 @@
 ﻿namespace Anonymyzer.PostgreSql.Tests;
 
-using Anonymyzer.Console.Safety;
+using Anonymyzer.Configuration.Safety;
 using Npgsql;
 
 public sealed class PostgreSqlAnonymyzerEngineIntegrationTests

@@ -6,7 +6,7 @@ using Anonymyzer.Configuration;
 using Anonymyzer.Console.CommandLibraryElements;
 using Anonymyzer.Console.InternalInterfaces;
 using Anonymyzer.Console.Planning;
-using Anonymyzer.Console.Safety;
+using Anonymyzer.Configuration.Safety;
 using Newtonsoft.Json;
 
 internal sealed class ProcessAnonymyzerCommand
