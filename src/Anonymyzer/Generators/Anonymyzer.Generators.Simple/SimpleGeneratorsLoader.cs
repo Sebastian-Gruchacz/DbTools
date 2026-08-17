@@ -8,12 +8,10 @@
     {
         public void RegisterGenerators(IServiceCollection serviceCollection)
         {
-            // TODO: manual or reflection - other types in assembly
-
             serviceCollection.AddTransient<IGenerator, ShufflingTextGenerator>();
-
-
-
+            serviceCollection.AddTransient<IGenerator, FixedTextGenerator>();
+            serviceCollection.AddTransient<IGenerator, SequentialTextGenerator>();
+            serviceCollection.AddTransient<IGenerator, EmailAddressGenerator>();
         }
     }
 }

@@ -12,17 +12,25 @@ internal sealed class ColumnViewModel : INotifyPropertyChanged
 
     public ColumnViewModel(
         ColumnProcessingOptions model,
-        IReadOnlyList<GeneratorProfileConfiguration> profiles)
+        IReadOnlyList<GeneratorProfileConfiguration> profiles,
+        IReadOnlyList<SemanticRoleGroup> semanticRoleGroups)
     {
         _model = model;
         _profiles = profiles;
+        SemanticRoleGroups = IncludeStoredCustomRole(semanticRoleGroups, model.SemanticRole);
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;
+    public event EventHandler? ConfigurationChanged;
 
     public int Ordinal => _model.Ordinal;
     public string ColumnName => _model.ColumnName;
     public string DataType => _model.DataType;
+    public string TypeDisplay => _model.DataType.Equals("Text", StringComparison.OrdinalIgnoreCase)
+        ? $"{_model.DataType} ({FormatLength(_model.MaxLength)})"
+        : _model.DataType;
+    public ColumnProcessingOptions Model => _model;
+    public IReadOnlyList<SemanticRoleGroup> SemanticRoleGroups { get; }
     public string CandidateMark => _model.Detection.IsCandidate ? "●" : string.Empty;
     public string CandidateDetails => _model.Detection.IsCandidate
         ? $"{_model.Detection.SuggestedRole} ({_model.Detection.Confidence:P0}, {_model.Detection.MatchedRule})"
@@ -47,19 +55,55 @@ internal sealed class ColumnViewModel : INotifyPropertyChanged
     public bool Enabled
     {
         get => _model.Enabled;
-        set => _model.Enabled = value;
+        set
+        {
+            if (_model.Enabled == value)
+            {
+                return;
+            }
+
+            _model.Enabled = value;
+            OnPropertyChanged();
+            OnConfigurationChanged();
+        }
     }
 
-    public string SemanticRole
+    public string SemanticRoleDisplay => FindSemanticRole(_model.SemanticRole) is { } role
+        ? string.IsNullOrEmpty(role.Option.Value)
+            ? "— No semantic role"
+            : $"{role.Group.DisplayName} › {role.Option.DisplayName}"
+        : _model.SemanticRole;
+
+    public string SemanticRoleValue => _model.SemanticRole;
+
+    public void SelectSemanticRole(SemanticRoleOption option)
     {
-        get => _model.SemanticRole;
-        set => _model.SemanticRole = value ?? string.Empty;
+        if (_model.SemanticRole == option.Value)
+        {
+            return;
+        }
+
+        _model.SemanticRole = option.Value;
+        OnPropertyChanged(nameof(SemanticRoleDisplay));
+        OnPropertyChanged(nameof(SemanticRoleValue));
+        OnConfigurationChanged();
     }
 
     public string GenerationGroupId
     {
         get => _model.GenerationGroupId;
-        set => _model.GenerationGroupId = value ?? string.Empty;
+        set
+        {
+            string groupId = value ?? string.Empty;
+            if (_model.GenerationGroupId == groupId)
+            {
+                return;
+            }
+
+            _model.GenerationGroupId = groupId;
+            OnPropertyChanged();
+            OnConfigurationChanged();
+        }
     }
 
     public string GeneratorType
@@ -83,6 +127,7 @@ internal sealed class ColumnViewModel : INotifyPropertyChanged
             }
 
             OnPropertyChanged();
+            OnConfigurationChanged();
         }
     }
 
@@ -107,6 +152,7 @@ internal sealed class ColumnViewModel : INotifyPropertyChanged
             }
 
             OnPropertyChanged();
+            OnConfigurationChanged();
         }
     }
 
@@ -115,8 +161,47 @@ internal sealed class ColumnViewModel : INotifyPropertyChanged
         return _profiles.FirstOrDefault(profile => profile.Id.Equals(profileId, StringComparison.OrdinalIgnoreCase));
     }
 
+    private (SemanticRoleGroup Group, SemanticRoleOption Option)? FindSemanticRole(string value)
+    {
+        foreach (SemanticRoleGroup group in SemanticRoleGroups)
+        {
+            SemanticRoleOption? option = group.Options.FirstOrDefault(candidate => candidate.Value == value);
+            if (option is not null)
+            {
+                return (group, option);
+            }
+        }
+
+        return null;
+    }
+
+    private static IReadOnlyList<SemanticRoleGroup> IncludeStoredCustomRole(
+        IReadOnlyList<SemanticRoleGroup> groups,
+        string storedRole)
+    {
+        if (string.IsNullOrWhiteSpace(storedRole)
+            || groups.SelectMany(group => group.Options).Any(option => option.Value == storedRole))
+        {
+            return groups;
+        }
+
+        return groups
+            .Append(new SemanticRoleGroup(
+                "Custom / legacy",
+                [new SemanticRoleOption(storedRole, storedRole)]))
+            .ToArray();
+    }
+
+    private static string FormatLength(int maxLength) =>
+        maxLength <= 0 || maxLength >= 1_073_741_823 ? "MAX" : maxLength.ToString();
+
     private void OnPropertyChanged([CallerMemberName] string? propertyName = null)
     {
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+    }
+
+    private void OnConfigurationChanged()
+    {
+        ConfigurationChanged?.Invoke(this, EventArgs.Empty);
     }
 }

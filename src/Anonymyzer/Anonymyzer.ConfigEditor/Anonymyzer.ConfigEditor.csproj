@@ -15,6 +15,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Anonymyzer.ConfigEditor.Abstractions\Anonymyzer.ConfigEditor.Abstractions.csproj" />
     <ProjectReference Include="..\Anonymyzer.Configuration\Anonymyzer.Configuration.csproj" />
+    <ProjectReference Include="..\Anonymyzer.DatabaseAccess\Anonymyzer.DatabaseAccess.csproj" />
     <ProjectReference Include="..\Generators\Anonymyzer.Generators.Person\Anonymyzer.Generators.Person.csproj" />
     <ProjectReference Include="..\Generators\Anonymyzer.Generators.Person.Wpf\Anonymyzer.Generators.Person.Wpf.csproj" />
     <ProjectReference Include="..\Generators\Anonymyzer.Generators.Simple\Anonymyzer.Generators.Simple.csproj" />

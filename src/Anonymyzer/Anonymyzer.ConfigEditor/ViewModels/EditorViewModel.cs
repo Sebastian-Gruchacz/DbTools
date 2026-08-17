@@ -2,25 +2,22 @@
 
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.IO;
 using System.Runtime.CompilerServices;
 using Anonymyzer.Configuration;
 
 internal sealed class EditorViewModel : INotifyPropertyChanged
 {
+    private readonly List<TableViewModel> _allTables = new();
     private TableViewModel? _selectedTable;
+    private string _tableFilterText = string.Empty;
+    private bool _showCandidateTablesOnly;
+    private bool _isDirty;
     private string _status = "Create or open an anonymization configuration.";
 
     public EditorViewModel()
     {
-        SemanticRoles = new[]
-        {
-            string.Empty,
-            "Person.FirstName", "Person.LastName", "Person.FullName", "Person.BirthDate", "Person.NationalId",
-            "Person.Gender",
-            "Contact.Email", "Contact.Phone",
-            "Address.Country", "Address.Region", "Address.City", "Address.Street", "Address.PostalCode",
-            "Company.Name", "Company.TaxId"
-        };
+        SemanticRoleGroups = SemanticRoleCatalog.CreateDefault();
 
         Load(new AnonymizationConfiguration(), null);
     }
@@ -31,13 +28,43 @@ internal sealed class EditorViewModel : INotifyPropertyChanged
     public ObservableCollection<TableViewModel> Tables { get; } = new();
     public ObservableCollection<string> GeneratorTypes { get; } = new();
     public ObservableCollection<string> ProfileIds { get; } = new();
-    public IReadOnlyList<string> SemanticRoles { get; }
+    public IReadOnlyList<SemanticRoleGroup> SemanticRoleGroups { get; }
     public string? CurrentPath { get; private set; }
+    public bool IsDirty => _isDirty;
+    public string DocumentDisplayName => CurrentPath is null ? "Untitled" : Path.GetFileName(CurrentPath);
+    public string WindowTitle => $"{DocumentDisplayName}{(IsDirty ? " *" : string.Empty)} — Anonymyzer Configuration Editor";
+    public string CandidateTablesOnlyLabel =>
+        $"Only candidates ({_allTables.Count(table => table.CandidateCount > 0)})";
+    public string TableFilterSummary => $"{Tables.Count} / {_allTables.Count} tables";
 
     public TableViewModel? SelectedTable
     {
         get => _selectedTable;
         set => SetField(ref _selectedTable, value);
+    }
+
+    public string TableFilterText
+    {
+        get => _tableFilterText;
+        set
+        {
+            if (SetField(ref _tableFilterText, value ?? string.Empty))
+            {
+                ApplyTableFilter();
+            }
+        }
+    }
+
+    public bool ShowCandidateTablesOnly
+    {
+        get => _showCandidateTablesOnly;
+        set
+        {
+            if (SetField(ref _showCandidateTablesOnly, value))
+            {
+                ApplyTableFilter();
+            }
+        }
     }
 
     public string Status
@@ -50,29 +77,50 @@ internal sealed class EditorViewModel : INotifyPropertyChanged
     {
         Configuration = configuration;
         CurrentPath = path;
+        _isDirty = false;
+        _tableFilterText = string.Empty;
+        _showCandidateTablesOnly = false;
+        OnPropertyChanged(nameof(TableFilterText));
+        OnPropertyChanged(nameof(ShowCandidateTablesOnly));
+        OnPropertyChanged(nameof(CurrentPath));
+        OnPropertyChanged(nameof(IsDirty));
+        OnPropertyChanged(nameof(DocumentDisplayName));
+        OnPropertyChanged(nameof(WindowTitle));
 
-        Tables.Clear();
-        foreach (TableProcessingOptions table in configuration.Tables.OrderBy(table => table.SchemaName).ThenBy(table => table.TableName))
-        {
-            Tables.Add(new TableViewModel(table, configuration.GeneratorProfiles));
-        }
-
+        RebuildAllTables();
         RefreshProfiles();
-        SelectedTable = Tables.FirstOrDefault();
+        ApplyTableFilter();
         Status = path is null ? "New configuration." : $"Opened {path}";
     }
 
     public void SetCurrentPath(string path)
     {
         CurrentPath = path;
+        _isDirty = false;
+        OnPropertyChanged(nameof(CurrentPath));
+        OnPropertyChanged(nameof(IsDirty));
+        OnPropertyChanged(nameof(DocumentDisplayName));
+        OnPropertyChanged(nameof(WindowTitle));
         Status = $"Saved {path}";
+    }
+
+    public void MarkDirty()
+    {
+        if (_isDirty)
+        {
+            return;
+        }
+
+        _isDirty = true;
+        OnPropertyChanged(nameof(IsDirty));
+        OnPropertyChanged(nameof(WindowTitle));
     }
 
     public void RefreshProfiles()
     {
         ReplaceItems(GeneratorTypes, Configuration.GeneratorProfiles
             .Select(profile => profile.GeneratorType)
-            .Append("TextShuffler")
+            .Concat(["EmailAddress", "FixedText", "SequentialText", "TextShuffler"])
             .Where(value => !string.IsNullOrWhiteSpace(value))
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .OrderBy(value => value));
@@ -90,15 +138,61 @@ internal sealed class EditorViewModel : INotifyPropertyChanged
             ? null
             : $"{SelectedTable.Model.SchemaName}.{SelectedTable.Model.TableName}";
 
+        RebuildAllTables(preserveVisibleColumns: true);
+        ApplyTableFilter(selectedTableKey);
+    }
+
+    private void RebuildAllTables(bool preserveVisibleColumns = false)
+    {
+        Dictionary<string, IReadOnlySet<string>> visibleColumns = preserveVisibleColumns
+            ? _allTables.ToDictionary(
+                table => table.QualifiedName,
+                table => (IReadOnlySet<string>)table.Columns
+                    .Select(column => column.ColumnName)
+                    .ToHashSet(StringComparer.OrdinalIgnoreCase),
+                StringComparer.OrdinalIgnoreCase)
+            : new Dictionary<string, IReadOnlySet<string>>(StringComparer.OrdinalIgnoreCase);
+
+        _allTables.Clear();
+        _allTables.AddRange(Configuration.Tables
+            .OrderBy(table => table.SchemaName)
+            .ThenBy(table => table.TableName)
+            .Select(table =>
+            {
+                string key = $"{table.SchemaName}.{table.TableName}";
+                visibleColumns.TryGetValue(key, out IReadOnlySet<string>? previouslyVisible);
+                var viewModel = new TableViewModel(
+                    table,
+                    Configuration.GeneratorProfiles,
+                    SemanticRoleGroups,
+                    previouslyVisible);
+                viewModel.ConfigurationChanged += (_, _) => MarkDirty();
+                return viewModel;
+            }));
+    }
+
+    private void ApplyTableFilter(string? preferredTableKey = null)
+    {
+        preferredTableKey ??= SelectedTable?.QualifiedName;
+        string[] terms = _tableFilterText.Split(
+            ' ',
+            StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        IEnumerable<TableViewModel> visibleTables = _allTables
+            .Where(table => !_showCandidateTablesOnly || table.CandidateCount > 0)
+            .Where(table => terms.All(term =>
+                table.QualifiedName.Contains(term, StringComparison.OrdinalIgnoreCase)));
+
         Tables.Clear();
-        foreach (TableProcessingOptions table in Configuration.Tables.OrderBy(table => table.SchemaName).ThenBy(table => table.TableName))
+        foreach (TableViewModel table in visibleTables)
         {
-            Tables.Add(new TableViewModel(table, Configuration.GeneratorProfiles));
+            Tables.Add(table);
         }
 
         SelectedTable = Tables.FirstOrDefault(table =>
-            $"{table.Model.SchemaName}.{table.Model.TableName}".Equals(selectedTableKey, StringComparison.OrdinalIgnoreCase))
+            table.QualifiedName.Equals(preferredTableKey, StringComparison.OrdinalIgnoreCase))
             ?? Tables.FirstOrDefault();
+        OnPropertyChanged(nameof(CandidateTablesOnlyLabel));
+        OnPropertyChanged(nameof(TableFilterSummary));
     }
 
     private static void ReplaceItems(ObservableCollection<string> target, IEnumerable<string> values)
@@ -110,14 +204,18 @@ internal sealed class EditorViewModel : INotifyPropertyChanged
         }
     }
 
-    private void SetField<T>(ref T field, T value, [CallerMemberName] string? propertyName = null)
+    private bool SetField<T>(ref T field, T value, [CallerMemberName] string? propertyName = null)
     {
         if (EqualityComparer<T>.Default.Equals(field, value))
         {
-            return;
+            return false;
         }
 
         field = value;
-        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        OnPropertyChanged(propertyName);
+        return true;
     }
+
+    private void OnPropertyChanged([CallerMemberName] string? propertyName = null) =>
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 }

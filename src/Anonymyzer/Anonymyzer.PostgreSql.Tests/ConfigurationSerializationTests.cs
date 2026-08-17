@@ -13,7 +13,8 @@ public class ConfigurationSerializationTests
             Database = new DatabaseTargetConfiguration
             {
                 DatabaseEngine = "PostgreSql",
-                DatabaseName = "detached_clone"
+                DatabaseName = "detached_clone",
+                DetachedCopyMarkerId = "11111111-2222-3333-4444-555555555555"
             }
         };
 
@@ -21,6 +22,7 @@ public class ConfigurationSerializationTests
 
         Assert.Contains("PostgreSql", json);
         Assert.Contains("detached_clone", json);
+        Assert.Contains("11111111-2222-3333-4444-555555555555", json);
         Assert.DoesNotContain("ConnectionString", json);
     }
 
@@ -84,7 +86,7 @@ public class ConfigurationSerializationTests
         AnonymizationConfiguration? restored = JsonConvert.DeserializeObject<AnonymizationConfiguration>(json);
 
         Assert.NotNull(restored);
-        Assert.Equal("0.3.0", restored.Version);
+        Assert.Equal("0.4.0", restored.Version);
         Assert.True(restored.Tables[0].HasCandidates);
         Assert.Equal("first_name", restored.Tables[0].GenerationGroups[0].Bindings["FirstName"]);
         Assert.DoesNotContain("HasCandidates", json);

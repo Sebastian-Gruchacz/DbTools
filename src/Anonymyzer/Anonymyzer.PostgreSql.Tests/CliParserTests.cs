@@ -1,0 +1,77 @@
+﻿namespace Anonymyzer.PostgreSql.Tests;
+
+using Anonymyzer.Console.Cli;
+
+public sealed class CliParserTests
+{
+    private static readonly Guid MarkerId = Guid.Parse("11111111-2222-3333-4444-555555555555");
+
+    [Fact]
+    public void ParsesGenerateConfigWithoutAcceptingASecret()
+    {
+        CliParseResult result = CliParser.Parse(
+        [
+            "generate-config",
+            "--engine", "PostgreSql",
+            "--database", "anonymyzer_clone",
+            "--connection-env", "ANONYMYZER_CONNECTION",
+            "--marker-id", MarkerId.ToString("D"),
+            "--output", "config.json",
+            "--force"
+        ]);
+
+        var options = Assert.IsType<GenerateConfigCliOptions>(result.Command);
+        Assert.True(result.IsSuccess);
+        Assert.Equal(MarkerId, options.MarkerId);
+        Assert.Equal("ANONYMYZER_CONNECTION", options.ConnectionEnvironmentVariable);
+        Assert.True(options.Force);
+    }
+
+    [Fact]
+    public void RejectsConnectionStringArgument()
+    {
+        CliParseResult result = CliParser.Parse(
+        [
+            "run",
+            "--config", "config.json",
+            "--connection-env", "ANONYMYZER_CONNECTION",
+            "--marker-id", MarkerId.ToString("D"),
+            "--dry-run",
+            "--connection-string", "Host=production"
+        ]);
+
+        Assert.False(result.IsSuccess);
+        Assert.Equal("Unknown option '--connection-string'.", result.Error);
+    }
+
+    [Fact]
+    public void RejectsEmptyMarkerId()
+    {
+        CliParseResult result = CliParser.Parse(
+        [
+            "run",
+            "--config", "config.json",
+            "--connection-env", "ANONYMYZER_CONNECTION",
+            "--marker-id", Guid.Empty.ToString("D"),
+            "--dry-run"
+        ]);
+
+        Assert.False(result.IsSuccess);
+        Assert.Contains("non-empty GUID", result.Error);
+    }
+
+    [Fact]
+    public void RunRequiresDryRunUntilDataModificationIsImplemented()
+    {
+        CliParseResult result = CliParser.Parse(
+        [
+            "run",
+            "--config", "config.json",
+            "--connection-env", "ANONYMYZER_CONNECTION",
+            "--marker-id", MarkerId.ToString("D")
+        ]);
+
+        Assert.False(result.IsSuccess);
+        Assert.Contains("requires --dry-run", result.Error);
+    }
+}

@@ -1,0 +1,59 @@
+﻿<UserControl x:Class="Anonymyzer.Generators.Simple.Wpf.EmailAddressGeneratorEditor"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+    <Grid Margin="16">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="Auto" />
+            <ColumnDefinition Width="260" />
+        </Grid.ColumnDefinitions>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <TextBlock Grid.Row="0"
+                   Grid.ColumnSpan="2"
+                   Margin="0,0,0,14"
+                   TextWrapping="Wrap"
+                   Text="Opaque creates unrelated addresses. NameBased reads configured name columns from the current row; Generated makes the planner run their producers first." />
+
+        <TextBlock Grid.Row="1" Margin="0,0,12,8" VerticalAlignment="Center" Text="Pattern:" />
+        <ComboBox x:Name="PatternComboBox" Grid.Row="1" Grid.Column="1" Margin="0,0,0,8" />
+
+        <TextBlock Grid.Row="2" Margin="0,0,12,8" VerticalAlignment="Center" Text="Domain:" />
+        <TextBox x:Name="DomainTextBox" Grid.Row="2" Grid.Column="1" Margin="0,0,0,8" />
+
+        <TextBlock Grid.Row="3" Margin="0,0,12,8" VerticalAlignment="Center" Text="Opaque prefix:" />
+        <TextBox x:Name="OpaquePrefixTextBox" Grid.Row="3" Grid.Column="1" Margin="0,0,0,8" />
+
+        <TextBlock Grid.Row="4" Margin="0,0,12,8" VerticalAlignment="Center" Text="First-name column:" />
+        <TextBox x:Name="FirstNameColumnTextBox" Grid.Row="4" Grid.Column="1" Margin="0,0,0,8" />
+
+        <TextBlock Grid.Row="5" Margin="0,0,12,8" VerticalAlignment="Center" Text="Last-name column:" />
+        <TextBox x:Name="LastNameColumnTextBox" Grid.Row="5" Grid.Column="1" Margin="0,0,0,8" />
+
+        <TextBlock Grid.Row="6" Margin="0,0,12,8" VerticalAlignment="Center" Text="Name values:" />
+        <ComboBox x:Name="NameValueSourceComboBox" Grid.Row="6" Grid.Column="1" Margin="0,0,0,8" />
+
+        <TextBlock Grid.Row="7" Margin="0,0,12,8" VerticalAlignment="Center" Text="Start at:" />
+        <TextBox x:Name="StartAtTextBox" Grid.Row="7" Grid.Column="1" Margin="0,0,0,8" />
+
+        <TextBlock Grid.Row="8" Margin="0,0,12,8" VerticalAlignment="Center" Text="Minimum digits:" />
+        <TextBox x:Name="MinimumDigitsTextBox" Grid.Row="8" Grid.Column="1" Margin="0,0,0,8" />
+
+        <CheckBox x:Name="PreserveNullsCheckBox"
+                  Grid.Row="9"
+                  Grid.ColumnSpan="2"
+                  Content="Preserve null positions" />
+    </Grid>
+    </ScrollViewer>
+</UserControl>

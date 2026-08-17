@@ -2,6 +2,7 @@
 
 using Anonymyzer.Base.Generation;
 using Anonymyzer.Configuration;
+using Newtonsoft.Json.Linq;
 
 internal sealed class GeneratorPreviewService(GeneratorCatalog catalog)
 {
@@ -77,9 +78,69 @@ internal sealed class GeneratorPreviewService(GeneratorCatalog catalog)
             }
 
             IGenerator? generator = catalog.Find(profile.GeneratorType, profile.GeneratorVersion);
-            if (generator?.Descriptor.Scope == GeneratorExecutionScope.Column)
+            if (generator is null)
+            {
+                samples[column.ColumnName] = "generator unavailable";
+                continue;
+            }
+
+            if (generator.Descriptor.Scope == GeneratorExecutionScope.Column)
             {
                 samples[column.ColumnName] = "requires cloned data";
+                continue;
+            }
+
+            if (generator.Descriptor.Scope != GeneratorExecutionScope.Row
+                || generator.Descriptor.Outputs.Count != 1)
+            {
+                samples[column.ColumnName] = "requires generation group";
+                continue;
+            }
+
+            try
+            {
+                JObject options = (JObject)profile.Options.DeepClone();
+                options.Merge(column.Generator.Options, new JsonMergeSettings
+                {
+                    MergeArrayHandling = MergeArrayHandling.Replace,
+                    MergeNullValueHandling = MergeNullValueHandling.Merge
+                });
+                object configuration = generator.Configuration.Deserialize(options);
+                IReadOnlyList<string> errors = generator.Configuration.Validate(configuration);
+                if (errors.Count > 0)
+                {
+                    samples[column.ColumnName] = errors[0];
+                    continue;
+                }
+
+                GeneratorOutputDescriptor output = generator.Descriptor.Outputs.Single();
+                var binding = new GeneratorBinding(
+                    new GeneratorTableReference(table.SchemaName, table.TableName),
+                    new Dictionary<string, string> { [output.Name] = column.ColumnName });
+                IReadOnlyList<GeneratorDataRequirement> requirements =
+                    generator.GetDataRequirements(binding, configuration);
+                await using IGeneratorSession session = await generator.PrepareAsync(
+                    new GeneratorPreparationContext(binding, new RejectingDataReader()),
+                    configuration,
+                    cancellationToken);
+                var row = new PreviewRow();
+                row.SetValue(column.ColumnName, "preview-source");
+                foreach (GeneratorDataRequirement requirement in requirements.Where(requirement =>
+                             !requirement.RequiresCompleteScan
+                             && requirement.Table == binding.Table))
+                {
+                    foreach (string sourceColumn in requirement.Columns)
+                    {
+                        row.SetValue(sourceColumn, PreviewSourceValue(sourceColumn));
+                    }
+                }
+
+                await session.ApplyAsync(row, cancellationToken);
+                samples[column.ColumnName] = FormatSample(row.GetBoundValue(column.ColumnName), output.Name);
+            }
+            catch (Exception exception)
+            {
+                samples[column.ColumnName] = exception.Message;
             }
         }
 
@@ -89,6 +150,15 @@ internal sealed class GeneratorPreviewService(GeneratorCatalog catalog)
     private static string FormatSample(object? value, string output)
     {
         return value?.ToString() ?? $"{output}: null";
+    }
+
+    private static string PreviewSourceValue(string columnName)
+    {
+        return columnName.Contains("last", StringComparison.OrdinalIgnoreCase)
+            || columnName.Contains("surname", StringComparison.OrdinalIgnoreCase)
+            || columnName.Contains("nazw", StringComparison.OrdinalIgnoreCase)
+                ? "Kowalski"
+                : "Jan";
     }
 
     private static void SetGroupMessage(

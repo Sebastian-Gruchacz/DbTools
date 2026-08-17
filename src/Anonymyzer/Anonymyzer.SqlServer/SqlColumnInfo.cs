@@ -2,13 +2,16 @@
 
 using Anonymyzer.Base;
 
-public class SqlColumnInfo : IColumnInfo
+public sealed class SqlColumnInfo : IColumnInfo
 {
-    public SqlColumnInfo(string columnName, DbDataType dataType)
+    public SqlColumnInfo(int ordinal, string columnName, DbDataType dataType)
     {
+        Ordinal = ordinal;
         Name = columnName;
         DataType = dataType;
     }
+
+    public int Ordinal { get; }
 
     public string Name { get; }
 
