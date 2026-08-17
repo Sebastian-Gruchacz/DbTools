@@ -25,6 +25,7 @@ public partial class MainWindow : Window
         new ShufflingTextGeneratorEditorFactory(),
         new FixedTextGeneratorEditorFactory(),
         new SequentialTextGeneratorEditorFactory(),
+        new EmailAddressGeneratorEditorFactory(),
         new PersonIdentityGeneratorEditorFactory()
     };
 

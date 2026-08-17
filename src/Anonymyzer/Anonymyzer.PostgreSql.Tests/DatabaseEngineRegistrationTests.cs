@@ -39,5 +39,6 @@ public class DatabaseEngineRegistrationTests
         Assert.Contains(generators, generator => generator.Descriptor.Type == "TextShuffler");
         Assert.Contains(generators, generator => generator is FixedTextGenerator);
         Assert.Contains(generators, generator => generator is SequentialTextGenerator);
+        Assert.Contains(generators, generator => generator is EmailAddressGenerator);
     }
 }

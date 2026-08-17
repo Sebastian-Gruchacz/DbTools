@@ -99,7 +99,8 @@ językowe opisuje [docs/anonymyzer-design.md](docs/anonymyzer-design.md).
 - `Anonymyzer.PostgreSql` — analogiczny provider oparty na Npgsql i
   `information_schema`;
 - `Anonymyzer.PostgreSql.Tests` — testy buildera i opcjonalna integracja z bazą;
-- `Anonymyzer.Generators.Simple` — `TextShuffler`, `FixedText` i `SequentialText`;
+- `Anonymyzer.Generators.Simple` — `TextShuffler`, `FixedText`, `SequentialText`
+  i `EmailAddress`;
 - `Anonymyzer.Generators.Person` — generator spójnej tożsamości w jednym wierszu;
 - `Anonymyzer.ConfigEditor.Abstractions` — kontrakt opcjonalnych paneli WPF;
 - `Anonymyzer.Generators.Simple.Wpf` — panele konfiguracji generatorów prostych;
@@ -127,7 +128,9 @@ językowe opisuje [docs/anonymyzer-design.md](docs/anonymyzer-design.md).
 - `FixedText` 1.0.0: stała wartość tekstowa z opcjonalnym zachowaniem `NULL`;
 - `SequentialText` 1.0.0: unikalny w ramach sesji tekst z prefiksem, sufiksem,
   początkiem numeracji i konfigurowalnym dopełnieniem zerami;
-- dedykowane panele WPF parametrów wszystkich trzech generatorów prostych;
+- `EmailAddress` 1.0.0: tryb opaque albo adres oparty na kolumnach imienia i
+  nazwiska, z zależnością od ich wartości oryginalnych lub wygenerowanych;
+- dedykowane panele WPF parametrów wszystkich czterech generatorów prostych;
 - rozwijane `Profiles → Add` tworzące kompletny profil domyślny wybranego
   generatora także w starszej konfiguracji;
 - `PersonIdentity` 1.0.0 w zakresie `Row`: spójne imię, nazwisko, rodzaj i e-mail

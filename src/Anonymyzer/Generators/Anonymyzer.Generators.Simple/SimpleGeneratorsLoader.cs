@@ -11,6 +11,7 @@
             serviceCollection.AddTransient<IGenerator, ShufflingTextGenerator>();
             serviceCollection.AddTransient<IGenerator, FixedTextGenerator>();
             serviceCollection.AddTransient<IGenerator, SequentialTextGenerator>();
+            serviceCollection.AddTransient<IGenerator, EmailAddressGenerator>();
         }
     }
 }

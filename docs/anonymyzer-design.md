@@ -219,6 +219,23 @@ konfigurację przez ten sam wersjonowany codec JSON co wykonanie CLI. Menu
 `Profiles → Add` buduje gotowy profil z domyślnej konfiguracji właściciela
 generatora; pusty profil pozostaje dostępny dla zewnętrznych pluginów.
 
+### Samodzielny EmailAddress 1.0.0
+
+`EmailAddress` ma jedno wyjście `Value` sugerujące rolę `Contact.Email` i dwa
+tryby. `Opaque` nie czyta danych osobowych i tworzy local-part z prefiksu oraz
+licznika. `NameBased` czyta wskazane kolumny imienia i nazwiska z bieżącego
+wiersza, normalizuje m.in. polskie znaki i dodaje licznik zapobiegający kolizjom.
+
+Dla `NameBased` operator jawnie wybiera `Original` albo `Generated`. W drugim
+wariancie wymaganie danych uczestniczy w grafie plannera, więc producenci imienia
+i nazwiska muszą istnieć i wykonać się wcześniej. Brak wartości nie uruchamia
+cichego fallbacku — jest błędem konfiguracji lub danych.
+
+Domyślna domena `example.invalid` jest niedostarczalna. Codec waliduje składnię
+ASCII DNS, długość domeny, długość local-part, licznik i wymagane nazwy kolumn.
+Generator zachowuje `NULL` opcjonalnie, a pominięty wiersz nie zużywa numeru.
+Unikalność, podobnie jak w `SequentialText`, dotyczy jednej sesji wykonawczej.
+
 ### Pierwszy generator Row: PersonIdentity 1.0.0
 
 `PersonIdentity` wykonuje jedno atomowe wywołanie dla wiersza i może wystawić

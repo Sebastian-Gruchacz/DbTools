@@ -117,12 +117,24 @@ internal sealed class GeneratorPreviewService(GeneratorCatalog catalog)
                 var binding = new GeneratorBinding(
                     new GeneratorTableReference(table.SchemaName, table.TableName),
                     new Dictionary<string, string> { [output.Name] = column.ColumnName });
+                IReadOnlyList<GeneratorDataRequirement> requirements =
+                    generator.GetDataRequirements(binding, configuration);
                 await using IGeneratorSession session = await generator.PrepareAsync(
                     new GeneratorPreparationContext(binding, new RejectingDataReader()),
                     configuration,
                     cancellationToken);
                 var row = new PreviewRow();
                 row.SetValue(column.ColumnName, "preview-source");
+                foreach (GeneratorDataRequirement requirement in requirements.Where(requirement =>
+                             !requirement.RequiresCompleteScan
+                             && requirement.Table == binding.Table))
+                {
+                    foreach (string sourceColumn in requirement.Columns)
+                    {
+                        row.SetValue(sourceColumn, PreviewSourceValue(sourceColumn));
+                    }
+                }
+
                 await session.ApplyAsync(row, cancellationToken);
                 samples[column.ColumnName] = FormatSample(row.GetBoundValue(column.ColumnName), output.Name);
             }
@@ -138,6 +150,15 @@ internal sealed class GeneratorPreviewService(GeneratorCatalog catalog)
     private static string FormatSample(object? value, string output)
     {
         return value?.ToString() ?? $"{output}: null";
+    }
+
+    private static string PreviewSourceValue(string columnName)
+    {
+        return columnName.Contains("last", StringComparison.OrdinalIgnoreCase)
+            || columnName.Contains("surname", StringComparison.OrdinalIgnoreCase)
+            || columnName.Contains("nazw", StringComparison.OrdinalIgnoreCase)
+                ? "Kowalski"
+                : "Jan";
     }
 
     private static void SetGroupMessage(

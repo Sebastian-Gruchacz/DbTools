@@ -13,6 +13,7 @@ internal sealed class GeneratorCatalog
         new ShufflingTextGenerator(),
         new FixedTextGenerator(),
         new SequentialTextGenerator(),
+        new EmailAddressGenerator(),
         new PersonIdentityGenerator(new[] { new PolishPersonLocaleDataProvider() })
     };
 
