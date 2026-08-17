@@ -34,6 +34,10 @@ transakcji obejmującej całą bazę.
 ## Niezmienniki bezpieczeństwa
 
 - `run` odmawia pracy bez markera odłączonej kopii.
+- Marker jest pojedynczym rekordem w tabeli `dbo.__AnonymyzerDetachedCopy` dla
+  SQL Servera albo `public.__anonymyzer_detached_copy` dla PostgreSQL.
+- Identyfikator podany przez operatora, zapisany w konfiguracji i odczytany z
+  bazy musi być identyczny; musi też zgadzać się nazwa połączonej bazy.
 - Anonimizator nigdy nie otrzymuje connection stringa bazy źródłowej ani
   produkcyjnej. Zarówno `generate-config`, jak i `run` łączą się wyłącznie z
   odłączoną kopią.
@@ -53,6 +57,10 @@ transakcji obejmującej całą bazę.
 - Klonowanie nie jest komendą ani biblioteką procesu anonimizatora. Dzięki temu
   jego konto nie potrzebuje dostępu do produkcji, a sekret produkcyjny nie może
   zostać przypadkiem użyty przez `run`.
+
+Format konfiguracji `0.4.0` przechowuje niesekretny identyfikator markera.
+Connection string jest pobierany z nazwanej zmiennej środowiskowej; CLI celowo
+nie udostępnia argumentu pozwalającego wkleić sekret do historii powłoki.
 
 ## Strategia testów bazodanowych
 
@@ -74,7 +82,7 @@ Skrypt `tools/Test-PostgreSqlProvider.ps1` realizuje już pierwszy bezpieczny
 wzorzec integracyjny: uruchamia własny kontener, ładuje fixture i usuwa kontener
 w `finally`. Nie korzysta z istniejących kontenerów ani baz.
 
-## Model generatorów i konfiguracji 0.3
+## Model generatorów i konfiguracji 0.4
 
 Konfiguracja rozdziela typ generatora od jego nazwanego profilu. Profil zawiera
 parametry i opcjonalne locale, np. `Email:Opaque`, `Email:NameBased.pl-PL` albo

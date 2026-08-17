@@ -114,7 +114,8 @@ językowe opisuje [docs/anonymyzer-design.md](docs/anonymyzer-design.md).
 - odczyt schematów, tabel, tekstowych kolumn, nullowalności i informacji o PK;
 - generowanie pliku JSON z domyślnie wyłączonymi tabelami i kolumnami;
 - rejestracja generatorów i eksport ich domyślnej konfiguracji;
-- model konfiguracji `0.3.0`: role semantyczne, wykryci kandydaci, profile
+- model konfiguracji `0.4.0`: marker odłączonej kopii, role semantyczne,
+  wykryci kandydaci, profile
   generatorów oraz grupy wiążące kilka kolumn;
 - edytor WPF: New/Open/Save/Save As, wybór tabeli, grid kolumn, edycja profili
   oraz grup wielokolumnowych z mapowaniem wyjść generatora na kolumny;
@@ -129,13 +130,16 @@ językowe opisuje [docs/anonymyzer-design.md](docs/anonymyzer-design.md).
   `example.invalid` jest celowo niedostarczalna;
 - dedykowany panel WPF konfiguracji `PersonIdentity`;
 - bezpieczny podgląd generatorów `Row` wykonywany w pamięci, bez połączenia z bazą;
+- CLI `generate-config` i `run --dry-run`, które pobiera connection string
+  wyłącznie ze wskazanej zmiennej środowiskowej;
+- potrójna walidacja markera odłączonej kopii: argument operatora, konfiguracja
+  i pojedynczy rekord w bazie muszą wskazywać ten sam identyfikator;
 - test integracyjny odczytu metadanych PostgreSQL 17 na tymczasowej bazie.
 
 ### Czego jeszcze nie ma
 
-- publicznego CLI — `Program.cs` kończy się obecnie bez próby połączenia, aby
-  nie dało się przypadkiem uruchomić prototypu na bazie;
-- wykonania konfiguracji (`ProcessAnonymyzerCommand` jest szkieletem);
+- wykonania konfiguracji modyfikującego dane — `run` przyjmuje obecnie wyłącznie
+  `--dry-run` i kończy pracę po walidacji bezpieczeństwa oraz generatorów;
 - planera wykonania, który dostarczy generatorom strumienie danych i zapisze
   wynik ich sesji do bazy;
 - pozostałych generatorów grupowych i angielskiego pakietu regionalnego;
@@ -144,21 +148,49 @@ językowe opisuje [docs/anonymyzer-design.md](docs/anonymyzer-design.md).
 - pełnych, ważonych zbiorów danych regionalnych oraz generatorów PESEL/NIP;
 - detektora kandydatów EN/PL — UI obsługuje oznaczenia, ale generator konfiguracji
   nie nadaje ich jeszcze automatycznie;
-- testów SQL Servera i bezpiecznego trybu `dry-run`;
+- testu integracyjnego SQL Servera;
 - obsługi XML/JSON oraz zmian PK/FK;
 - strategii wyłączania i odbudowy indeksów, constraintów i triggerów.
 
 Kod jest na .NET 10. SQL Server używa `Microsoft.Data.SqlClient` 7.0.2, a
 PostgreSQL używa Npgsql 10.0.3. Aktualny build przechodzi bez ostrzeżeń.
 
-Nie ma więc obecnie wspieranego wywołania CLI anonimizatora. Uruchomienie
-`Anonymyzer.Console` zwraca błąd konfiguracji i nie próbuje łączyć się z bazą.
-
 Provider wybiera pole `DatabaseEngine`: obsługiwane wartości to `SqlServer` i
-`PostgreSql`. Konfiguracja formatu `0.3.0` zapisuje nazwę schematu, role kolumn,
-profile generatorów i grupy spójnych danych. Nadal nie zawiera connection stringa.
-Edytor celowo odrzuca starszy format `0.2.0`, zamiast po cichu utracić pola przy
-zapisie; konfigurację należy obecnie wygenerować ponownie.
+`PostgreSql`. Konfiguracja formatu `0.4.0` zapisuje marker klona, nazwę schematu,
+role kolumn, profile generatorów i grupy spójnych danych. Nadal nie zawiera
+connection stringa. Edytor celowo odrzuca starsze formaty, zamiast po cichu
+utracić pola przy zapisie; konfigurację należy obecnie wygenerować ponownie.
+
+### CLI anonimizatora
+
+Marker należy utworzyć dopiero po odtworzeniu odłączonej kopii. Skrypty są w
+`tools/markers`; celowo odmawiają nadpisania istniejącej tabeli markera:
+
+```powershell
+$marker = [Guid]::NewGuid()
+psql $env:ANONYMYZER_CONNECTION -v marker_id=$marker -f .\tools\markers\postgresql.sql
+# albo:
+sqlcmd -S .\SQLEXPRESS -d DetachedClone -v MarkerId=$marker -i .\tools\markers\sqlserver.sql
+```
+
+Connection string jest przekazywany wyłącznie przez zmienną środowiskową, a CLI
+otrzymuje jej nazwę. Nie istnieje argument `--connection-string`:
+
+```powershell
+dotnet run --project .\src\Anonymyzer\Anonymyzer.Console -- generate-config `
+  --engine PostgreSql --database anonymyzer_clone `
+  --connection-env ANONYMYZER_CONNECTION --marker-id $marker `
+  --output .\anonymyzer-config.json
+
+dotnet run --project .\src\Anonymyzer\Anonymyzer.Console -- run `
+  --config .\anonymyzer-config.json `
+  --connection-env ANONYMYZER_CONNECTION --marker-id $marker --dry-run
+```
+
+Obie komendy sprawdzają nazwę bazy i marker. `generate-config` tylko czyta
+metadane, pomija samą tabelę markera i zapisuje niesekretny JSON. `run --dry-run`
+waliduje konfigurację, dokładne wersje generatorów i target, po czym kończy bez
+zapisu danych. Wywołanie `run` bez `--dry-run` jest obecnie odrzucane.
 
 Edytor konfiguracji można uruchomić poleceniem:
 
@@ -211,9 +243,8 @@ skasowany po wypchnięciu lub zarchiwizowaniu nowego repozytorium.
 
 1. Dodać testy regresyjne `ScriptCut` dla wielu tabel, tabel bez
    `IDENTITY_INSERT`, pustego wejścia i znaków niedozwolonych w nazwie pliku.
-2. Dodać jawne komendy `generate-config` i `run` z connection stringiem kopii
-   podawanym tylko w runtime; przed `run` dodać obowiązkowy marker odłączonej
-   kopii, kontrolę oczekiwanej nazwy/identyfikatora bazy i plan `dry-run`.
+2. Rozszerzyć istniejące `run --dry-run` o plan tabel, grup, batchy i wymagań
+   generatorów, nadal bez wykonywania zapisów.
 3. Dodać słowniki kandydatów angielskich i polskich oraz pierwszy pakiet
    regionalny `pl-PL`. Mają podpowiadać pola, ale nie włączać ich automatycznie.
 4. Podłączyć podgląd generatorów `Column` do bezpiecznego, tylko-odczytowego
