@@ -162,6 +162,8 @@ docelową tabelę, dokładny typ i wersję generatora, zakres `Row`/`Column`/
 wierszy. Lokalne `Options` kolumny są nakładane na profil przed walidacją.
 Włączona kolumna bez jednoznacznego kroku jest błędem, a nie cichym pominięciem.
 Planner nadal nie odczytuje liczby wierszy ani nie wykonuje sesji generatorów.
+Liczbę wierszy i koszt pamięci uzupełnia osobny inspektor bieżącego schematu,
+uruchamiany przez `run --dry-run` po zbudowaniu planu.
 
 Reader przekazuje dane strumieniowo, natomiast generator decyduje, co buforuje.
 Dokładny shuffle ma koszt pamięci `O(n)` i nie nadaje się bezpośrednio do każdej
@@ -234,3 +236,11 @@ Lista jest zalążkiem do testów i strojenia, nie zamkniętym słownikiem. Nale
 uwzględnić także prefiksy/sufiksy techniczne (`customer_email`, `billing_city`)
 oraz negatywne przypadki, np. `email_enabled`, `address_type` czy
 `tax_id_required`, których wartości nie są danymi do anonimizacji.
+
+Pierwszy zestaw jest zaimplementowany jako dwa niezależne providery reguł.
+Wspólny detektor usuwa diakrytykę, rozpoznaje skróty w `PascalCase`, dopasowuje
+pełne sekwencje tokenów i obniża score dla prefiksów technicznych. Tokeny takie
+jak `enabled`, `required`, `type`, `status` i `flag` odrzucają dopasowanie.
+Reguła ogólnego angielskiego `address` została celowo zastąpiona formami
+`street_address`, `mailing_address` i `postal_address`, ponieważ na realnym
+schemacie myliła adres pocztowy z adresem strony, sieci i nadawcy e-maila.

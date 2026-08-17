@@ -138,6 +138,9 @@ językowe opisuje [docs/anonymyzer-design.md](docs/anonymyzer-design.md).
   zakresy generatorów, mapowania wyjść, wymagane skany i batch po 1000 wierszy;
 - porównanie aktywnego planu z bieżącym schematem klona przed wykonaniem,
   wraz z estymacją liczby wierszy i górnego zużycia pamięci pełnych skanów;
+- deterministyczny detektor kandydatów EN/PL: `snake_case`, `camelCase`,
+  prefiksy techniczne, polskie znaki, score i negatywne flagi; propozycje nigdy
+  nie ustawiają `Enabled`;
 - sortowanie kroków po zależnościach od wartości `Generated`, wraz z odrzucaniem
   brakujących producentów, podwójnych zapisów i cykli;
 - testy integracyjne metadanych PostgreSQL 17 na tymczasowej bazie oraz SQL
@@ -153,8 +156,6 @@ językowe opisuje [docs/anonymyzer-design.md](docs/anonymyzer-design.md).
 - podglądu generatorów `Column` i `Relational`, które wymagają odczytu danych
   z odłączonego klona;
 - pełnych, ważonych zbiorów danych regionalnych oraz generatorów PESEL/NIP;
-- detektora kandydatów EN/PL — UI obsługuje oznaczenia, ale generator konfiguracji
-  nie nadaje ich jeszcze automatycznie;
 - obsługi XML/JSON oraz zmian PK/FK;
 - strategii wyłączania i odbudowy indeksów, constraintów i triggerów.
 
@@ -253,17 +254,16 @@ skasowany po wypchnięciu lub zarchiwizowaniu nowego repozytorium.
 
 1. Dodać testy regresyjne `ScriptCut` dla wielu tabel, tabel bez
    `IDENTITY_INSERT`, pustego wejścia i znaków niedozwolonych w nazwie pliku.
-2. Dodać słowniki kandydatów angielskich i polskich oraz pierwszy pakiet
-   regionalny `pl-PL`. Mają podpowiadać pola, ale nie włączać ich automatycznie.
-3. Podłączyć podgląd generatorów `Column` do bezpiecznego, tylko-odczytowego
+2. Podłączyć podgląd generatorów `Column` do bezpiecznego, tylko-odczytowego
    źródła danych z odłączonego klona.
-4. Ujednolicić historyczne nazwy `Anonymyzer` / `Anonymization` bez zmiany
+3. Ujednolicić historyczne nazwy `Anonymyzer` / `Anonymization` bez zmiany
    zachowania.
-5. Zrealizować mały pionowy wycinek: jedna tabela, grupa `PersonIdentity`,
+4. Zrealizować mały pionowy wycinek: jedna tabela, grupa `PersonIdentity`,
    deterministyczny seed, batche, `dry-run` i test na lokalnej bazie.
+5. Rozszerzyć pakiety regionalne o ważone dane oraz generatory PESEL/NIP/SSN.
 6. Dopiero po pomiarach dodać planowanie zależności FK, mapowanie zmienianych
    kluczy, indeksy, XML/JSON i generatory odwołujące się do innych wierszy.
 
 Najbardziej opłacalny następny krok to punkt 2, a potem pionowy wycinek z punktu
-5. Próba rozwiązania od razu zmian PK/FK i wszystkich wariantów indeksów
+4. Próba rozwiązania od razu zmian PK/FK i wszystkich wariantów indeksów
 utrudniłaby zweryfikowanie podstawowego przepływu.
