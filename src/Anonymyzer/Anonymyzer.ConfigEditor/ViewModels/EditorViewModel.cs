@@ -19,7 +19,8 @@ internal sealed class EditorViewModel : INotifyPropertyChanged
             "Person.Gender",
             "Contact.Email", "Contact.Phone",
             "Address.Country", "Address.Region", "Address.City", "Address.Street", "Address.PostalCode",
-            "Company.Name", "Company.TaxId"
+            "Company.Name", "Company.TaxId",
+            "Account.Login", "Financial.BankAccount"
         };
 
         Load(new AnonymizationConfiguration(), null);

@@ -12,7 +12,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\Anonymyzer.Interfaces\Anonymyzer.Base.csproj" />
-    <ProjectReference Include="..\..\Generators\Anonymyzer.Generators.Person\Anonymyzer.Generators.Person.csproj" />
   </ItemGroup>
 
 </Project>

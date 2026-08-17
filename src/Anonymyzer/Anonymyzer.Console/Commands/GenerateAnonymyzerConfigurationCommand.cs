@@ -15,6 +15,7 @@ internal class GenerateAnonymyzerConfigurationCommand// : ICommand<GenerateAnony
 {
     private const string DEFAULT = @"Default";
     private readonly IDbConnectionFactory _dbConnectionFactory;
+    private readonly ColumnCandidateDetector _candidateDetector;
     private readonly IEngineFactory _engineFactory;
     private readonly IGeneratorsProvider _generatorsProvider;
     private readonly ICommandLogger _logger;
@@ -24,10 +25,16 @@ internal class GenerateAnonymyzerConfigurationCommand// : ICommand<GenerateAnony
         Formatting = Formatting.Indented
     };
 
-    public GenerateAnonymyzerConfigurationCommand(IDbConnectionFactory dbConnectionFactory, IEngineFactory engineFactory,
-        IGeneratorsProvider generatorsProvider, ICommandLogger logger, DetachedCopySafetyValidator safetyValidator)
+    public GenerateAnonymyzerConfigurationCommand(
+        IDbConnectionFactory dbConnectionFactory,
+        ColumnCandidateDetector candidateDetector,
+        IEngineFactory engineFactory,
+        IGeneratorsProvider generatorsProvider,
+        ICommandLogger logger,
+        DetachedCopySafetyValidator safetyValidator)
     {
         _dbConnectionFactory = dbConnectionFactory ?? throw new ArgumentNullException(nameof(dbConnectionFactory));
+        _candidateDetector = candidateDetector ?? throw new ArgumentNullException(nameof(candidateDetector));
         _engineFactory = engineFactory ?? throw new ArgumentNullException(nameof(engineFactory));
         _generatorsProvider = generatorsProvider ?? throw new ArgumentNullException(nameof(generatorsProvider));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
@@ -192,8 +199,8 @@ internal class GenerateAnonymyzerConfigurationCommand// : ICommand<GenerateAnony
                 MaxLength = column.MaxLength,
                 Unicode = column.IsUnicodeText,
 
-                Enabled = false, // TODO: use "AI" to enable obvious fields?
-                // TODO: use AI strategies to obtain start / default configuration
+                Enabled = false,
+                Detection = _candidateDetector.Detect(column.Name),
                 Generator = new ColumnGeneratorConfiguration
                 {
                     GeneratorType = "TextShuffler",

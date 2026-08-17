@@ -87,6 +87,21 @@ try {
         throw "Anonymyzer generate-config failed with exit code $LASTEXITCODE."
     }
 
+    $configuration = Get-Content -Raw -LiteralPath $generatedConfig | ConvertFrom-Json
+    $customerData = $configuration.Tables | Where-Object {
+        $_.SchemaName -eq 'public' -and $_.TableName -eq 'customer_data'
+    }
+    $displayName = $customerData.Columns | Where-Object { $_.ColumnName -eq 'display_name' }
+    if (-not $displayName.Detection.IsCandidate `
+        -or $displayName.Detection.SuggestedRole -ne 'Person.FullName' `
+        -or $displayName.Enabled) {
+        throw 'Generated config did not contain the expected disabled display_name candidate.'
+    }
+    if ($configuration.Tables.Enabled -contains $true `
+        -or $configuration.Tables.Columns.Enabled -contains $true) {
+        throw 'Candidate detection enabled a table or column without operator approval.'
+    }
+
     dotnet run --project $cliProject --no-build -- run `
         --config $generatedConfig `
         --connection-env ANONYMYZER_POSTGRES_CONNECTION `

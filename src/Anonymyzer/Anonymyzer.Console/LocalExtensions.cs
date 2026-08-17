@@ -10,6 +10,7 @@ using Anonymyzer.Console.InternalInterfaces;
 using Anonymyzer.Console.Safety;
 using Anonymyzer.Generators.Person;
 using Anonymyzer.Generators.Simple;
+using Anonymyzer.LanguagePack.English;
 using Anonymyzer.LanguagePack.Polish;
 using Anonymyzer.PostgreSql;
 using Anonymyzer.SqlServer;
@@ -31,6 +32,7 @@ internal static class LocalExtensions
     {
         services.AddSingleton<IDetachedCopyMarkerReader, DetachedCopyMarkerReader>();
         services.AddSingleton<DetachedCopySafetyValidator>();
+        services.AddSingleton<ColumnCandidateDetector>();
         services.AddTransient<GenerateAnonymyzerConfigurationCommand>();
         services.AddTransient<ProcessAnonymyzerCommand>();
 
@@ -39,6 +41,7 @@ internal static class LocalExtensions
 
     public static IServiceCollection AddBuiltInGenerators(this IServiceCollection services)
     {
+        services.AddEnglishLanguagePack();
         services.AddPolishLanguagePack();
         return services.AddGenerators(builder =>
         {
