@@ -136,9 +136,12 @@ językowe opisuje [docs/anonymyzer-design.md](docs/anonymyzer-design.md).
   i pojedynczy rekord w bazie muszą wskazywać ten sam identyfikator;
 - deterministyczny plan `dry-run`: aktywne grupy i kolumny, dokładne wersje oraz
   zakresy generatorów, mapowania wyjść, wymagane skany i batch po 1000 wierszy;
+- porównanie aktywnego planu z bieżącym schematem klona przed wykonaniem,
+  wraz z estymacją liczby wierszy i górnego zużycia pamięci pełnych skanów;
 - sortowanie kroków po zależnościach od wartości `Generated`, wraz z odrzucaniem
   brakujących producentów, podwójnych zapisów i cykli;
-- test integracyjny odczytu metadanych PostgreSQL 17 na tymczasowej bazie.
+- testy integracyjne metadanych PostgreSQL 17 na tymczasowej bazie oraz SQL
+  Servera na jawnie wskazanym odłączonym klonie.
 
 ### Czego jeszcze nie ma
 
@@ -152,7 +155,6 @@ językowe opisuje [docs/anonymyzer-design.md](docs/anonymyzer-design.md).
 - pełnych, ważonych zbiorów danych regionalnych oraz generatorów PESEL/NIP;
 - detektora kandydatów EN/PL — UI obsługuje oznaczenia, ale generator konfiguracji
   nie nadaje ich jeszcze automatycznie;
-- testu integracyjnego SQL Servera;
 - obsługi XML/JSON oraz zmian PK/FK;
 - strategii wyłączania i odbudowy indeksów, constraintów i triggerów.
 
@@ -194,8 +196,11 @@ dotnet run --project .\src\Anonymyzer\Anonymyzer.Console -- run `
 Obie komendy sprawdzają nazwę bazy i marker. `generate-config` tylko czyta
 metadane, pomija samą tabelę markera i zapisuje niesekretny JSON. `run --dry-run`
 waliduje konfigurację, dokładne wersje generatorów i target, wypisuje kolejność
-kroków, mapowania, wymagane pełne skany i proponowany batch, po czym kończy bez
-zapisu danych. Wywołanie `run` bez `--dry-run` jest obecnie odrzucane.
+kroków, mapowania, wymagane pełne skany i proponowany batch. Dodatkowo odrzuca
+zmiany schematu aktywnych kolumn oraz pokazuje szacowaną liczbę wierszy i pamięć
+pełnych skanów. Dla nieograniczonego `text` pamięć pozostaje jawnie nieznana.
+Komenda kończy bez zapisu danych. Wywołanie `run` bez `--dry-run` jest obecnie
+odrzucane.
 
 Edytor konfiguracji można uruchomić poleceniem:
 
@@ -248,19 +253,17 @@ skasowany po wypchnięciu lub zarchiwizowaniu nowego repozytorium.
 
 1. Dodać testy regresyjne `ScriptCut` dla wielu tabel, tabel bez
    `IDENTITY_INSERT`, pustego wejścia i znaków niedozwolonych w nazwie pliku.
-2. Rozszerzyć `run --dry-run` o porównanie planu z aktualnym schematem klona oraz
-   oszacowanie liczby wierszy i pamięci wymaganej przez pełne skany.
-3. Dodać słowniki kandydatów angielskich i polskich oraz pierwszy pakiet
+2. Dodać słowniki kandydatów angielskich i polskich oraz pierwszy pakiet
    regionalny `pl-PL`. Mają podpowiadać pola, ale nie włączać ich automatycznie.
-4. Podłączyć podgląd generatorów `Column` do bezpiecznego, tylko-odczytowego
+3. Podłączyć podgląd generatorów `Column` do bezpiecznego, tylko-odczytowego
    źródła danych z odłączonego klona.
-5. Ujednolicić historyczne nazwy `Anonymyzer` / `Anonymization` bez zmiany
-   zachowania i dodać test integracyjny SQL Servera.
-6. Zrealizować mały pionowy wycinek: jedna tabela, grupa `PersonIdentity`,
+4. Ujednolicić historyczne nazwy `Anonymyzer` / `Anonymization` bez zmiany
+   zachowania.
+5. Zrealizować mały pionowy wycinek: jedna tabela, grupa `PersonIdentity`,
    deterministyczny seed, batche, `dry-run` i test na lokalnej bazie.
-7. Dopiero po pomiarach dodać planowanie zależności FK, mapowanie zmienianych
+6. Dopiero po pomiarach dodać planowanie zależności FK, mapowanie zmienianych
    kluczy, indeksy, XML/JSON i generatory odwołujące się do innych wierszy.
 
 Najbardziej opłacalny następny krok to punkt 2, a potem pionowy wycinek z punktu
-6. Próba rozwiązania od razu zmian PK/FK i wszystkich wariantów indeksów
+5. Próba rozwiązania od razu zmian PK/FK i wszystkich wariantów indeksów
 utrudniłaby zweryfikowanie podstawowego przepływu.

@@ -26,7 +26,9 @@ transakcji obejmującej całą bazę.
 4. Operator zatwierdza tabele, kolumny i generatory. Propozycje pozostają
    domyślnie wyłączone.
 5. `run --dry-run` waliduje provider, marker, oczekiwaną nazwę i identyfikator
-   bazy, konfigurację generatorów, relacje oraz kolejność operacji.
+   bazy, konfigurację generatorów, relacje oraz kolejność operacji. Porównuje
+   aktywne kolumny z bieżącym schematem klona i raportuje estymowaną liczbę
+   wierszy oraz górne zużycie pamięci pełnych skanów.
 6. `run` przetwarza dane batchami, zapisuje checkpointy i raport końcowy.
 7. Walidacja po wykonaniu sprawdza constrainty, liczbę wierszy i spójność
    relacji. Kopia może dopiero wtedy zostać przekazana dalej.
@@ -81,6 +83,10 @@ fixture'em PL oraz osobnym zestawem wydajnościowym.
 Skrypt `tools/Test-PostgreSqlProvider.ps1` realizuje już pierwszy bezpieczny
 wzorzec integracyjny: uruchamia własny kontener, ładuje fixture i usuwa kontener
 w `finally`. Nie korzysta z istniejących kontenerów ani baz.
+
+Opcjonalny test SQL Servera wymaga `ANONYMYZER_SQLSERVER_CONNECTION` i tylko
+odczytuje metadane jawnie wskazanego klona. Fixture lub klon musi zawierać marker
+`dbo.__AnonymyzerDetachedCopy`; test nie tworzy ani nie modyfikuje bazy.
 
 ## Model generatorów i konfiguracji 0.4
 
