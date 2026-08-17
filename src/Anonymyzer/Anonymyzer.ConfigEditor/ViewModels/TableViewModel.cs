@@ -16,7 +16,13 @@ internal sealed class TableViewModel
 
     public TableProcessingOptions Model { get; }
     public ObservableCollection<ColumnViewModel> Columns { get; }
-    public string DisplayName => $"{(Model.HasCandidates ? "● " : string.Empty)}{Model.SchemaName}.{Model.TableName}";
+    public int CandidateCount => Model.Columns.Count(column => column.Detection.IsCandidate);
+    public string CandidateMark => CandidateCount > 0 ? "●" : string.Empty;
+    public string CandidateCountText => CandidateCount > 0 ? CandidateCount.ToString() : string.Empty;
+    public string CandidateDetails => CandidateCount > 0
+        ? $"Automatic candidates: {CandidateCount}."
+        : "No automatic candidates.";
+    public string QualifiedName => $"{Model.SchemaName}.{Model.TableName}";
 
     public void ApplySamples(IReadOnlyDictionary<string, string> samples)
     {

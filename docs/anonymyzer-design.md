@@ -125,6 +125,10 @@ kopii i preferować oficjalne zakresy testowe lub zastrzeżone, jeśli istnieją
 Edytor WPF operuje wyłącznie na niesekretnym JSON. Oznacza wykrytych kandydatów,
 ale pokazuje również wszystkie pozostałe tabele i kolumny. Obsługuje pliki,
 podstawowy grid, profile oraz mapowanie wyjść grup wielokolumnowych na kolumny.
+Lista tabel używa osobnych pól o stałej szerokości na znacznik i licznik
+kandydatów, aby nazwy z trafieniami i bez trafień zaczynały się w tej samej
+kolumnie.
+
 Podgląd generatorów `Row` uruchamia ich rzeczywistą sesję w pamięci, bez dostępu
 do bazy. Dla pojedynczej kolumny operator może otworzyć kilka niemodalnych okien
 surowych wartości `non-null` z odłączonego klona. Jest to narzędzie inspekcyjne,

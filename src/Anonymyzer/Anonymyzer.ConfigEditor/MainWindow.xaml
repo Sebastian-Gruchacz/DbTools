@@ -41,15 +41,43 @@
                 <TextBlock Grid.Column="0" Margin="0,0,10,0" VerticalAlignment="Center" Text="Table:" />
                 <ComboBox Grid.Column="1"
                           ItemsSource="{Binding Tables}"
-                          SelectedItem="{Binding SelectedTable}"
-                          DisplayMemberPath="DisplayName" />
+                          SelectedItem="{Binding SelectedTable}">
+                    <ComboBox.ItemContainerStyle>
+                        <Style TargetType="{x:Type ComboBoxItem}">
+                            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                        </Style>
+                    </ComboBox.ItemContainerStyle>
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate>
+                            <Grid MinWidth="380" ToolTip="{Binding CandidateDetails}">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="18" />
+                                    <ColumnDefinition Width="34" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock HorizontalAlignment="Center"
+                                           Foreground="DarkOrange"
+                                           Text="{Binding CandidateMark}" />
+                                <TextBlock Grid.Column="1"
+                                           Margin="0,0,8,0"
+                                           HorizontalAlignment="Right"
+                                           Foreground="DarkOrange"
+                                           FontWeight="SemiBold"
+                                           Text="{Binding CandidateCountText}" />
+                                <TextBlock Grid.Column="2"
+                                           Text="{Binding QualifiedName}"
+                                           TextTrimming="CharacterEllipsis" />
+                            </Grid>
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
                 <StackPanel Grid.Column="2" Margin="14,0,0,0" Orientation="Horizontal">
                     <Button Width="110" Margin="0,0,8,0" Content="Edit groups..." Click="Groups_Click" />
                     <Button Width="105" Margin="0,0,8,0" Content="Add column..." Click="AddColumns_Click" />
                     <Button Width="120" Margin="0,0,14,0" Content="Refresh sample" Click="RefreshSample_Click" />
                     <TextBlock VerticalAlignment="Center"
                                Foreground="DimGray"
-                               Text="● automatic candidate; every table remains available" />
+                               Text="● + count = automatic candidates; every table remains available" />
                 </StackPanel>
             </Grid>
 
