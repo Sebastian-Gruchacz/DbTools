@@ -1,0 +1,25 @@
+﻿<UserControl x:Class="Anonymyzer.Generators.Simple.Wpf.FixedTextGeneratorEditor"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Grid Margin="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <TextBlock Grid.Row="0"
+                   Margin="0,0,0,14"
+                   TextWrapping="Wrap"
+                   Text="Replaces every non-null value with the configured text. Empty text is allowed; database length constraints are never truncated silently." />
+
+        <DockPanel Grid.Row="1" Margin="0,0,0,10">
+            <TextBlock Width="110" VerticalAlignment="Center" Text="Value:" />
+            <TextBox x:Name="ValueTextBox" MinWidth="280" />
+        </DockPanel>
+
+        <CheckBox x:Name="PreserveNullsCheckBox"
+                  Grid.Row="2"
+                  Content="Preserve null positions" />
+    </Grid>
+</UserControl>

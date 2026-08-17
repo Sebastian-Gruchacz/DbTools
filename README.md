@@ -99,10 +99,10 @@ językowe opisuje [docs/anonymyzer-design.md](docs/anonymyzer-design.md).
 - `Anonymyzer.PostgreSql` — analogiczny provider oparty na Npgsql i
   `information_schema`;
 - `Anonymyzer.PostgreSql.Tests` — testy buildera i opcjonalna integracja z bazą;
-- `Anonymyzer.Generators.Simple` — rejestracja generatora `TextShuffler`;
+- `Anonymyzer.Generators.Simple` — `TextShuffler`, `FixedText` i `SequentialText`;
 - `Anonymyzer.Generators.Person` — generator spójnej tożsamości w jednym wierszu;
 - `Anonymyzer.ConfigEditor.Abstractions` — kontrakt opcjonalnych paneli WPF;
-- `Anonymyzer.Generators.Simple.Wpf` — panel konfiguracji `TextShuffler` 1.0.0;
+- `Anonymyzer.Generators.Simple.Wpf` — panele konfiguracji generatorów prostych;
 - `Anonymyzer.Generators.Person.Wpf` — panel konfiguracji `PersonIdentity` 1.0.0;
 - `Anonymyzer.LanguagePack.Polish` — dane i reguły regionalne `pl-PL`;
 - `Anonymyzer.ConfigEditor` — edytor konfiguracji WPF;
@@ -124,13 +124,19 @@ językowe opisuje [docs/anonymyzer-design.md](docs/anonymyzer-design.md).
   wymagań danych, przygotowanie stanu i sesja wykonawcza;
 - `TextShuffler` 1.0.0: deterministyczna permutacja całej kolumny zachowująca
   dokładny multizbiór wartości oraz opcjonalnie pozycje `NULL`;
-- dedykowany panel WPF parametrów `TextShuffler` dostępny z edytora profili;
+- `FixedText` 1.0.0: stała wartość tekstowa z opcjonalnym zachowaniem `NULL`;
+- `SequentialText` 1.0.0: unikalny w ramach sesji tekst z prefiksem, sufiksem,
+  początkiem numeracji i konfigurowalnym dopełnieniem zerami;
+- dedykowane panele WPF parametrów wszystkich trzech generatorów prostych;
+- rozwijane `Profiles → Add` tworzące kompletny profil domyślny wybranego
+  generatora także w starszej konfiguracji;
 - `PersonIdentity` 1.0.0 w zakresie `Row`: spójne imię, nazwisko, rodzaj i e-mail
   na podstawie pakietu `pl-PL`, bez dodatkowego skanu bazy;
 - dwa schematy e-mail: oparty na imieniu i nazwisku oraz opaque; domyślna domena
   `example.invalid` jest celowo niedostarczalna;
 - dedykowany panel WPF konfiguracji `PersonIdentity`;
-- bezpieczny podgląd generatorów `Row` wykonywany w pamięci, bez połączenia z bazą;
+- bezpieczny podgląd generatorów `Row`, także przypisanych bezpośrednio do jednej
+  kolumny, wykonywany w pamięci bez połączenia z bazą;
 - niemodalne, tylko-odczytowe okna wartości `non-null` dla dowolnej kolumny z
   konfiguracji: limit 1–50, wiele okien naraz, kopiowanie i ponowna walidacja
   nazwy oraz markera klona przed każdym odczytem;

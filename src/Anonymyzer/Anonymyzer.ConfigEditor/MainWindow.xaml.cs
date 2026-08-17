@@ -23,6 +23,8 @@ public partial class MainWindow : Window
     private readonly IGeneratorConfigurationEditorFactory[] _generatorEditors =
     {
         new ShufflingTextGeneratorEditorFactory(),
+        new FixedTextGeneratorEditorFactory(),
+        new SequentialTextGeneratorEditorFactory(),
         new PersonIdentityGeneratorEditorFactory()
     };
 
@@ -83,7 +85,10 @@ public partial class MainWindow : Window
 
     private void Profiles_Click(object sender, RoutedEventArgs e)
     {
-        var dialog = new GeneratorProfilesWindow(_viewModel.Configuration.GeneratorProfiles, _generatorEditors)
+        var dialog = new GeneratorProfilesWindow(
+            _viewModel.Configuration.GeneratorProfiles,
+            _generatorEditors,
+            _generatorCatalog.CreateDefaultProfiles())
         {
             Owner = this
         };

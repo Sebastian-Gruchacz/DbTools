@@ -3,6 +3,7 @@
 using System.Collections.ObjectModel;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using Anonymyzer.ConfigEditor.Abstractions;
 using Anonymyzer.Configuration;
 using Newtonsoft.Json;
@@ -13,10 +14,12 @@ public partial class GeneratorProfilesWindow : Window
     private readonly List<GeneratorProfileConfiguration> _target;
     private readonly ObservableCollection<GeneratorProfileRow> _rows;
     private readonly IReadOnlyDictionary<string, IGeneratorConfigurationEditorFactory> _editorFactories;
+    private readonly IReadOnlyList<GeneratorProfileConfiguration> _profileTemplates;
 
     public GeneratorProfilesWindow(
         List<GeneratorProfileConfiguration> profiles,
-        IEnumerable<IGeneratorConfigurationEditorFactory> editorFactories)
+        IEnumerable<IGeneratorConfigurationEditorFactory> editorFactories,
+        IReadOnlyList<GeneratorProfileConfiguration> profileTemplates)
     {
         InitializeComponent();
         _target = profiles;
@@ -24,21 +27,64 @@ public partial class GeneratorProfilesWindow : Window
         _editorFactories = editorFactories.ToDictionary(
             factory => BuildFactoryKey(factory.GeneratorType, factory.GeneratorVersion),
             StringComparer.OrdinalIgnoreCase);
+        _profileTemplates = profileTemplates;
         DataContext = _rows;
     }
 
     private void Add_Click(object sender, RoutedEventArgs e)
     {
-        var row = new GeneratorProfileRow
+        if (sender is not Button button)
+        {
+            return;
+        }
+
+        var menu = new ContextMenu
+        {
+            PlacementTarget = button,
+            Placement = PlacementMode.Bottom
+        };
+        foreach (GeneratorProfileConfiguration template in _profileTemplates.OrderBy(profile => profile.DisplayName))
+        {
+            var item = new MenuItem { Header = template.DisplayName };
+            item.Click += (_, _) => AddProfile(GeneratorProfileRow.FromModel(template));
+            menu.Items.Add(item);
+        }
+
+        menu.Items.Add(new Separator());
+        var blankItem = new MenuItem { Header = "Blank profile..." };
+        blankItem.Click += (_, _) => AddProfile(new GeneratorProfileRow
         {
             Id = "NewProfile",
             DisplayName = "New profile",
             OptionsJson = "{}"
-        };
+        });
+        menu.Items.Add(blankItem);
+
+        button.ContextMenu = menu;
+        menu.IsOpen = true;
+    }
+
+    private void AddProfile(GeneratorProfileRow row)
+    {
+        row.Id = CreateUniqueId(row.Id);
 
         _rows.Add(row);
         ProfilesGrid.SelectedItem = row;
         ProfilesGrid.ScrollIntoView(row);
+    }
+
+    private string CreateUniqueId(string requestedId)
+    {
+        string baseId = string.IsNullOrWhiteSpace(requestedId) ? "NewProfile" : requestedId;
+        string candidate = baseId;
+        int suffix = 2;
+        while (_rows.Any(row => row.Id.Equals(candidate, StringComparison.OrdinalIgnoreCase)))
+        {
+            candidate = $"{baseId}:{suffix}";
+            suffix++;
+        }
+
+        return candidate;
     }
 
     private void Remove_Click(object sender, RoutedEventArgs e)

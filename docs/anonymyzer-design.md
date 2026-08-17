@@ -110,7 +110,7 @@ role wyjściowe na kolumny tabeli. Pierwsze zakładane grupy to:
 Grupa eliminuje zależność od przypadkowej kolejności kolumn. Przykładowo e-mail
 może użyć już wygenerowanego imienia i nazwiska, PESEL może być zgodny z datą
 urodzenia, a kod pocztowy z miastem. Prosty `TextShuffler`, stała wartość czy
-losowy tekst pozostają generatorami pojedynczej kolumny.
+tekst sekwencyjny pozostają generatorami pojedynczej kolumny.
 
 Pakiet regionalny nie jest providerem bazy danych. Dostarcza słowniki, dane
 adresowe, reguły formatowania i walidatory dla locale, początkowo `pl-PL` oraz
@@ -139,7 +139,9 @@ stabilną wartość kanoniczną, np. `Address.City`; nieznane wartości z istnie
 konfiguracji pozostają dostępne w grupie `Custom / legacy`.
 
 Podgląd generatorów `Row` uruchamia ich rzeczywistą sesję w pamięci, bez dostępu
-do bazy. Dla pojedynczej kolumny operator może otworzyć kilka niemodalnych okien
+do bazy. Obejmuje grupy wielokolumnowe i generatory `Row` przypisane bezpośrednio
+do jednej kolumny; lokalne `Options` są nakładane na profil tak samo jak w
+plannerze. Dla pojedynczej kolumny operator może otworzyć kilka niemodalnych okien
 surowych wartości `non-null` z odłączonego klona. Jest to narzędzie inspekcyjne,
 nie podgląd wyniku generatora `Column`: UI nadal nie symuluje shuffle ani
 generatorów `Relational`. Podgląd nigdy nie może modyfikować bazy.
@@ -198,6 +200,24 @@ które zachowuje rozkład tylko statystycznie. Wybór musi być jawny w profilu.
 
 Samo przestawienie wartości nie usuwa rzadkich danych z całej kopii, dlatego
 `TextShuffler` nie jest właściwym generatorem dla silnie identyfikujących pól.
+
+### Proste generatory Row 1.0.0
+
+`FixedText` zastępuje wartość skonfigurowanym tekstem. `Value` może być pustym
+łańcuchem, ale nie `null`; `PreserveNulls` decyduje, czy istniejące pozycje `NULL`
+pozostają nienaruszone. Generator nie skraca wartości do długości kolumny — zbyt
+długi tekst ma zostać wykryty przez walidację lub bazę, a nie cicho uszkodzony.
+
+`SequentialText` tworzy wartości `Prefix + numer + Suffix`. Konfiguracja zawiera
+`StartAt`, `MinimumDigits` oraz `PreserveNulls`. Pominięte pozycje `NULL` nie
+zużywają numeru, więc sekwencja pozostaje gęsta. Unikalność jest gwarantowana
+tylko w ramach jednej sesji generatora, a konkretna wartość zależy od kolejności
+przetwarzania wierszy; nie jest to pseudonim stabilny względem klucza źródłowego.
+
+Oba generatory nie deklarują odczytu danych i mają osobne panele WPF zapisujące
+konfigurację przez ten sam wersjonowany codec JSON co wykonanie CLI. Menu
+`Profiles → Add` buduje gotowy profil z domyślnej konfiguracji właściciela
+generatora; pusty profil pozostaje dostępny dla zewnętrznych pluginów.
 
 ### Pierwszy generator Row: PersonIdentity 1.0.0
 

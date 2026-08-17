@@ -9,7 +9,7 @@
         WindowStartupLocation="CenterOwner">
     <DockPanel Margin="12">
         <StackPanel DockPanel.Dock="Bottom" Margin="0,10,0,0" Orientation="Horizontal" HorizontalAlignment="Right">
-            <Button Width="90" Margin="0,0,8,0" Content="Add" Click="Add_Click" />
+            <Button Width="90" Margin="0,0,8,0" Content="Add ▾" Click="Add_Click" />
             <Button Width="90" Margin="0,0,8,0" Content="Remove" Click="Remove_Click" />
             <Button Width="110" Margin="0,0,24,0" Content="Configure..." Click="Configure_Click" />
             <Button Width="90" Margin="0,0,8,0" Content="OK" IsDefault="True" Click="Ok_Click" />

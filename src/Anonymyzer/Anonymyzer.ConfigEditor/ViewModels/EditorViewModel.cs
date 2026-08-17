@@ -93,7 +93,7 @@ internal sealed class EditorViewModel : INotifyPropertyChanged
     {
         ReplaceItems(GeneratorTypes, Configuration.GeneratorProfiles
             .Select(profile => profile.GeneratorType)
-            .Append("TextShuffler")
+            .Concat(["FixedText", "SequentialText", "TextShuffler"])
             .Where(value => !string.IsNullOrWhiteSpace(value))
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .OrderBy(value => value));
