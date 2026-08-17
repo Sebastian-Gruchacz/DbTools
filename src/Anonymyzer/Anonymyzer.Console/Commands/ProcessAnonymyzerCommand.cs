@@ -1,6 +1,7 @@
 ﻿namespace Anonymyzer.Console.Commands;
 
 using System.Data;
+using Anonymyzer.Base;
 using Anonymyzer.Configuration;
 using Anonymyzer.Console.CommandLibraryElements;
 using Anonymyzer.Console.InternalInterfaces;
@@ -12,16 +13,19 @@ internal sealed class ProcessAnonymyzerCommand
 {
     private readonly IDbConnectionFactory _dbConnectionFactory;
     private readonly IGeneratorsProvider _generatorsProvider;
+    private readonly IEngineFactory _engineFactory;
     private readonly ICommandLogger _logger;
     private readonly DetachedCopySafetyValidator _safetyValidator;
 
     public ProcessAnonymyzerCommand(
         IDbConnectionFactory dbConnectionFactory,
+        IEngineFactory engineFactory,
         IGeneratorsProvider generatorsProvider,
         ICommandLogger logger,
         DetachedCopySafetyValidator safetyValidator)
     {
         _dbConnectionFactory = dbConnectionFactory ?? throw new ArgumentNullException(nameof(dbConnectionFactory));
+        _engineFactory = engineFactory ?? throw new ArgumentNullException(nameof(engineFactory));
         _generatorsProvider = generatorsProvider ?? throw new ArgumentNullException(nameof(generatorsProvider));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _safetyValidator = safetyValidator ?? throw new ArgumentNullException(nameof(safetyValidator));
@@ -56,10 +60,15 @@ internal sealed class ProcessAnonymyzerCommand
             configuration.Database,
             parameters.ExpectedMarkerId,
             connection);
+        IAnonymyzerEngine engine = _engineFactory.CreateEngine(configuration.Database.DatabaseEngine, connection)
+            ?? throw new InvalidOperationException(
+                $"Database engine '{configuration.Database.DatabaseEngine}' is not installed.");
+        ExecutionPlanDatabaseInspection inspection = new ExecutionPlanDatabaseInspector()
+            .Inspect(configuration, plan, engine);
         _logger.Info(
             $"Dry-run passed for {configuration.Database.DatabaseEngine} database " +
             $"'{configuration.Database.DatabaseName}', marker {marker.MarkerId:D}. No data was modified.");
-        foreach (string line in ExecutionPlanFormatter.Format(plan))
+        foreach (string line in ExecutionPlanFormatter.Format(plan, inspection))
         {
             _logger.Info(line);
         }

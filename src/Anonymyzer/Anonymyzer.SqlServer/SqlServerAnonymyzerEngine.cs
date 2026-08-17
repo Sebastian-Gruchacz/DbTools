@@ -15,23 +15,27 @@ public class SqlServerAnonymyzerEngine : IAnonymyzerEngine
 
     public IEnumerable<ITableInfo> ListTables(bool listSystemTables = false)
     {
-        // TODO: extracting system tables needs master connection and different approach.... tricky...
-        // TODO: Maybe need two diff connections - one for data and another one for the structure?
-
         using var cmd = _connection.CreateCommand();
         cmd.CommandType = CommandType.Text;
-        cmd.CommandText = @$"SELECT * FROM [{_connection.Database}].INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'BASE TABLE'";
+        cmd.CommandText = """
+            SELECT
+                schema_info.name,
+                table_info.name,
+                COALESCE(SUM(CASE WHEN partition_info.index_id IN (0, 1) THEN partition_info.rows ELSE 0 END), 0)
+            FROM sys.tables AS table_info
+            JOIN sys.schemas AS schema_info ON schema_info.schema_id = table_info.schema_id
+            LEFT JOIN sys.partitions AS partition_info ON partition_info.object_id = table_info.object_id
+            WHERE @list_system = 1 OR table_info.is_ms_shipped = 0
+            GROUP BY schema_info.name, table_info.name
+            ORDER BY schema_info.name, table_info.name;
+            """;
+        cmd.Parameters.Add(new SqlParameter("list_system", SqlDbType.Bit) { Value = listSystemTables });
 
-        var reader = cmd.ExecuteReader();
+        using var reader = cmd.ExecuteReader();
         while (reader.Read())
         {
-            string? tableName = reader[@"TABLE_NAME"] as string;
-            string? schemaName = reader[@"TABLE_SCHEMA"] as string;
-
-            yield return new SqlTableInfo(tableName!, schemaName!);
+            yield return new SqlTableInfo(reader.GetString(1), reader.GetString(0), reader.GetInt64(2));
         }
-
-        reader.Close();
     }
 
     public IEnumerable<IColumnInfo> ListTextColumns(ITableInfo tableInfo)

@@ -4,6 +4,11 @@ CREATE TABLE public.customer_data (
     notes text
 );
 
+INSERT INTO public.customer_data (id, display_name, notes)
+VALUES
+    (1, 'Ada', 'first note'),
+    (2, 'Grace', 'second note');
+
 CREATE TABLE public.__anonymyzer_detached_copy (
     marker_id uuid PRIMARY KEY,
     database_name text NOT NULL,
@@ -18,9 +23,15 @@ CREATE TABLE public.labels (
     value text NOT NULL
 );
 
+INSERT INTO public.labels (code, value)
+VALUES ('sample', 'Sample label');
+
 CREATE SCHEMA audit;
 
 CREATE TABLE audit.customer_data (
     id integer PRIMARY KEY,
     payload text
 );
+
+ANALYZE public.customer_data;
+ANALYZE public.labels;

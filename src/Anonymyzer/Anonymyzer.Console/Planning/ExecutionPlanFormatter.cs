@@ -1,10 +1,13 @@
 ﻿namespace Anonymyzer.Console.Planning;
 
+using System.Globalization;
 using Anonymyzer.Base.Generation;
 
 internal static class ExecutionPlanFormatter
 {
-    public static IReadOnlyList<string> Format(AnonymizationExecutionPlan plan)
+    public static IReadOnlyList<string> Format(
+        AnonymizationExecutionPlan plan,
+        ExecutionPlanDatabaseInspection? databaseInspection = null)
     {
         ArgumentNullException.ThrowIfNull(plan);
         var lines = new List<string>
@@ -19,17 +22,50 @@ internal static class ExecutionPlanFormatter
             lines.Add(
                 $"  {index + 1}. {step.Id}: {step.Generator.Type} {step.Generator.Version} " +
                 $"[{step.Generator.Scope}], outputs: {outputs}.");
+            GeneratorStepDatabaseInspection? stepInspection = databaseInspection?.Steps.GetValueOrDefault(step.Id);
+            if (stepInspection is not null)
+            {
+                lines.Add(
+                    $"     estimated target rows: " +
+                    $"{stepInspection.EstimatedTargetRows.ToString("N0", CultureInfo.InvariantCulture)}.");
+            }
 
             foreach (GeneratorDataRequirement requirement in step.DataRequirements)
             {
                 string scan = requirement.RequiresCompleteScan ? "complete scan" : "stream";
+                DataRequirementEstimate? estimate = stepInspection?.DataRequirements.GetValueOrDefault(requirement.Alias);
+                string estimateText = estimate is null
+                    ? string.Empty
+                    : $", estimated rows {estimate.EstimatedRows.ToString("N0", CultureInfo.InvariantCulture)}" +
+                      (requirement.RequiresCompleteScan
+                          ? $", rough max memory {FormatBytes(estimate.EstimatedMaximumMemoryBytes)}"
+                          : string.Empty);
                 lines.Add(
                     $"     data '{requirement.Alias}': {requirement.ValueSource} " +
                     $"{requirement.Table.SchemaName}.{requirement.Table.TableName}" +
-                    $"({string.Join(", ", requirement.Columns)}), {scan}.");
+                    $"({string.Join(", ", requirement.Columns)}), {scan}{estimateText}.");
             }
         }
 
         return lines;
+    }
+
+    private static string FormatBytes(long? bytes)
+    {
+        if (bytes is null)
+        {
+            return "unknown (unbounded text column)";
+        }
+
+        string[] units = ["B", "KiB", "MiB", "GiB", "TiB"];
+        double value = bytes.Value;
+        int unit = 0;
+        while (value >= 1024 && unit < units.Length - 1)
+        {
+            value /= 1024;
+            unit++;
+        }
+
+        return $"{value.ToString("0.##", CultureInfo.InvariantCulture)} {units[unit]}";
     }
 }

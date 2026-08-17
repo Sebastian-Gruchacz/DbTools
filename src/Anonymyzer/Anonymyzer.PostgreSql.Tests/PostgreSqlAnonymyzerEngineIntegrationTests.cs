@@ -32,6 +32,8 @@ public sealed class PostgreSqlAnonymyzerEngineIntegrationTests
         var labelTable = Assert.Single(tables, table => table is { SchemaName: "public", Name: "labels" });
         Assert.Contains(tables, table => table is { SchemaName: "audit", Name: "customer_data" });
         Assert.DoesNotContain(tables, table => table.SchemaName is "pg_catalog" or "information_schema");
+        Assert.Equal(2, customerTable.EstimatedRowCount);
+        Assert.Equal(1, labelTable.EstimatedRowCount);
 
         var customerColumns = engine.ListTextColumns(customerTable).ToArray();
         var displayName = Assert.Single(customerColumns, column => column.Name == "display_name");

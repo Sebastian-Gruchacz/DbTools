@@ -19,18 +19,23 @@ public sealed class PostgreSqlAnonymyzerEngine : IAnonymyzerEngine
     {
         using var command = _connection.CreateCommand();
         command.CommandText = """
-            SELECT table_schema, table_name
-            FROM information_schema.tables
-            WHERE table_type = 'BASE TABLE'
-              AND (@list_system OR table_schema NOT IN ('pg_catalog', 'information_schema'))
-            ORDER BY table_schema, table_name;
+            SELECT
+                namespace_info.nspname,
+                table_info.relname,
+                GREATEST(table_info.reltuples, 0)::bigint
+            FROM pg_catalog.pg_class AS table_info
+            JOIN pg_catalog.pg_namespace AS namespace_info
+              ON namespace_info.oid = table_info.relnamespace
+            WHERE table_info.relkind IN ('r', 'p')
+              AND (@list_system OR namespace_info.nspname NOT IN ('pg_catalog', 'information_schema'))
+            ORDER BY namespace_info.nspname, table_info.relname;
             """;
         command.Parameters.AddWithValue("list_system", listSystemTables);
 
         using var reader = command.ExecuteReader();
         while (reader.Read())
         {
-            yield return new PostgreSqlTableInfo(reader.GetString(1), reader.GetString(0));
+            yield return new PostgreSqlTableInfo(reader.GetString(1), reader.GetString(0), reader.GetInt64(2));
         }
     }
 
@@ -79,7 +84,7 @@ public sealed class PostgreSqlAnonymyzerEngine : IAnonymyzerEngine
     }
 }
 
-internal sealed record PostgreSqlTableInfo(string Name, string SchemaName) : ITableInfo;
+internal sealed record PostgreSqlTableInfo(string Name, string SchemaName, long EstimatedRowCount) : ITableInfo;
 
 internal sealed class PostgreSqlColumnInfo(string name, DbDataType dataType) : IColumnInfo
 {
