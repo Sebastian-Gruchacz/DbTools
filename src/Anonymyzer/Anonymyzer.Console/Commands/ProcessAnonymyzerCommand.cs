@@ -1,10 +1,10 @@
 ﻿namespace Anonymyzer.Console.Commands;
 
 using System.Data;
-using Anonymyzer.Base.Generation;
 using Anonymyzer.Configuration;
 using Anonymyzer.Console.CommandLibraryElements;
 using Anonymyzer.Console.InternalInterfaces;
+using Anonymyzer.Console.Planning;
 using Anonymyzer.Console.Safety;
 using Newtonsoft.Json;
 
@@ -38,7 +38,8 @@ internal sealed class ProcessAnonymyzerCommand
         AnonymizationConfiguration configuration = LoadConfiguration(parameters.ConfigurationFilePath);
         ConfigurationValidator.EnsureValid(configuration);
         DetachedCopySafetyValidator.EnsureConfigurationDoesNotTargetMarker(configuration);
-        ValidateGenerators(configuration);
+        var planner = new AnonymizationExecutionPlanner(_generatorsProvider.GetAllGenerators());
+        AnonymizationExecutionPlan plan = planner.Build(configuration);
 
         parameters.DatabaseEngine = configuration.Database.DatabaseEngine;
         parameters.DatabaseName = configuration.Database.DatabaseName;
@@ -55,13 +56,14 @@ internal sealed class ProcessAnonymyzerCommand
             configuration.Database,
             parameters.ExpectedMarkerId,
             connection);
-        int enabledTables = configuration.Tables.Count(table => table.Enabled);
-        int enabledColumns = configuration.Tables.Sum(table => table.Columns.Count(column => column.Enabled));
-
         _logger.Info(
             $"Dry-run passed for {configuration.Database.DatabaseEngine} database " +
-            $"'{configuration.Database.DatabaseName}', marker {marker.MarkerId:D}, " +
-            $"{enabledTables} enabled table(s), {enabledColumns} enabled column(s). No data was modified.");
+            $"'{configuration.Database.DatabaseName}', marker {marker.MarkerId:D}. No data was modified.");
+        foreach (string line in ExecutionPlanFormatter.Format(plan))
+        {
+            _logger.Info(line);
+        }
+
         return (int)ErrorCodes.Success;
     }
 
@@ -77,30 +79,6 @@ internal sealed class ProcessAnonymyzerCommand
             ?? throw new InvalidOperationException("Configuration file is empty.");
     }
 
-    private void ValidateGenerators(AnonymizationConfiguration configuration)
-    {
-        Dictionary<(string Type, string Version), IGenerator> generators = _generatorsProvider.GetAllGenerators()
-            .ToDictionary(
-                generator => (generator.Descriptor.Type.ToUpperInvariant(), generator.Descriptor.Version),
-                generator => generator);
-
-        foreach (GeneratorProfileConfiguration profile in configuration.GeneratorProfiles)
-        {
-            if (!generators.TryGetValue((profile.GeneratorType.ToUpperInvariant(), profile.GeneratorVersion), out IGenerator? generator))
-            {
-                throw new InvalidOperationException(
-                    $"Generator {profile.GeneratorType} {profile.GeneratorVersion} required by profile '{profile.Id}' is not installed.");
-            }
-
-            object options = generator.Configuration.Deserialize(profile.Options);
-            IReadOnlyList<string> errors = generator.Configuration.Validate(options);
-            if (errors.Count > 0)
-            {
-                throw new InvalidOperationException(
-                    $"Generator profile '{profile.Id}' is invalid: {string.Join("; ", errors)}");
-            }
-        }
-    }
 }
 
 internal sealed class ProcessAnonymyzerCommandParameters : DbParameters
