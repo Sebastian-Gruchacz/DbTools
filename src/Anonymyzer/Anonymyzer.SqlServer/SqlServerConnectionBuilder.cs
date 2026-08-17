@@ -1,8 +1,8 @@
 ﻿namespace Anonymyzer.SqlServer;
 
 using System.Data;
-using System.Data.SqlClient;
 using Anonymyzer.Base;
+using Microsoft.Data.SqlClient;
 
 public class SqlServerConnectionBuilder : IDbConnectionBuilder
 {
@@ -11,13 +11,13 @@ public class SqlServerConnectionBuilder : IDbConnectionBuilder
     public IDbConnection BuildStructuralConnection(string connectionString)
     {
         var conn = new SqlConnection(connectionString);
-        
+
         return conn;
     }
 
     public IDbConnection BuildMainConnection(string connectionString, string dbName)
     {
-        var conn =  new SqlConnection(connectionString);
+        var conn = new SqlConnection(connectionString);
         if (string.IsNullOrWhiteSpace(conn.Database))
         {
             conn.Open();

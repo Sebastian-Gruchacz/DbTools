@@ -1,7 +1,7 @@
 ﻿namespace Anonymyzer.SqlServer;
 
 using System.Data;
-using System.Data.SqlClient;
+using Microsoft.Data.SqlClient;
 using Anonymyzer.Base;
 
 public class SqlServerAnonymyzerEngine : IAnonymyzerEngine
@@ -41,7 +41,7 @@ public class SqlServerAnonymyzerEngine : IAnonymyzerEngine
         using IDbCommand cmd = _connection.CreateCommand();
         cmd.CommandType = CommandType.StoredProcedure;
         cmd.CommandText = @"sp_columns";
-        
+
         var tableNameParameter = cmd.CreateParameter();
         tableNameParameter.ParameterName = @"table_name";
         tableNameParameter.DbType = DbType.String;
@@ -51,7 +51,7 @@ public class SqlServerAnonymyzerEngine : IAnonymyzerEngine
         var schemaNameParameter = cmd.CreateParameter();
         schemaNameParameter.ParameterName = @"table_owner"; // ?!?
         schemaNameParameter.DbType = DbType.String;
-        schemaNameParameter.Value = ((SqlTableInfo)tableInfo).SchemaName;
+        schemaNameParameter.Value = tableInfo.SchemaName;
         cmd.Parameters.Add(schemaNameParameter);
 
         var reader = cmd.ExecuteReader();
@@ -95,7 +95,7 @@ public class SqlServerAnonymyzerEngine : IAnonymyzerEngine
         var schemaNameParameter = cmd.CreateParameter();
         schemaNameParameter.ParameterName = @"table_schema";
         schemaNameParameter.DbType = DbType.String;
-        schemaNameParameter.Value = ((SqlTableInfo)tableInfo).SchemaName;
+        schemaNameParameter.Value = tableInfo.SchemaName;
         cmd.Parameters.Add(schemaNameParameter);
 
         var reader = cmd.ExecuteReader();

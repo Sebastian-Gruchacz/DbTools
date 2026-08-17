@@ -8,7 +8,7 @@ internal class ColumnProcessingOptions
     public string ColumnName { get; set; } = string.Empty;
     public int MaxLength { get; set; }
     public bool Unicode { get; set; }
-    public string DataType { get; set; }
+    public string DataType { get; set; } = string.Empty;
 
-    public ColumnGeneratorConfiguration Generator { get; set; }
+    public ColumnGeneratorConfiguration Generator { get; set; } = new();
 }

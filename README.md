@@ -2,23 +2,25 @@
 
 Zbiór małych narzędzi bazodanowych. Aktywną gałęzią roboczą jest obecnie
 `anonymyzator`: zawiera działający `ScriptCut` oraz rozpoczęty anonimizator dla
-SQL Servera.
+SQL Servera i PostgreSQL.
 
 ## Wymagania
 
-- .NET SDK 10 do budowania `ScriptCut`;
+- .NET SDK 10 do budowania całego rozwiązania i uruchamiania testów;
 - SQL Server i `sqlcmd` dostępny w `PATH` do uruchamiania wygenerowanych paczek;
-- dla starego kodu anonimizatora: .NET 6 SDK oraz dostęp do pakietów NuGet.
+- dostęp do pakietów NuGet;
+- opcjonalnie Docker z obrazem PostgreSQL do testu integracyjnego providera.
 
 Budowanie całego rozwiązania:
 
 ```powershell
 dotnet restore .\src\DbTools.sln
 dotnet build .\src\DbTools.sln
+dotnet test .\src\DbTools.sln
 ```
 
-Anonimizator nadal celuje w niewspierany już `net6.0`; jego migracja jest na
-liście dalszych prac. `ScriptCut` celuje w `net10.0`.
+Wszystkie aktywne projekty celują w `net10.0`. Plik `global.json` wybiera
+Microsoft Testing Platform, wymagany przez testy xUnit v3 i SDK .NET 10.
 
 ## ScriptCut
 
@@ -80,38 +82,68 @@ Cel projektu opisuje szerzej [Kwerenda.txt](Kwerenda.txt): wydajna i
 konfigurowalna anonimizacja dużych baz, z uwzględnieniem tabel bez prostego PK,
 indeksów, relacji oraz generatorów korzystających z innych wartości.
 
+Anonimizator docelowo **modyfikuje bazę w miejscu**, ale jego targetem musi być
+odłączona, odtwarzalna kopia robocza — nigdy baza źródłowa ani produkcyjna.
+Backup/restore jest osobnym procesem z osobnymi uprawnieniami. Anonimizator nie
+powinien nigdy otrzymywać connection stringa produkcji; także konfigurację
+generuje ze schematu odłączonej kopii.
+Zakładany przepływ, zabezpieczenia komendy `run`, strategię testów oraz pakiety
+językowe opisuje [docs/anonymyzer-design.md](docs/anonymyzer-design.md).
+
 ### Architektura
 
 - `Anonymyzer.Base` — kontrakty silnika, metadanych i generatorów;
 - `Anonymyzer.SqlServer` — połączenia i odczyt tabel, kolumn tekstowych oraz PK;
+- `Anonymyzer.PostgreSql` — analogiczny provider oparty na Npgsql i
+  `information_schema`;
+- `Anonymyzer.PostgreSql.Tests` — testy buildera i opcjonalna integracja z bazą;
 - `Anonymyzer.Generators.Simple` — rejestracja generatora `TextShuffler`;
 - `Anonymyzer.Console` — DI, generowanie konfiguracji i przyszłe wykonanie.
 
 ### Co działa
 
-- budowanie połączenia do SQL Servera;
-- odczyt tabel, tekstowych kolumn i informacji o kluczu głównym;
+- budowanie połączeń do SQL Servera i PostgreSQL;
+- odczyt schematów, tabel, tekstowych kolumn, nullowalności i informacji o PK;
 - generowanie pliku JSON z domyślnie wyłączonymi tabelami i kolumnami;
-- rejestracja generatorów i eksport ich domyślnej konfiguracji.
+- rejestracja generatorów i eksport ich domyślnej konfiguracji;
+- test integracyjny odczytu metadanych PostgreSQL 17 na tymczasowej bazie.
 
 ### Czego jeszcze nie ma
 
-- publicznego CLI — `Program.cs` zawiera na razie lokalne, wpisane na sztywno
-  parametry komputera autora;
+- publicznego CLI — `Program.cs` kończy się obecnie bez próby połączenia, aby
+  nie dało się przypadkiem uruchomić prototypu na bazie;
 - wykonania konfiguracji (`ProcessAnonymyzerCommand` jest szkieletem);
 - implementacji `TextShuffler` (`BuildColumnWriter` zgłasza
   `NotImplementedException`);
-- testów automatycznych i bezpiecznego trybu `dry-run`;
-- obsługi innych schematów danych, XML/JSON oraz zmian PK/FK;
+- testów SQL Servera i bezpiecznego trybu `dry-run`;
+- obsługi XML/JSON oraz zmian PK/FK;
 - strategii wyłączania i odbudowy indeksów, constraintów i triggerów.
 
-Aktualny build przechodzi, ale zgłasza dług techniczny: projekty anonimizatora
-celują w EOL `net6.0`, `System.Data.SqlClient` 4.8.3 ma zgłoszone podatności, a
-modele konfiguracji i `GeneratorBase` generują ostrzeżenia nullable.
+Kod jest na .NET 10. SQL Server używa `Microsoft.Data.SqlClient` 7.0.2, a
+PostgreSQL używa Npgsql 10.0.3. Aktualny build przechodzi bez ostrzeżeń.
 
-Nie ma więc obecnie wspieranego wywołania CLI anonimizatora. Nie należy
-uruchamiać `Anonymyzer.Console` bez przejrzenia `Program.cs`: program próbuje
-połączyć się z wpisanym tam serwerem i nadpisać wskazany plik konfiguracji.
+Nie ma więc obecnie wspieranego wywołania CLI anonimizatora. Uruchomienie
+`Anonymyzer.Console` zwraca błąd konfiguracji i nie próbuje łączyć się z bazą.
+
+Provider wybiera pole `DatabaseEngine`: obsługiwane wartości to `SqlServer` i
+`PostgreSql`. Konfiguracja formatu `0.2.0` zapisuje nazwę schematu każdej tabeli.
+
+Najprostsze bezpieczne wywołanie integracji tworzy osobny kontener z lokalnego
+obrazu, ładuje fixture i zawsze usuwa kontener w bloku `finally`:
+
+```powershell
+.\tools\Test-PostgreSqlProvider.ps1
+```
+
+Można wskazać inny lokalny obraz przez `-Image`. Sam test korzysta ze zmiennej
+`ANONYMYZER_POSTGRES_CONNECTION`; bez niej integracja jest pomijana, a testy
+jednostkowe nadal się wykonują. Fixture znajduje się w
+`tests/postgresql/init.sql`. Bieżąca implementacja generowania konfiguracji
+tylko czyta metadane odłączonej kopii i nie zapisuje connection stringa w JSON.
+Przyszła komenda `run` będzie modyfikowała dane w
+odłączonej kopii. Testy wykonania muszą tworzyć nową bazę z fixture'a albo
+odtwarzać backup/dump (np. Northwind) i nigdy nie mogą wskazywać istniejącej
+bazy roboczej użytkownika.
 
 ## Stan gałęzi
 
@@ -120,31 +152,29 @@ połączyć się z wpisanym tam serwerem i nadpisać wskazany plik konfiguracji.
 | `master` | historyczna wersja `ScriptCut` | punkt bazowy, zastąpiony przez nowsze prace |
 | `some_changes` | obsługa triggerów i BAT w `ScriptCut` | w całości jest przodkiem `anonymyzator`; można później usunąć ref |
 | `anonymyzator` | `ScriptCut` oraz szkic anonimizatora | właściwa gałąź do dalszej pracy |
-| `gateway` | `TimeGateService` i ręczny `TestConsole` | osobny eksperyment Windows Service z 2019 r.; nie scalać z DbTools bez decyzji produktowej |
+| `gateway` | historyczne źródło `TimeGateService` | wydzielone do osobnego repozytorium `J:\GIT\Gateway`; nie scalać do `main` |
 
-`gateway` instaluje usługę, która według reguł czasu może wymusić wyłączenie
-komputera. Kod nie ma testów automatycznych, używa starego modelu projektu .NET
-Framework i nie został zweryfikowany na obecnym środowisku. Jeśli jest nadal
-potrzebny, lepiej wydzielić go do osobnego repozytorium; w przeciwnym razie
-zachować branch jako archiwum. Historyczny `setup.bat` kopiuje EXE do
-`C:\Program Files\Obscure` i wywołuje `InstallUtil`; jest to instalator usługi,
-nie bezpieczne CLI diagnostyczne. `TestConsole` tylko ręcznie symuluje kontrolę
-czasu. Dostępne reguły to domyślne godziny pracy, weekend i wakacje.
+Gateway został wydzielony do `J:\GIT\Gateway` wraz z dwoma historycznymi
+commitami, osobnym rozwiązaniem, licencją i dokumentacją bezpieczeństwa. Ref
+`gateway` w DbTools pozostaje jedynie źródłem historycznym i może zostać
+skasowany po wypchnięciu lub zarchiwizowaniu nowego repozytorium.
 
 ## Proponowana kolejka
 
 1. Dodać testy regresyjne `ScriptCut` dla wielu tabel, tabel bez
    `IDENTITY_INSERT`, pustego wejścia i znaków niedozwolonych w nazwie pliku.
-2. Zamienić wpisane na sztywno parametry `Anonymyzer.Console` na jawne komendy
-   `generate-config` i `run`; dodać walidację bez łączenia z bazą.
-3. Zmigrować anonimizator do .NET 10, przejść z przestarzałego
-   `System.Data.SqlClient` na wspierany provider i usunąć ostrzeżenia nullable;
-   ujednolicić nazwy `Anonymyzer` / `Anonymization` bez zmiany zachowania.
-4. Zrealizować mały pionowy wycinek: jedna tabela, tekstowe kolumny spoza PK,
+2. Dodać jawne komendy `generate-config` i `run` z connection stringiem kopii
+   podawanym tylko w runtime; przed `run` dodać obowiązkowy marker odłączonej
+   kopii, kontrolę oczekiwanej nazwy/identyfikatora bazy i plan `dry-run`.
+3. Dodać słowniki kandydatów angielskich i polskich. Mają podpowiadać pola,
+   ale nie włączać ich automatycznie bez zatwierdzenia konfiguracji.
+4. Ujednolicić historyczne nazwy `Anonymyzer` / `Anonymization` bez zmiany
+   zachowania i dodać test integracyjny SQL Servera.
+5. Zrealizować mały pionowy wycinek: jedna tabela, tekstowe kolumny spoza PK,
    deterministyczny generator, batche, `dry-run` i test na lokalnej bazie.
-5. Dopiero po pomiarach dodać planowanie zależności FK, mapowanie zmienianych
+6. Dopiero po pomiarach dodać planowanie zależności FK, mapowanie zmienianych
    kluczy, indeksy, XML/JSON i generatory odwołujące się do innych wierszy.
 
 Najbardziej opłacalny następny krok to punkt 2, a potem pionowy wycinek z punktu
-4. Próba rozwiązania od razu zmian PK/FK i wszystkich wariantów indeksów
+5. Próba rozwiązania od razu zmian PK/FK i wszystkich wariantów indeksów
 utrudniłaby zweryfikowanie podstawowego przepływu.

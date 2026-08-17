@@ -14,29 +14,15 @@ public class DbParameters
     public string DatabaseName { get; set; } = string.Empty;
 
     /// <summary>
-    /// Gets or sets connection string to the operational DB
+    /// Gets or sets the runtime-only connection string to the detached working copy.
+    /// This value must never be persisted in the anonymyzation configuration.
     /// </summary>
     public string ConnectionString { get; set; } = string.Empty;
 
     /// <summary>
-    /// Gets or sets connection string required for master / structural operations
+    /// Gets or sets the runtime-only connection string required for structural operations.
+    /// This value must never be persisted in the anonymyzation configuration.
     /// </summary>
     public string StructuralConnectionString { get; set; } = string.Empty;
 
-    /// <summary>
-    /// Need to do this, as stupid JSON writers all properties of derived class assigned to the base variable...
-    /// </summary>
-    /// <returns></returns>
-    public DbParameters GetCleanParameters()
-    {
-        return new DbParameters
-        {
-            DatabaseEngine = this.DatabaseEngine,
-            StructuralConnectionString = this.StructuralConnectionString,
-            ConnectionString = this.ConnectionString,
-            DatabaseName = this.DatabaseName
-            
-            
-        };
-    }
 }

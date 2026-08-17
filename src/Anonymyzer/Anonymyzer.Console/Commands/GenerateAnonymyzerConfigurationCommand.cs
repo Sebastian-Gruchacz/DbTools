@@ -137,7 +137,11 @@ internal class GenerateAnonymyzerConfigurationCommand// : ICommand<GenerateAnony
 
         var config = new AnonymyzationConfiguration()
         {
-            DbConfiguration = parameters.GetCleanParameters(),
+            DbConfiguration = new DatabaseTargetConfiguration
+            {
+                DatabaseEngine = parameters.DatabaseEngine,
+                DatabaseName = parameters.DatabaseName
+            },
             Generators = BuildDefaultGeneratorsConfiguration(),
             Tables = outputConfigs.ToArray()
         };
@@ -156,7 +160,7 @@ internal class GenerateAnonymyzerConfigurationCommand// : ICommand<GenerateAnony
 
     private TableProcessingOptions CreateConfigForTable(IAnonymyzerEngine engine, ITableInfo tableInfo)
     {
-        var config = TableProcessingOptions.DefaultForTable(tableInfo.Name);
+        var config = TableProcessingOptions.DefaultForTable(tableInfo.Name, tableInfo.SchemaName);
 
         var columns = engine.ListTextColumns(tableInfo);
         foreach (IColumnInfo column in columns)

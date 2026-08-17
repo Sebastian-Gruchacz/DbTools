@@ -28,9 +28,9 @@ internal class ProcessAnonymyzerCommand // : ICommand<ProcessAnonymyzerCommandPa
 
         //AnonymyzationConfiguration config;
 
-        //var dbConnection = _dbConnectionFactory.CreateMainConnection(
-        //    config.DbConfiguration.DatabaseEngine,
-        //    config.DbConfiguration.ConnectionString);
+        // The detached-copy connection must come from runtime arguments or a secret provider.
+        // It must never be read from the anonymyzation configuration file.
+        //var dbConnection = _dbConnectionFactory.CreateMainConnection(parameters);
 
         //var engine = _engineFactory.CreateEngine(config.DbConfiguration.DatabaseEngine, dbConnection);
 

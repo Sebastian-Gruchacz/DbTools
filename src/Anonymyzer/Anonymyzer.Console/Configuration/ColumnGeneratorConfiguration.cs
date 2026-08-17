@@ -6,5 +6,5 @@ internal class ColumnGeneratorConfiguration
 {
     public string Name { get; set; } = string.Empty;
 
-    public JObject Options { get; set; }
+    public JObject Options { get; set; } = new();
 }

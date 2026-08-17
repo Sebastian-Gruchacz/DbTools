@@ -5,7 +5,7 @@ using System.Linq.Expressions;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
-public abstract class GeneratorBase<TConfig> : IGenerator
+public abstract class GeneratorBase<TConfig> : IGenerator where TConfig : notnull
 {
     private readonly JsonSerializer _serializer;
 
@@ -19,7 +19,8 @@ public abstract class GeneratorBase<TConfig> : IGenerator
     {
         // TODO: merge global and column config....
 
-        TConfig config = globalConfig.ToObject<TConfig>();
+        TConfig config = globalConfig.ToObject<TConfig>(_serializer)
+            ?? throw new JsonSerializationException($"Could not deserialize {typeof(TConfig).Name} configuration.");
 
 
         return BuildColumnWriter(columnInfo, config);
@@ -29,7 +30,7 @@ public abstract class GeneratorBase<TConfig> : IGenerator
     public JObject GetDefaultConfig()
     {
         var config = GetDefaultConfiguration();
-        return JObject.FromObject(config);
+        return JObject.FromObject(config, _serializer);
     }
 
     /// <inheritdoc cref="IGenerator"/>

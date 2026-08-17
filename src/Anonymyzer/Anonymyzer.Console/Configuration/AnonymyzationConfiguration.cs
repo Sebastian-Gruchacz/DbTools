@@ -1,6 +1,5 @@
 ﻿namespace Anonymyzer.Console.Configuration;
 
-using Anonymyzer.Console.Commands;
 using Anonymyzer.Console.GenerateConfiguration;
 using Newtonsoft.Json.Linq;
 
@@ -9,9 +8,9 @@ using Newtonsoft.Json.Linq;
 /// </summary>
 internal class AnonymyzationConfiguration
 {
-    public string Version { get; set; } = @"0.1.1";
+    public string Version { get; set; } = @"0.2.0";
 
-    public DbParameters DbConfiguration { get; set; }
+    public DatabaseTargetConfiguration DbConfiguration { get; set; } = new();
 
     public Dictionary<string, JObject> Generators { get; set; } = new();
 

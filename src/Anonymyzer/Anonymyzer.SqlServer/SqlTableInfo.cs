@@ -10,7 +10,7 @@ public class SqlTableInfo : ITableInfo
         SchemaName = schemaName;
     }
 
-    public string SchemaName { get; private set; }
+    public string SchemaName { get; }
 
     public string Name { get; }
 }
