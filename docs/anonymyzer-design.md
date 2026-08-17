@@ -132,6 +132,12 @@ Filtr listy działa wyłącznie w pamięci UI, dopasowuje wszystkie wpisane frag
 do `schema.table` bez rozróżniania wielkości liter i opcjonalnie pokazuje tylko
 tabele zawierające kandydatów. Nie zmienia kolejności ani zawartości JSON-a.
 
+Rola semantyczna jest wybierana płaskim przyciskiem otwierającym dwupoziomowe
+menu: najpierw kategorię, np. osoba, adres lub identyfikatory, a następnie
+konkretną rolę. Kategorie są wyłącznie organizacją UI. JSON nadal przechowuje
+stabilną wartość kanoniczną, np. `Address.City`; nieznane wartości z istniejących
+konfiguracji pozostają dostępne w grupie `Custom / legacy`.
+
 Podgląd generatorów `Row` uruchamia ich rzeczywistą sesję w pamięci, bez dostępu
 do bazy. Dla pojedynczej kolumny operator może otworzyć kilka niemodalnych okien
 surowych wartości `non-null` z odłączonego klona. Jest to narzędzie inspekcyjne,

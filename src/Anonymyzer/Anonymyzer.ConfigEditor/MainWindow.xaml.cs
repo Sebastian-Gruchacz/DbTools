@@ -2,6 +2,8 @@
 
 using System.IO;
 using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using Anonymyzer.ConfigEditor.Infrastructure;
 using Anonymyzer.ConfigEditor.ViewModels;
 using Anonymyzer.ConfigEditor.Abstractions;
@@ -193,6 +195,41 @@ public partial class MainWindow : Window
         };
         _sampleWindowOffset = (_sampleWindowOffset + 24) % 144;
         window.Show();
+    }
+
+    private void SemanticRole_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { DataContext: ColumnViewModel column } button)
+        {
+            return;
+        }
+
+        var menu = new ContextMenu
+        {
+            PlacementTarget = button,
+            Placement = PlacementMode.Bottom
+        };
+
+        foreach (SemanticRoleGroup group in column.SemanticRoleGroups)
+        {
+            var groupItem = new MenuItem { Header = group.DisplayName };
+            foreach (SemanticRoleOption option in group.Options)
+            {
+                var optionItem = new MenuItem
+                {
+                    Header = option.DisplayName,
+                    IsCheckable = true,
+                    IsChecked = option.Value == column.SemanticRoleValue
+                };
+                optionItem.Click += (_, _) => column.SelectSemanticRole(option);
+                groupItem.Items.Add(optionItem);
+            }
+
+            menu.Items.Add(groupItem);
+        }
+
+        button.ContextMenu = menu;
+        menu.IsOpen = true;
     }
 
     private void Exit_Click(object sender, RoutedEventArgs e)

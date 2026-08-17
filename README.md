@@ -117,8 +117,9 @@ językowe opisuje [docs/anonymyzer-design.md](docs/anonymyzer-design.md).
 - model konfiguracji `0.4.0`: marker odłączonej kopii, role semantyczne,
   wykryci kandydaci, profile
   generatorów oraz grupy wiążące kilka kolumn;
-- edytor WPF: New/Open/Save/Save As, wybór tabeli, grid kolumn, edycja profili
-  oraz grup wielokolumnowych z mapowaniem wyjść generatora na kolumny;
+- edytor WPF: New/Open/Save/Save As, wybór tabeli, grid kolumn, dwupoziomowe
+  menu ról semantycznych, edycja profili oraz grup wielokolumnowych z mapowaniem
+  wyjść generatora na kolumny;
 - wersjonowany kontrakt generatora: własny codec JSON, walidacja, deklaracja
   wymagań danych, przygotowanie stanu i sesja wykonawcza;
 - `TextShuffler` 1.0.0: deterministyczna permutacja całej kolumny zachowująca

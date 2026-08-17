@@ -15,16 +15,7 @@ internal sealed class EditorViewModel : INotifyPropertyChanged
 
     public EditorViewModel()
     {
-        SemanticRoles = new[]
-        {
-            string.Empty,
-            "Person.FirstName", "Person.LastName", "Person.FullName", "Person.BirthDate", "Person.NationalId",
-            "Person.Gender",
-            "Contact.Email", "Contact.Phone",
-            "Address.Country", "Address.Region", "Address.City", "Address.Street", "Address.PostalCode",
-            "Company.Name", "Company.TaxId",
-            "Account.Login", "Financial.BankAccount"
-        };
+        SemanticRoleGroups = SemanticRoleCatalog.CreateDefault();
 
         Load(new AnonymizationConfiguration(), null);
     }
@@ -35,7 +26,7 @@ internal sealed class EditorViewModel : INotifyPropertyChanged
     public ObservableCollection<TableViewModel> Tables { get; } = new();
     public ObservableCollection<string> GeneratorTypes { get; } = new();
     public ObservableCollection<string> ProfileIds { get; } = new();
-    public IReadOnlyList<string> SemanticRoles { get; }
+    public IReadOnlyList<SemanticRoleGroup> SemanticRoleGroups { get; }
     public string? CurrentPath { get; private set; }
     public string CandidateTablesOnlyLabel =>
         $"Only candidates ({_allTables.Count(table => table.CandidateCount > 0)})";
@@ -130,7 +121,7 @@ internal sealed class EditorViewModel : INotifyPropertyChanged
         _allTables.AddRange(Configuration.Tables
             .OrderBy(table => table.SchemaName)
             .ThenBy(table => table.TableName)
-            .Select(table => new TableViewModel(table, Configuration.GeneratorProfiles)));
+            .Select(table => new TableViewModel(table, Configuration.GeneratorProfiles, SemanticRoleGroups)));
     }
 
     private void ApplyTableFilter(string? preferredTableKey = null)

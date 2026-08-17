@@ -124,11 +124,16 @@
                     <DataGridTextColumn Header="Column" Binding="{Binding ColumnName}" IsReadOnly="True" Width="1.4*" />
                     <DataGridTextColumn Header="Type" Binding="{Binding TypeDisplay}" IsReadOnly="True" Width="105" />
                     <DataGridCheckBoxColumn Header="Anonymize" Binding="{Binding Enabled}" Width="80" />
-                    <DataGridTemplateColumn Header="Semantic role" Width="1.3*">
+                    <DataGridTemplateColumn Header="Semantic role" Width="1.5*">
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
-                                <ComboBox ItemsSource="{Binding DataContext.SemanticRoles, RelativeSource={RelativeSource AncestorType=Window}}"
-                                          SelectedItem="{Binding SemanticRole, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                <Button Padding="5,1"
+                                        HorizontalContentAlignment="Left"
+                                        Background="Transparent"
+                                        BorderThickness="0"
+                                        Content="{Binding SemanticRoleDisplay}"
+                                        ToolTip="{Binding SemanticRoleValue}"
+                                        Click="SemanticRole_Click" />
                             </DataTemplate>
                         </DataGridTemplateColumn.CellTemplate>
                     </DataGridTemplateColumn>

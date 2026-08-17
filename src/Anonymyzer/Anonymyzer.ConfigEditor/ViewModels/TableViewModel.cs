@@ -7,11 +7,12 @@ internal sealed class TableViewModel
 {
     public TableViewModel(
         TableProcessingOptions model,
-        IReadOnlyList<GeneratorProfileConfiguration> profiles)
+        IReadOnlyList<GeneratorProfileConfiguration> profiles,
+        IReadOnlyList<SemanticRoleGroup> semanticRoleGroups)
     {
         Model = model;
         Columns = new ObservableCollection<ColumnViewModel>(
-            model.Columns.Select(column => new ColumnViewModel(column, profiles)));
+            model.Columns.Select(column => new ColumnViewModel(column, profiles, semanticRoleGroups)));
     }
 
     public TableProcessingOptions Model { get; }
