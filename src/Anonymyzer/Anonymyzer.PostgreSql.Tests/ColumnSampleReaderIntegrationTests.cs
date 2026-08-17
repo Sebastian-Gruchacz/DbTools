@@ -70,6 +70,52 @@ public sealed class ColumnSampleReaderIntegrationTests
                 TestContext.Current.CancellationToken));
     }
 
+    [Fact]
+    public async Task ListsOnlyUnconfiguredNonPrimaryKeyColumnsFromValidatedClone()
+    {
+        string connectionString = RequireConnectionString();
+        const string environmentVariable = "ANONYMYZER_METADATA_TEST_CONNECTION";
+        string? previousValue = Environment.GetEnvironmentVariable(environmentVariable);
+        Environment.SetEnvironmentVariable(environmentVariable, connectionString);
+
+        try
+        {
+            var table = new TableProcessingOptions
+            {
+                SchemaName = "public",
+                TableName = "customer_data",
+                Columns =
+                {
+                    new ColumnProcessingOptions { Ordinal = 2, ColumnName = "display_name", DataType = "Text" }
+                }
+            };
+            var configuration = new AnonymizationConfiguration
+            {
+                Database = new DatabaseTargetConfiguration
+                {
+                    DatabaseEngine = "PostgreSql",
+                    DatabaseName = "anonymyzer_test",
+                    DetachedCopyMarkerId = "11111111-2222-3333-4444-555555555555"
+                },
+                Tables = { table }
+            };
+
+            IReadOnlyList<AvailableColumn> columns = await new ColumnMetadataReader().ReadAvailableAsync(
+                configuration,
+                table,
+                environmentVariable,
+                TestContext.Current.CancellationToken);
+
+            Assert.DoesNotContain(columns, column => column.ColumnName is "id" or "display_name");
+            Assert.Contains(columns, column => column is { ColumnName: "pesel", DataType: "Integer" });
+            Assert.Contains(columns, column => column is { ColumnName: "preferences", DataType: "Json" });
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable(environmentVariable, previousValue);
+        }
+    }
+
     private static string RequireConnectionString()
     {
         string? connectionString = Environment.GetEnvironmentVariable("ANONYMYZER_POSTGRES_CONNECTION");

@@ -2,25 +2,15 @@
 
 using System.Data;
 using System.Globalization;
-using Anonymyzer.Base;
 using Anonymyzer.Configuration;
 using Anonymyzer.Configuration.Safety;
-using Anonymyzer.PostgreSql;
-using Anonymyzer.SqlServer;
 
 public sealed class ColumnSampleReader
 {
     public const int CommandTimeoutSeconds = 15;
     public const int MaximumCharactersPerValue = 32_768;
 
-    private readonly IReadOnlyList<IDbConnectionBuilder> _connectionBuilders = new IDbConnectionBuilder[]
-    {
-        new SqlServerConnectionBuilder(),
-        new PostgreSqlConnectionBuilder()
-    };
-
-    private readonly DetachedCopySafetyValidator _safetyValidator =
-        new(new DetachedCopyMarkerReader());
+    private readonly ValidatedCloneConnectionFactory _connectionFactory = new();
 
     public Task<IReadOnlyList<ColumnSample>> ReadAsync(
         AnonymizationConfiguration configuration,
@@ -59,30 +49,10 @@ public sealed class ColumnSampleReader
         CancellationToken cancellationToken)
     {
         ValidateSelection(configuration, table, column);
-        string? connectionString = Environment.GetEnvironmentVariable(connectionEnvironmentVariable);
-        if (string.IsNullOrWhiteSpace(connectionString))
-        {
-            throw new InvalidOperationException(
-                $"Environment variable '{connectionEnvironmentVariable}' is empty or missing.");
-        }
-
-        IDbConnectionBuilder builder = _connectionBuilders.SingleOrDefault(candidate =>
-            candidate.Name.Equals(configuration.Database.DatabaseEngine, StringComparison.OrdinalIgnoreCase))
-            ?? throw new InvalidOperationException(
-                $"Unsupported database engine '{configuration.Database.DatabaseEngine}'.");
-
-        using IDbConnection connection = builder.BuildMainConnection(
-            connectionString,
-            configuration.Database.DatabaseName);
-        connection.Open();
-        cancellationToken.ThrowIfCancellationRequested();
-
-        if (!Guid.TryParse(configuration.Database.DetachedCopyMarkerId, out Guid markerId))
-        {
-            throw new InvalidOperationException("The configuration has no valid detached-copy marker id.");
-        }
-
-        _safetyValidator.Validate(configuration.Database, markerId, connection);
+        using IDbConnection connection = _connectionFactory.Open(
+            configuration,
+            connectionEnvironmentVariable,
+            cancellationToken);
 
         using IDbCommand command = connection.CreateCommand();
         command.CommandTimeout = CommandTimeoutSeconds;

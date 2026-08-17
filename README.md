@@ -111,7 +111,7 @@ językowe opisuje [docs/anonymyzer-design.md](docs/anonymyzer-design.md).
 ### Co działa
 
 - budowanie połączeń do SQL Servera i PostgreSQL;
-- odczyt schematów, tabel, tekstowych kolumn, nullowalności i informacji o PK;
+- odczyt schematów, tabel, wszystkich kolumn, nullowalności, ordinali i informacji o PK;
 - generowanie pliku JSON z domyślnie wyłączonymi tabelami i kolumnami;
 - rejestracja generatorów i eksport ich domyślnej konfiguracji;
 - model konfiguracji `0.4.0`: marker odłączonej kopii, role semantyczne,
@@ -134,6 +134,10 @@ językowe opisuje [docs/anonymyzer-design.md](docs/anonymyzer-design.md).
   konfiguracji: limit 1–50, wiele okien naraz, kopiowanie i ponowna walidacja
   nazwy oraz markera klona przed każdym odczytem;
 - prezentacja tekstowego typu kolumny wraz z długością albo `MAX`;
+- klasyfikacja typów SQL Server/PostgreSQL oraz kandydaci wykrywani po nazwie
+  także dla pól liczbowych, np. PESEL, NIP i telefonów;
+- ręczne `Add column...`, które po walidacji klona pokazuje brakujące kolumny
+  niebędące PK i dodaje wybrane jako domyślnie wyłączone;
 - CLI `generate-config` i `run --dry-run`, które pobiera connection string
   wyłącznie ze wskazanej zmiennej środowiskowej;
 - potrójna walidacja markera odłączonej kopii: argument operatora, konfiguracja
@@ -160,8 +164,6 @@ językowe opisuje [docs/anonymyzer-design.md](docs/anonymyzer-design.md).
 - podglądu generatorów `Column` i `Relational`, które wymagają odczytu danych
   z odłączonego klona;
 - pełnych, ważonych zbiorów danych regionalnych oraz generatorów PESEL/NIP;
-- metadanych kolumn nietekstowych, detekcji liczbowych PESEL/NIP/telefonów oraz
-  komendy UI `Add column...` dla pól pominiętych przez generator konfiguracji;
 - automatycznej analizy niestabilnych kolekcji, JSON, XML i tekstu swobodnego;
 - obsługi XML/JSON oraz zmian PK/FK;
 - strategii wyłączania i odbudowy indeksów, constraintów i triggerów.
@@ -234,6 +236,11 @@ kopiować dane, ale sample nie trafiają do konfiguracji, logów ani plików. Je
 zapytanie trwa najwyżej 15 sekund, a pojedyncza wyświetlana wartość jest obcinana
 po 32 768 znakach i oznaczana jako skrócona.
 
+`Add column...` używa tego samego bezpiecznego połączenia i walidacji markera.
+Pokazuje wyłącznie kolumny istniejące w wybranej tabeli klona, których nie ma
+jeszcze w konfiguracji, z pominięciem klucza głównego. Dodane pola są wyłączone
+i nie dostają generatora automatycznie; operator wybiera rolę i profil jawnie.
+
 Najprostsze bezpieczne wywołanie integracji tworzy osobny kontener z lokalnego
 obrazu, ładuje fixture i zawsze usuwa kontener w bloku `finally`:
 
@@ -269,18 +276,16 @@ skasowany po wypchnięciu lub zarchiwizowaniu nowego repozytorium.
 
 1. Dodać testy regresyjne `ScriptCut` dla wielu tabel, tabel bez
    `IDENTITY_INSERT`, pustego wejścia i znaków niedozwolonych w nazwie pliku.
-2. Rozszerzyć metadane providerów na wszystkie typy, wykrywać po nazwie także
-   liczbowe NIP/PESEL/telefony i dodać ręczne `Add column...` w edytorze.
-3. Podłączyć podgląd generatorów `Column` do bezpiecznego, tylko-odczytowego
+2. Podłączyć podgląd generatorów `Column` do bezpiecznego, tylko-odczytowego
    źródła danych z odłączonego klona.
-4. Ujednolicić historyczne nazwy `Anonymyzer` / `Anonymization` bez zmiany
+3. Ujednolicić historyczne nazwy `Anonymyzer` / `Anonymization` bez zmiany
    zachowania.
-5. Zrealizować mały pionowy wycinek: jedna tabela, grupa `PersonIdentity`,
+4. Zrealizować mały pionowy wycinek: jedna tabela, grupa `PersonIdentity`,
    deterministyczny seed, batche, `dry-run` i test na lokalnej bazie.
-6. Rozszerzyć pakiety regionalne o ważone dane oraz generatory PESEL/NIP/SSN.
-7. Dopiero po pomiarach dodać planowanie zależności FK, mapowanie zmienianych
+5. Rozszerzyć pakiety regionalne o ważone dane oraz generatory PESEL/NIP/SSN.
+6. Dopiero po pomiarach dodać planowanie zależności FK, mapowanie zmienianych
    kluczy, indeksy, XML/JSON i generatory odwołujące się do innych wierszy.
 
 Najbardziej opłacalny następny krok to punkt 2, a potem pionowy wycinek z punktu
-5. Próba rozwiązania od razu zmian PK/FK i wszystkich wariantów indeksów
+4. Próba rozwiązania od razu zmian PK/FK i wszystkich wariantów indeksów
 utrudniłaby zweryfikowanie podstawowego przepływu.

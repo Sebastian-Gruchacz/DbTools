@@ -131,6 +131,11 @@ surowych wartości `non-null` z odłączonego klona. Jest to narzędzie inspekcy
 nie podgląd wyniku generatora `Column`: UI nadal nie symuluje shuffle ani
 generatorów `Relational`. Podgląd nigdy nie może modyfikować bazy.
 
+`Add column...` ponownie waliduje nazwę i marker klona, a następnie pokazuje
+brakujące kolumny niebędące PK. Dodanie zmienia wyłącznie model konfiguracji w
+pamięci; pola pozostają wyłączone i bez generatora aż do jawnej decyzji
+operatora.
+
 ### Kontrakt pluginu generatora
 
 Generator jest identyfikowany przez parę `Type` + `Version`; profil zapisuje oba
@@ -250,8 +255,10 @@ Reguła ogólnego angielskiego `address` została celowo zastąpiona formami
 `street_address`, `mailing_address` i `postal_address`, ponieważ na realnym
 schemacie myliła adres pocztowy z adresem strony, sieci i nadawcy e-maila.
 
-Aktualny generator konfiguracji pobiera wyłącznie kolumny tekstowe. Detekcja po
-nazwie musi docelowo działać również na typach liczbowych, ponieważ spotykane są
-bazy przechowujące PESEL, NIP i numery telefonu jako liczby. Takie pola powinny
-być widoczne do ręcznego dodania, ale generator musi uwzględnić utracone zera
-wiodące i ograniczenia typu docelowego.
+Generator konfiguracji pobiera wszystkie kolumny niebędące PK i klasyfikuje je
+do przenośnych kategorii: tekst, liczba całkowita/dziesiętna, boolean, data/czas,
+GUID, binaria, JSON, XML lub `Other`. Detekcja po nazwie działa niezależnie od
+tej kategorii, więc liczbowy PESEL, NIP albo telefon nadal zostanie oznaczony.
+Automatyczny `TextShuffler` jest przypisywany wyłącznie tekstowi; pozostałe typy
+czekają na jawny, zgodny generator. Dla liczbowych identyfikatorów generator musi
+uwzględnić utracone zera wiodące i ograniczenia typu docelowego.

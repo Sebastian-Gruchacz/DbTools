@@ -6,6 +6,7 @@ using Anonymyzer.ConfigEditor.Infrastructure;
 using Anonymyzer.ConfigEditor.ViewModels;
 using Anonymyzer.ConfigEditor.Abstractions;
 using Anonymyzer.Configuration;
+using Anonymyzer.DatabaseAccess;
 using Anonymyzer.Generators.Person.Wpf;
 using Anonymyzer.Generators.Simple.Wpf;
 using Microsoft.Win32;
@@ -136,6 +137,40 @@ public partial class MainWindow : Window
             _viewModel.Status = exception.Message;
             MessageBox.Show(this, exception.Message, "Preview error", MessageBoxButton.OK, MessageBoxImage.Error);
         }
+    }
+
+    private void AddColumns_Click(object sender, RoutedEventArgs e)
+    {
+        TableViewModel? table = _viewModel.SelectedTable;
+        if (table is null)
+        {
+            return;
+        }
+
+        var dialog = new AddColumnsWindow(_viewModel.Configuration, table.Model)
+        {
+            Owner = this
+        };
+        if (dialog.ShowDialog() != true)
+        {
+            return;
+        }
+
+        foreach (AvailableColumn column in dialog.SelectedColumns)
+        {
+            table.Model.Columns.Add(new ColumnProcessingOptions
+            {
+                Ordinal = column.Ordinal,
+                ColumnName = column.ColumnName,
+                DataType = column.DataType,
+                MaxLength = column.MaxLength,
+                Unicode = column.Unicode
+            });
+        }
+
+        table.Model.Columns = table.Model.Columns.OrderBy(column => column.Ordinal).ToList();
+        _viewModel.RefreshTables();
+        _viewModel.Status = $"Added {dialog.SelectedColumns.Count} column(s). Save the configuration to persist changes.";
     }
 
     private void ViewValues_Click(object sender, RoutedEventArgs e)
