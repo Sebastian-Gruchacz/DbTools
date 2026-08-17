@@ -1,15 +1,10 @@
-﻿namespace Anonymyzer.Generators.Simple
-{
-    public class ShufflingTextGeneratorConfiguration
-    {
-        /// <summary>
-        /// How many shuffling iterations will be performed in comparison to original string length
-        /// </summary>
-        public decimal IterationsMultiplier { get; set; }
+﻿namespace Anonymyzer.Generators.Simple;
 
-        /// <summary>
-        /// Minimum string length to apply shuffling
-        /// </summary>
-        public int MinimumLengthToApply { get; set; }
-    }
+public sealed class ShufflingTextGeneratorConfiguration
+{
+    public int Seed { get; set; }
+
+    public int MinimumPopulation { get; set; } = 2;
+
+    public bool PreserveNulls { get; set; } = true;
 }

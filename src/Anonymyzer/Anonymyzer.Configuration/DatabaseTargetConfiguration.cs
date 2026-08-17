@@ -1,9 +1,9 @@
-﻿namespace Anonymyzer.Console.Configuration;
+﻿namespace Anonymyzer.Configuration;
 
 /// <summary>
 /// Non-secret identity of the detached database targeted by the configuration.
 /// </summary>
-internal sealed class DatabaseTargetConfiguration
+public sealed class DatabaseTargetConfiguration
 {
     public string DatabaseEngine { get; set; } = string.Empty;
 

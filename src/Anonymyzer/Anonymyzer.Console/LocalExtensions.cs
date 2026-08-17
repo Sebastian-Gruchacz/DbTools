@@ -7,6 +7,9 @@ using Anonymyzer.Base;
 using Anonymyzer.Console.Commands;
 using Anonymyzer.Console.Implementation;
 using Anonymyzer.Console.InternalInterfaces;
+using Anonymyzer.Generators.Person;
+using Anonymyzer.Generators.Simple;
+using Anonymyzer.LanguagePack.Polish;
 using Anonymyzer.PostgreSql;
 using Anonymyzer.SqlServer;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -29,6 +32,16 @@ internal static class LocalExtensions
         services.AddTransient<ProcessAnonymyzerCommand>();
 
         return services;
+    }
+
+    public static IServiceCollection AddBuiltInGenerators(this IServiceCollection services)
+    {
+        services.AddPolishLanguagePack();
+        return services.AddGenerators(builder =>
+        {
+            builder.AddLoader<SimpleGeneratorsLoader>();
+            builder.AddLoader<PersonGeneratorsLoader>();
+        });
     }
 
     public static IServiceCollection AddGenerators(this IServiceCollection services, Action<GeneratorsCollectionBuilder> callbackAction)

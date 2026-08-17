@@ -1,56 +1,42 @@
 ﻿namespace Anonymyzer.Base.Generation;
 
-using System.Linq.Expressions;
-
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
-
-public abstract class GeneratorBase<TConfig> : IGenerator where TConfig : notnull
+public abstract class GeneratorBase<TConfiguration> : IGenerator
+    where TConfiguration : class
 {
-    private readonly JsonSerializer _serializer;
+    public abstract GeneratorDescriptor Descriptor { get; }
 
-    protected GeneratorBase()
+    public abstract IGeneratorConfigurationCodec Configuration { get; }
+
+    public IReadOnlyList<GeneratorDataRequirement> GetDataRequirements(
+        GeneratorBinding binding,
+        object configuration)
     {
-        this._serializer = JsonSerializer.Create(new JsonSerializerSettings());
+        return GetDataRequirements(binding, RequireTyped(configuration));
     }
 
-    /// <inheritdoc cref="IGenerator"/>
-    public Expression<Action<IRowNavigator>> BuildColumnWriter(IColumnInfo columnInfo, JObject globalConfig, JObject columnConfig)
+    public ValueTask<IGeneratorSession> PrepareAsync(
+        GeneratorPreparationContext context,
+        object configuration,
+        CancellationToken cancellationToken = default)
     {
-        // TODO: merge global and column config....
-
-        TConfig config = globalConfig.ToObject<TConfig>(_serializer)
-            ?? throw new JsonSerializationException($"Could not deserialize {typeof(TConfig).Name} configuration.");
-
-
-        return BuildColumnWriter(columnInfo, config);
+        return PrepareAsync(context, RequireTyped(configuration), cancellationToken);
     }
 
-    /// <inheritdoc cref="IGenerator"/>
-    public JObject GetDefaultConfig()
+    protected abstract IReadOnlyList<GeneratorDataRequirement> GetDataRequirements(
+        GeneratorBinding binding,
+        TConfiguration configuration);
+
+    protected abstract ValueTask<IGeneratorSession> PrepareAsync(
+        GeneratorPreparationContext context,
+        TConfiguration configuration,
+        CancellationToken cancellationToken);
+
+    private static TConfiguration RequireTyped(object configuration)
     {
-        var config = GetDefaultConfiguration();
-        return JObject.FromObject(config, _serializer);
+        ArgumentNullException.ThrowIfNull(configuration);
+        return configuration as TConfiguration
+            ?? throw new ArgumentException(
+                $"Expected configuration type {typeof(TConfiguration).FullName}, got {configuration.GetType().FullName}.",
+                nameof(configuration));
     }
-
-    /// <inheritdoc cref="IGenerator"/>
-    public abstract string Name { get; }
-
-    /// <inheritdoc cref="IGenerator"/>
-    public abstract DbDataType SupportedDataType { get; }
-
-    /// <inheritdoc cref="IGenerator"/>
-    public abstract bool IsMatch(IColumnInfo columnInfo);
-
-    /// <summary>
-    /// Retrieves default configuration for this generator
-    /// </summary>
-    /// <returns></returns>
-    public abstract TConfig GetDefaultConfiguration();
-
-    /// <inheritdoc cref="IGenerator"/>
-    protected abstract Expression<Action<IRowNavigator>> BuildColumnWriter(IColumnInfo columnInfo, TConfig config);
-
-
-
 }

@@ -92,12 +92,20 @@ językowe opisuje [docs/anonymyzer-design.md](docs/anonymyzer-design.md).
 
 ### Architektura
 
-- `Anonymyzer.Base` — kontrakty silnika, metadanych i generatorów;
+- `Anonymyzer.Base` — kontrakty silnika, metadanych oraz sesji generatorów
+  `Row`/`Column`/`Relational`;
+- `Anonymyzer.Configuration` — współdzielony, niesekretny model konfiguracji;
 - `Anonymyzer.SqlServer` — połączenia i odczyt tabel, kolumn tekstowych oraz PK;
 - `Anonymyzer.PostgreSql` — analogiczny provider oparty na Npgsql i
   `information_schema`;
 - `Anonymyzer.PostgreSql.Tests` — testy buildera i opcjonalna integracja z bazą;
 - `Anonymyzer.Generators.Simple` — rejestracja generatora `TextShuffler`;
+- `Anonymyzer.Generators.Person` — generator spójnej tożsamości w jednym wierszu;
+- `Anonymyzer.ConfigEditor.Abstractions` — kontrakt opcjonalnych paneli WPF;
+- `Anonymyzer.Generators.Simple.Wpf` — panel konfiguracji `TextShuffler` 1.0.0;
+- `Anonymyzer.Generators.Person.Wpf` — panel konfiguracji `PersonIdentity` 1.0.0;
+- `Anonymyzer.LanguagePack.Polish` — dane i reguły regionalne `pl-PL`;
+- `Anonymyzer.ConfigEditor` — edytor konfiguracji WPF;
 - `Anonymyzer.Console` — DI, generowanie konfiguracji i przyszłe wykonanie.
 
 ### Co działa
@@ -106,6 +114,21 @@ językowe opisuje [docs/anonymyzer-design.md](docs/anonymyzer-design.md).
 - odczyt schematów, tabel, tekstowych kolumn, nullowalności i informacji o PK;
 - generowanie pliku JSON z domyślnie wyłączonymi tabelami i kolumnami;
 - rejestracja generatorów i eksport ich domyślnej konfiguracji;
+- model konfiguracji `0.3.0`: role semantyczne, wykryci kandydaci, profile
+  generatorów oraz grupy wiążące kilka kolumn;
+- edytor WPF: New/Open/Save/Save As, wybór tabeli, grid kolumn, edycja profili
+  oraz grup wielokolumnowych z mapowaniem wyjść generatora na kolumny;
+- wersjonowany kontrakt generatora: własny codec JSON, walidacja, deklaracja
+  wymagań danych, przygotowanie stanu i sesja wykonawcza;
+- `TextShuffler` 1.0.0: deterministyczna permutacja całej kolumny zachowująca
+  dokładny multizbiór wartości oraz opcjonalnie pozycje `NULL`;
+- dedykowany panel WPF parametrów `TextShuffler` dostępny z edytora profili;
+- `PersonIdentity` 1.0.0 w zakresie `Row`: spójne imię, nazwisko, rodzaj i e-mail
+  na podstawie pakietu `pl-PL`, bez dodatkowego skanu bazy;
+- dwa schematy e-mail: oparty na imieniu i nazwisku oraz opaque; domyślna domena
+  `example.invalid` jest celowo niedostarczalna;
+- dedykowany panel WPF konfiguracji `PersonIdentity`;
+- bezpieczny podgląd generatorów `Row` wykonywany w pamięci, bez połączenia z bazą;
 - test integracyjny odczytu metadanych PostgreSQL 17 na tymczasowej bazie.
 
 ### Czego jeszcze nie ma
@@ -113,8 +136,14 @@ językowe opisuje [docs/anonymyzer-design.md](docs/anonymyzer-design.md).
 - publicznego CLI — `Program.cs` kończy się obecnie bez próby połączenia, aby
   nie dało się przypadkiem uruchomić prototypu na bazie;
 - wykonania konfiguracji (`ProcessAnonymyzerCommand` jest szkieletem);
-- implementacji `TextShuffler` (`BuildColumnWriter` zgłasza
-  `NotImplementedException`);
+- planera wykonania, który dostarczy generatorom strumienie danych i zapisze
+  wynik ich sesji do bazy;
+- pozostałych generatorów grupowych i angielskiego pakietu regionalnego;
+- podglądu generatorów `Column` i `Relational`, które wymagają odczytu danych
+  z odłączonego klona;
+- pełnych, ważonych zbiorów danych regionalnych oraz generatorów PESEL/NIP;
+- detektora kandydatów EN/PL — UI obsługuje oznaczenia, ale generator konfiguracji
+  nie nadaje ich jeszcze automatycznie;
 - testów SQL Servera i bezpiecznego trybu `dry-run`;
 - obsługi XML/JSON oraz zmian PK/FK;
 - strategii wyłączania i odbudowy indeksów, constraintów i triggerów.
@@ -126,7 +155,26 @@ Nie ma więc obecnie wspieranego wywołania CLI anonimizatora. Uruchomienie
 `Anonymyzer.Console` zwraca błąd konfiguracji i nie próbuje łączyć się z bazą.
 
 Provider wybiera pole `DatabaseEngine`: obsługiwane wartości to `SqlServer` i
-`PostgreSql`. Konfiguracja formatu `0.2.0` zapisuje nazwę schematu każdej tabeli.
+`PostgreSql`. Konfiguracja formatu `0.3.0` zapisuje nazwę schematu, role kolumn,
+profile generatorów i grupy spójnych danych. Nadal nie zawiera connection stringa.
+Edytor celowo odrzuca starszy format `0.2.0`, zamiast po cichu utracić pola przy
+zapisie; konfigurację należy obecnie wygenerować ponownie.
+
+Edytor konfiguracji można uruchomić poleceniem:
+
+```powershell
+dotnet run --project .\src\Anonymyzer\Anonymyzer.ConfigEditor\Anonymyzer.ConfigEditor.csproj
+```
+
+Kropka `●` przy tabeli lub kolumnie oznacza propozycję automatu, nie zgodę na
+anonimizację. Wszystkie tabele pozostają dostępne do ręcznej kontroli. Przycisk
+`Edit groups...` tworzy grupy wielokolumnowe i mapuje deklarowane wyjścia
+generatora na kolumny. `Refresh sample` uruchamia prawdziwą sesję generatora
+`Row` wyłącznie w pamięci. Dla generatorów `Column`, takich jak `TextShuffler`,
+UI jawnie pokazuje `requires cloned data`, ponieważ uczciwy podgląd wymaga
+odczytu całej kolumny z odłączonego klona. W oknie profili `Configure...`
+otwiera panel dostarczony przez dokładną wersję generatora; bez panelu nadal
+można edytować jego własny fragment `Options` jako JSON.
 
 Najprostsze bezpieczne wywołanie integracji tworzy osobny kontener z lokalnego
 obrazu, ładuje fixture i zawsze usuwa kontener w bloku `finally`:
@@ -166,15 +214,17 @@ skasowany po wypchnięciu lub zarchiwizowaniu nowego repozytorium.
 2. Dodać jawne komendy `generate-config` i `run` z connection stringiem kopii
    podawanym tylko w runtime; przed `run` dodać obowiązkowy marker odłączonej
    kopii, kontrolę oczekiwanej nazwy/identyfikatora bazy i plan `dry-run`.
-3. Dodać słowniki kandydatów angielskich i polskich. Mają podpowiadać pola,
-   ale nie włączać ich automatycznie bez zatwierdzenia konfiguracji.
-4. Ujednolicić historyczne nazwy `Anonymyzer` / `Anonymization` bez zmiany
+3. Dodać słowniki kandydatów angielskich i polskich oraz pierwszy pakiet
+   regionalny `pl-PL`. Mają podpowiadać pola, ale nie włączać ich automatycznie.
+4. Podłączyć podgląd generatorów `Column` do bezpiecznego, tylko-odczytowego
+   źródła danych z odłączonego klona.
+5. Ujednolicić historyczne nazwy `Anonymyzer` / `Anonymization` bez zmiany
    zachowania i dodać test integracyjny SQL Servera.
-5. Zrealizować mały pionowy wycinek: jedna tabela, tekstowe kolumny spoza PK,
-   deterministyczny generator, batche, `dry-run` i test na lokalnej bazie.
-6. Dopiero po pomiarach dodać planowanie zależności FK, mapowanie zmienianych
+6. Zrealizować mały pionowy wycinek: jedna tabela, grupa `PersonIdentity`,
+   deterministyczny seed, batche, `dry-run` i test na lokalnej bazie.
+7. Dopiero po pomiarach dodać planowanie zależności FK, mapowanie zmienianych
    kluczy, indeksy, XML/JSON i generatory odwołujące się do innych wierszy.
 
 Najbardziej opłacalny następny krok to punkt 2, a potem pionowy wycinek z punktu
-5. Próba rozwiązania od razu zmian PK/FK i wszystkich wariantów indeksów
+6. Próba rozwiązania od razu zmian PK/FK i wszystkich wariantów indeksów
 utrudniłaby zweryfikowanie podstawowego przepływu.

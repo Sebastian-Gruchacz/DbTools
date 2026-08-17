@@ -1,8 +1,8 @@
 ﻿namespace Anonymyzer.Console.Commands;
 
 using Anonymyzer.Base;
+using Anonymyzer.Configuration;
 using Anonymyzer.Console.CommandLibraryElements;
-using Anonymyzer.Console.Configuration;
 using Anonymyzer.Console.InternalInterfaces;
 
 internal class ProcessAnonymyzerCommand // : ICommand<ProcessAnonymyzerCommandParameters>
@@ -26,13 +26,13 @@ internal class ProcessAnonymyzerCommand // : ICommand<ProcessAnonymyzerCommandPa
     {
         //var configFile = ;
 
-        //AnonymyzationConfiguration config;
+        //AnonymizationConfiguration config;
 
         // The detached-copy connection must come from runtime arguments or a secret provider.
         // It must never be read from the anonymyzation configuration file.
         //var dbConnection = _dbConnectionFactory.CreateMainConnection(parameters);
 
-        //var engine = _engineFactory.CreateEngine(config.DbConfiguration.DatabaseEngine, dbConnection);
+        //var engine = _engineFactory.CreateEngine(config.Database.DatabaseEngine, dbConnection);
 
         // 1. check-build all generators, using global settings
 

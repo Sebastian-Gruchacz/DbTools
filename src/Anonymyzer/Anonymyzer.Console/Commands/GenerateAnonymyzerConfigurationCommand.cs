@@ -2,15 +2,13 @@
 
 using System.Data;
 using System.Text;
-using System.Text.Json.Nodes;
 using Anonymyzer.Base;
 using Anonymyzer.Base.Generation;
+using Anonymyzer.Configuration;
 using Anonymyzer.Console.CommandLibraryElements;
 using Anonymyzer.Console.Commands;
-using Anonymyzer.Console.Configuration;
 using Anonymyzer.Console.InternalInterfaces;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 
 internal class GenerateAnonymyzerConfigurationCommand// : ICommand<GenerateAnonymyzerConfigurationCommandParameters>
 {
@@ -135,15 +133,15 @@ internal class GenerateAnonymyzerConfigurationCommand// : ICommand<GenerateAnony
             }
         }
 
-        var config = new AnonymyzationConfiguration()
+        var config = new AnonymizationConfiguration
         {
-            DbConfiguration = new DatabaseTargetConfiguration
+            Database = new DatabaseTargetConfiguration
             {
                 DatabaseEngine = parameters.DatabaseEngine,
                 DatabaseName = parameters.DatabaseName
             },
-            Generators = BuildDefaultGeneratorsConfiguration(),
-            Tables = outputConfigs.ToArray()
+            GeneratorProfiles = BuildDefaultGeneratorProfiles(),
+            Tables = outputConfigs
         };
 
         _serializer.Serialize(stream, config);
@@ -151,11 +149,18 @@ internal class GenerateAnonymyzerConfigurationCommand// : ICommand<GenerateAnony
         return (int)ErrorCodes.Success;
     }
 
-    private Dictionary<string, JObject> BuildDefaultGeneratorsConfiguration()
+    private List<GeneratorProfileConfiguration> BuildDefaultGeneratorProfiles()
     {
-        return _generatorsProvider.GetAllGenerators().ToDictionary(
-            g => $"{g.Name}:{DEFAULT}",
-            g => g.GetDefaultConfig());
+        return _generatorsProvider.GetAllGenerators()
+            .Select(generator => new GeneratorProfileConfiguration
+            {
+                Id = $"{generator.Descriptor.Type}:{DEFAULT}",
+                DisplayName = $"{generator.Descriptor.DisplayName} ({DEFAULT})",
+                GeneratorType = generator.Descriptor.Type,
+                GeneratorVersion = generator.Descriptor.Version,
+                Options = generator.Configuration.Serialize(generator.Configuration.CreateDefault())
+            })
+            .ToList();
     }
 
     private TableProcessingOptions CreateConfigForTable(IAnonymyzerEngine engine, ITableInfo tableInfo)
@@ -163,8 +168,10 @@ internal class GenerateAnonymyzerConfigurationCommand// : ICommand<GenerateAnony
         var config = TableProcessingOptions.DefaultForTable(tableInfo.Name, tableInfo.SchemaName);
 
         var columns = engine.ListTextColumns(tableInfo);
+        int ordinal = 0;
         foreach (IColumnInfo column in columns)
         {
+            ordinal++;
             // TODO: for now only setting text, non-PK fields
             if (column.IsPartOfThePrimaryKey || column.DataType != DbDataType.Text)
             {
@@ -173,6 +180,7 @@ internal class GenerateAnonymyzerConfigurationCommand// : ICommand<GenerateAnony
 
             var columnInfo = new ColumnProcessingOptions
             {
+                Ordinal = ordinal,
                 ColumnName = column.Name,
                 DataType = column.DataType.ToString(),
                 MaxLength = column.MaxLength,
@@ -182,7 +190,9 @@ internal class GenerateAnonymyzerConfigurationCommand// : ICommand<GenerateAnony
                 // TODO: use AI strategies to obtain start / default configuration
                 Generator = new ColumnGeneratorConfiguration
                 {
-                    Name = $@"TextShuffler:{DEFAULT}"
+                    GeneratorType = "TextShuffler",
+                    GeneratorVersion = "1.0.0",
+                    ProfileId = $"TextShuffler:{DEFAULT}"
                 }
             };
 

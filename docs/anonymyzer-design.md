@@ -74,6 +74,104 @@ Skrypt `tools/Test-PostgreSqlProvider.ps1` realizuje już pierwszy bezpieczny
 wzorzec integracyjny: uruchamia własny kontener, ładuje fixture i usuwa kontener
 w `finally`. Nie korzysta z istniejących kontenerów ani baz.
 
+## Model generatorów i konfiguracji 0.3
+
+Konfiguracja rozdziela typ generatora od jego nazwanego profilu. Profil zawiera
+parametry i opcjonalne locale, np. `Email:Opaque`, `Email:NameBased.pl-PL` albo
+`Address:WarsawOnly`. Kolumna wskazuje typ oraz profil, a lokalne `Options` są
+wyłącznie nadpisaniem profilu.
+
+Nie wszystkie dane wolno generować niezależnie kolumna po kolumnie. Grupa
+generowania opisuje jedno wywołanie zwracające kilka spójnych wartości i mapuje
+role wyjściowe na kolumny tabeli. Pierwsze zakładane grupy to:
+
+- `PersonIdentity`: imię, nazwisko, płeć, data urodzenia, identyfikator i e-mail;
+- `PostalAddress`: kraj, region, miasto, ulica i kod pocztowy;
+- `CompanyIdentity`: nazwa firmy, identyfikatory podatkowe i adres.
+
+Grupa eliminuje zależność od przypadkowej kolejności kolumn. Przykładowo e-mail
+może użyć już wygenerowanego imienia i nazwiska, PESEL może być zgodny z datą
+urodzenia, a kod pocztowy z miastem. Prosty `TextShuffler`, stała wartość czy
+losowy tekst pozostają generatorami pojedynczej kolumny.
+
+Pakiet regionalny nie jest providerem bazy danych. Dostarcza słowniki, dane
+adresowe, reguły formatowania i walidatory dla locale, początkowo `pl-PL` oraz
+wybranych wariantów angielskich. Logika generatora korzysta z tego kontraktu,
+ale nie zawiera na sztywno danych konkretnego kraju.
+
+Identyfikator „poprawny składniowo” nie zawsze oznacza „na pewno nieistniejący”.
+Generator PESEL/NIP/SSN musi stosować właściwe cyfry kontrolne i ograniczenia,
+ale także dokumentować gwarancje danego kraju, zapewniać unikalność w obrębie
+kopii i preferować oficjalne zakresy testowe lub zastrzeżone, jeśli istnieją.
+
+Edytor WPF operuje wyłącznie na niesekretnym JSON. Oznacza wykrytych kandydatów,
+ale pokazuje również wszystkie pozostałe tabele i kolumny. Obsługuje pliki,
+podstawowy grid, profile oraz mapowanie wyjść grup wielokolumnowych na kolumny.
+Podgląd generatorów `Row` uruchamia ich rzeczywistą sesję w pamięci, bez dostępu
+do bazy. Generatory `Column` i `Relational` wymagają danych z odłączonego klona;
+do czasu dodania bezpiecznego źródła tylko do odczytu UI nie symuluje ich wyniku
+i pokazuje tę zależność operatorowi. Podgląd nigdy nie może modyfikować bazy.
+
+### Kontrakt pluginu generatora
+
+Generator jest identyfikowany przez parę `Type` + `Version`; profil zapisuje oba
+pola, aby aktualizacja biblioteki nie zmieniła po cichu znaczenia istniejącej
+konfiguracji. Rdzeń generatora udostępnia:
+
+- descriptor z nazwą, wersją, typem danych, zakresem wykonania oraz listą
+  nazwanych wyjść z sugerowanymi rolami semantycznymi;
+- własny codec: default, deserializacja JSON, walidacja i serializacja JSON;
+- listę wymagań danych dla konkretnego bindingu;
+- `PrepareAsync`, które może wykonać skan i zbudować stan;
+- sesję z `ApplyAsync`, która generuje wartości dla kolejnych wierszy.
+
+Rdzeń nie zależy od WPF. Dokładna wersja generatora może dostarczyć osobny
+adapter `IGeneratorConfigurationEditorFactory`. Adapter otwiera dedykowany panel,
+ale zapisuje ustawienia przez ten sam codec. Gdy panelu nie ma, edytor pozwala
+zmienić należący do generatora obiekt `Options` jako surowy JSON.
+
+### Zakresy wykonania
+
+- `Row` korzysta wyłącznie z bieżącego wiersza. Tak mogą działać generatory
+  imienia/nazwiska i e-maila, jeśli wszystkie zależności są w tej samej tabeli.
+- `Column` deklaruje pełny skan kolumny i przygotowuje stan przed zapisem.
+  `TextShuffler` 1.0.0 buforuje wartości i wykonuje deterministyczny Fisher-Yates,
+  zachowując dokładny multizbiór zamiast jedynie przybliżać rozkład losowaniem.
+- `Relational` deklaruje kolumny z innych tabel oraz czy potrzebuje ich wartości
+  oryginalnych czy już wygenerowanych. Na tej podstawie przyszły planner zbuduje
+  graf zależności, wykryje cykle i ustali kolejność wykonania.
+
+Reader przekazuje dane strumieniowo, natomiast generator decyduje, co buforuje.
+Dokładny shuffle ma koszt pamięci `O(n)` i nie nadaje się bezpośrednio do każdej
+wielkiej tabeli. Kolejne strategie powinny obejmować limit pamięci, spill do
+pliku tymczasowego lub bazowej tabeli roboczej oraz opcjonalne losowanie ważone,
+które zachowuje rozkład tylko statystycznie. Wybór musi być jawny w profilu.
+
+Samo przestawienie wartości nie usuwa rzadkich danych z całej kopii, dlatego
+`TextShuffler` nie jest właściwym generatorem dla silnie identyfikujących pól.
+
+### Pierwszy generator Row: PersonIdentity 1.0.0
+
+`PersonIdentity` wykonuje jedno atomowe wywołanie dla wiersza i może wystawić
+wyjścia `FirstName`, `LastName`, `Gender` oraz `Email`. Binding decyduje, które
+z nich trafią do kolumn. E-mail jest budowany z wartości wygenerowanych w tym
+samym wywołaniu, więc nie zależy od kolejności kolumn.
+
+Konfiguracja należąca do generatora zawiera `Seed`, `Locale`, `EmailPattern` i
+`EmailDomain`. Dostępne są na razie schematy:
+
+- `NameBased`: znormalizowane imię, nazwisko i licznik zapewniający unikalność;
+- `Opaque`: sztuczny identyfikator bez imienia i nazwiska.
+
+Domyślna domena `example.invalid` jest zastrzeżona do przykładów i nie prowadzi
+do prawdziwej skrzynki. Pakiet `pl-PL` odpowiada za pary męskich/żeńskich form
+nazwisk oraz transliterację polskich znaków w local-part e-maila.
+
+Aktualny pakiet zawiera mały, równomiernie losowany zestaw startowy. Nie należy
+traktować go jako modelu rozkładu polskiej populacji. Docelowy pakiet danych
+powinien zawierać wersjonowane częstotliwości wraz z pochodzeniem danych i
+testami jakości. Generator nie tworzy jeszcze PESEL ani NIP.
+
 ## Słowniki kandydatów
 
 Pierwszy zakres językowy to angielski (`en`) i polski (`pl`). Kolejne języki

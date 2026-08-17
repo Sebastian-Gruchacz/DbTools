@@ -1,6 +1,8 @@
-﻿namespace Anonymyzer.Console.Configuration;
+﻿namespace Anonymyzer.Configuration;
 
-internal class TableProcessingOptions
+using Newtonsoft.Json;
+
+public sealed class TableProcessingOptions
 {
     public string TableName { get; set; } = string.Empty;
 
@@ -10,14 +12,17 @@ internal class TableProcessingOptions
 
     public List<ColumnProcessingOptions> Columns { get; set; } = new();
 
+    public List<GenerationGroupConfiguration> GenerationGroups { get; set; } = new();
+
+    [JsonIgnore]
+    public bool HasCandidates => Columns.Any(column => column.Detection.IsCandidate);
+
     public static TableProcessingOptions DefaultForTable(string tableName, string schemaName)
     {
         return new TableProcessingOptions
         {
             TableName = tableName,
-            SchemaName = schemaName,
-            Enabled = false,
-            Columns = new List<ColumnProcessingOptions>()
+            SchemaName = schemaName
         };
     }
 }
