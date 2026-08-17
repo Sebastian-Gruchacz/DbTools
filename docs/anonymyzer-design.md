@@ -146,8 +146,16 @@ zmienić należący do generatora obiekt `Options` jako surowy JSON.
   `TextShuffler` 1.0.0 buforuje wartości i wykonuje deterministyczny Fisher-Yates,
   zachowując dokładny multizbiór zamiast jedynie przybliżać rozkład losowaniem.
 - `Relational` deklaruje kolumny z innych tabel oraz czy potrzebuje ich wartości
-  oryginalnych czy już wygenerowanych. Na tej podstawie przyszły planner zbuduje
-  graf zależności, wykryje cykle i ustali kolejność wykonania.
+  oryginalnych czy już wygenerowanych. Planner `dry-run` buduje z deklaracji
+  `Generated` graf zależności, wykrywa brakujących producentów, podwójne zapisy
+  i cykle oraz ustala deterministyczną kolejność wykonania.
+
+Plan obejmuje wyłącznie włączone tabele i kolumny. Dla każdego kroku podaje
+docelową tabelę, dokładny typ i wersję generatora, zakres `Row`/`Column`/
+`Relational`, mapowanie wyjść, wymagania danych oraz proponowany batch 1000
+wierszy. Lokalne `Options` kolumny są nakładane na profil przed walidacją.
+Włączona kolumna bez jednoznacznego kroku jest błędem, a nie cichym pominięciem.
+Planner nadal nie odczytuje liczby wierszy ani nie wykonuje sesji generatorów.
 
 Reader przekazuje dane strumieniowo, natomiast generator decyduje, co buforuje.
 Dokładny shuffle ma koszt pamięci `O(n)` i nie nadaje się bezpośrednio do każdej

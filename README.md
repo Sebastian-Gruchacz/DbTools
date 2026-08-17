@@ -134,14 +134,18 @@ językowe opisuje [docs/anonymyzer-design.md](docs/anonymyzer-design.md).
   wyłącznie ze wskazanej zmiennej środowiskowej;
 - potrójna walidacja markera odłączonej kopii: argument operatora, konfiguracja
   i pojedynczy rekord w bazie muszą wskazywać ten sam identyfikator;
+- deterministyczny plan `dry-run`: aktywne grupy i kolumny, dokładne wersje oraz
+  zakresy generatorów, mapowania wyjść, wymagane skany i batch po 1000 wierszy;
+- sortowanie kroków po zależnościach od wartości `Generated`, wraz z odrzucaniem
+  brakujących producentów, podwójnych zapisów i cykli;
 - test integracyjny odczytu metadanych PostgreSQL 17 na tymczasowej bazie.
 
 ### Czego jeszcze nie ma
 
 - wykonania konfiguracji modyfikującego dane — `run` przyjmuje obecnie wyłącznie
   `--dry-run` i kończy pracę po walidacji bezpieczeństwa oraz generatorów;
-- planera wykonania, który dostarczy generatorom strumienie danych i zapisze
-  wynik ich sesji do bazy;
+- wykonawcy planu, który dostarczy generatorom strumienie danych i zapisze wynik
+  ich sesji do bazy;
 - pozostałych generatorów grupowych i angielskiego pakietu regionalnego;
 - podglądu generatorów `Column` i `Relational`, które wymagają odczytu danych
   z odłączonego klona;
@@ -189,7 +193,8 @@ dotnet run --project .\src\Anonymyzer\Anonymyzer.Console -- run `
 
 Obie komendy sprawdzają nazwę bazy i marker. `generate-config` tylko czyta
 metadane, pomija samą tabelę markera i zapisuje niesekretny JSON. `run --dry-run`
-waliduje konfigurację, dokładne wersje generatorów i target, po czym kończy bez
+waliduje konfigurację, dokładne wersje generatorów i target, wypisuje kolejność
+kroków, mapowania, wymagane pełne skany i proponowany batch, po czym kończy bez
 zapisu danych. Wywołanie `run` bez `--dry-run` jest obecnie odrzucane.
 
 Edytor konfiguracji można uruchomić poleceniem:
@@ -243,8 +248,8 @@ skasowany po wypchnięciu lub zarchiwizowaniu nowego repozytorium.
 
 1. Dodać testy regresyjne `ScriptCut` dla wielu tabel, tabel bez
    `IDENTITY_INSERT`, pustego wejścia i znaków niedozwolonych w nazwie pliku.
-2. Rozszerzyć istniejące `run --dry-run` o plan tabel, grup, batchy i wymagań
-   generatorów, nadal bez wykonywania zapisów.
+2. Rozszerzyć `run --dry-run` o porównanie planu z aktualnym schematem klona oraz
+   oszacowanie liczby wierszy i pamięci wymaganej przez pełne skany.
 3. Dodać słowniki kandydatów angielskich i polskich oraz pierwszy pakiet
    regionalny `pl-PL`. Mają podpowiadać pola, ale nie włączać ich automatycznie.
 4. Podłączyć podgląd generatorów `Column` do bezpiecznego, tylko-odczytowego
