@@ -99,8 +99,8 @@ językowe opisuje [docs/anonymyzer-design.md](docs/anonymyzer-design.md).
 - `Anonymyzer.PostgreSql` — analogiczny provider oparty na Npgsql i
   `information_schema`;
 - `Anonymyzer.PostgreSql.Tests` — testy buildera i opcjonalna integracja z bazą;
-- `Anonymyzer.Generators.Simple` — `TextShuffler`, `FixedText`, `SequentialText`
-  i `EmailAddress`;
+- `Anonymyzer.Generators.Simple` — `TextShuffler`, `FixedText`, `SequentialText`,
+  `EmailAddress` i `PhoneNumber`;
 - `Anonymyzer.Generators.Person` — generator spójnej tożsamości w jednym wierszu;
 - `Anonymyzer.ConfigEditor.Abstractions` — kontrakt opcjonalnych paneli WPF;
 - `Anonymyzer.Generators.Simple.Wpf` — panele konfiguracji generatorów prostych;
@@ -132,7 +132,9 @@ językowe opisuje [docs/anonymyzer-design.md](docs/anonymyzer-design.md).
   początkiem numeracji i konfigurowalnym dopełnieniem zerami;
 - `EmailAddress` 1.0.0: tryb opaque albo adres oparty na kolumnach imienia i
   nazwiska, z zależnością od ich wartości oryginalnych lub wygenerowanych;
-- dedykowane panele WPF parametrów wszystkich czterech generatorów prostych;
+- `PhoneNumber` 1.0.0: deterministyczne formaty `pl-PL` i `en-US`, krajowe albo
+  międzynarodowe; wariant amerykański korzysta z zastrzeżonego zakresu 555-0100–0199;
+- dedykowane panele WPF parametrów wszystkich pięciu generatorów prostych;
 - rozwijane `Profiles → Add` tworzące kompletny profil domyślny wybranego
   generatora także w starszej konfiguracji;
 - `PersonIdentity` 1.0.0 w zakresie `Row`: spójne imię, nazwisko, rodzaj i e-mail
@@ -175,7 +177,7 @@ językowe opisuje [docs/anonymyzer-design.md](docs/anonymyzer-design.md).
   `--dry-run` i kończy pracę po walidacji bezpieczeństwa oraz generatorów;
 - wykonawcy planu, który dostarczy generatorom strumienie danych i zapisze wynik
   ich sesji do bazy;
-- pozostałych generatorów grupowych i angielskiego pakietu regionalnego;
+- pozostałych generatorów grupowych i pełnego angielskiego pakietu danych osoby;
 - podglądu generatorów `Column` i `Relational`, które wymagają odczytu danych
   z odłączonego klona;
 - pełnych, ważonych zbiorów danych regionalnych oraz generatorów PESEL/NIP;

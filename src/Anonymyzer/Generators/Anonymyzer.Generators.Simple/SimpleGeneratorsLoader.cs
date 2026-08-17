@@ -12,6 +12,7 @@
             serviceCollection.AddTransient<IGenerator, FixedTextGenerator>();
             serviceCollection.AddTransient<IGenerator, SequentialTextGenerator>();
             serviceCollection.AddTransient<IGenerator, EmailAddressGenerator>();
+            serviceCollection.AddTransient<IGenerator, PhoneNumberGenerator>();
         }
     }
 }

@@ -243,6 +243,27 @@ ASCII DNS, długość domeny, długość local-part, licznik i wymagane nazwy ko
 Generator zachowuje `NULL` opcjonalnie, a pominięty wiersz nie zużywa numeru.
 Unikalność, podobnie jak w `SequentialText`, dotyczy jednej sesji wykonawczej.
 
+### PhoneNumber 1.0.0
+
+`PhoneNumber` jest generatorem `Row` z jednym wyjściem `Value` dla roli
+`Contact.Phone`. Profil wybiera `Locale`, format krajowy lub międzynarodowy,
+deterministyczny `Seed` i zachowanie pozycji `NULL`. Generator nie czyta danych
+źródłowych; składanie numeru należy do providerów pakietów językowych. Provider
+deklaruje pojemność własnego zakresu, a sesja tworzy wartości bez powtórzeń i
+kończy się błędem przed ponownym użyciem numeru.
+
+Provider `pl-PL` tworzy dziewięciocyfrowy numer w układzie `501 XXX XXX` i może
+dodać prefiks `+48`. Jest to wartość syntetyczna o poprawnym kształcie, ale polski
+plan numeracji nie udostępnia ogólnego zakresu fikcyjnego, więc nie należy jej
+wybierać ani używać do wysyłki. Provider `en-US` używa zakresu `202-555-0100`–
+`202-555-0199`, zastrzeżonego jako fikcyjny i niedziałający, oraz opcjonalnego
+prefiksu `+1`. Format polski odpowiada [opisowi numeracji krajowej UKE](https://cik.uke.gov.pl/news/nie-oddzwaniaj%2C100.html),
+a zakres amerykański [dokumentuje NANPA](https://nanpa.com/numbering/555-line-numbers).
+
+Panel WPF udostępnia dokładnie parametry własnego codeca. Nieznane locale jest
+poprawnym JSON-em pluginu, lecz przygotowanie sesji kończy się czytelnym błędem,
+jeżeli odpowiadający provider nie został zainstalowany.
+
 ### Pierwszy generator Row: PersonIdentity 1.0.0
 
 `PersonIdentity` wykonuje jedno atomowe wywołanie dla wiersza i może wystawić

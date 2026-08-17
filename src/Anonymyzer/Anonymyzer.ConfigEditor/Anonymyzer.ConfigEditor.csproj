@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
@@ -21,6 +21,7 @@
     <ProjectReference Include="..\Generators\Anonymyzer.Generators.Simple\Anonymyzer.Generators.Simple.csproj" />
     <ProjectReference Include="..\Generators\Anonymyzer.Generators.Simple.Wpf\Anonymyzer.Generators.Simple.Wpf.csproj" />
     <ProjectReference Include="..\LanguagePacks\Anonymyzer.LanguagePack.Polish\Anonymyzer.LanguagePack.Polish.csproj" />
+    <ProjectReference Include="..\LanguagePacks\Anonymyzer.LanguagePack.English\Anonymyzer.LanguagePack.English.csproj" />
   </ItemGroup>
 
 </Project>

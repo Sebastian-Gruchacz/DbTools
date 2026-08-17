@@ -4,6 +4,7 @@ using Anonymyzer.Base.Generation;
 using Anonymyzer.Configuration;
 using Anonymyzer.Generators.Person;
 using Anonymyzer.Generators.Simple;
+using Anonymyzer.LanguagePack.English;
 using Anonymyzer.LanguagePack.Polish;
 
 internal sealed class GeneratorCatalog
@@ -14,6 +15,11 @@ internal sealed class GeneratorCatalog
         new FixedTextGenerator(),
         new SequentialTextGenerator(),
         new EmailAddressGenerator(),
+        new PhoneNumberGenerator(
+        [
+            new PolishPhoneNumberLocaleDataProvider(),
+            new EnglishPhoneNumberLocaleDataProvider()
+        ]),
         new PersonIdentityGenerator(new[] { new PolishPersonLocaleDataProvider() })
     };
 
@@ -43,7 +49,7 @@ internal sealed class GeneratorCatalog
         DisplayName = $"{generator.Descriptor.DisplayName} (Default)",
         GeneratorType = generator.Descriptor.Type,
         GeneratorVersion = generator.Descriptor.Version,
-        Locale = generator.Descriptor.Type == "PersonIdentity" ? "pl-PL" : string.Empty,
+        Locale = generator.Descriptor.Type is "PersonIdentity" or "PhoneNumber" ? "pl-PL" : string.Empty,
         Options = generator.Configuration.Serialize(generator.Configuration.CreateDefault())
     };
 }
