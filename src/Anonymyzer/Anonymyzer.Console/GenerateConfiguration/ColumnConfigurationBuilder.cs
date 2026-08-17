@@ -20,7 +20,7 @@ internal sealed class ColumnConfigurationBuilder(ColumnCandidateDetector candida
                 MaxLength = column.MaxLength,
                 Unicode = column.IsUnicodeText,
                 Enabled = false,
-                Detection = candidateDetector.Detect(column.Name),
+                Detection = candidateDetector.Detect(column.Name, column.DataType),
                 Generator = CreateDefaultGenerator(column.DataType)
             });
         }

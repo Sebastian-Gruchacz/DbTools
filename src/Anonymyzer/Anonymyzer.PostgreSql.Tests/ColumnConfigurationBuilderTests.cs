@@ -16,7 +16,8 @@ public sealed class ColumnConfigurationBuilderTests
             table,
             new StubColumn(1, "id", DbDataType.Integer, isPrimaryKey: true),
             new StubColumn(2, "PESEL", DbDataType.Integer),
-            new StubColumn(3, "notes", DbDataType.Text, maxLength: 200));
+            new StubColumn(3, "notes", DbDataType.Text, maxLength: 200),
+            new StubColumn(4, "PeselJakoNrKontrahenta", DbDataType.Boolean));
         var detector = new ColumnCandidateDetector(new IColumnCandidateRuleProvider[]
         {
             new EnglishColumnCandidateRuleProvider(),
@@ -25,7 +26,7 @@ public sealed class ColumnConfigurationBuilderTests
 
         var result = new ColumnConfigurationBuilder(detector).CreateTable(engine, table);
 
-        Assert.Equal(2, result.Columns.Count);
+        Assert.Equal(3, result.Columns.Count);
         var pesel = Assert.Single(result.Columns, column => column.ColumnName == "PESEL");
         Assert.Equal(2, pesel.Ordinal);
         Assert.Equal(nameof(DbDataType.Integer), pesel.DataType);
@@ -36,6 +37,9 @@ public sealed class ColumnConfigurationBuilderTests
         var notes = Assert.Single(result.Columns, column => column.ColumnName == "notes");
         Assert.Equal("TextShuffler", notes.Generator.GeneratorType);
         Assert.Equal("TextShuffler:Default", notes.Generator.ProfileId);
+
+        var booleanSetting = Assert.Single(result.Columns, column => column.ColumnName == "PeselJakoNrKontrahenta");
+        Assert.False(booleanSetting.Detection.IsCandidate);
     }
 
     private sealed class StubEngine(ITableInfo table, params IColumnInfo[] columns) : IAnonymyzerEngine

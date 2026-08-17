@@ -136,6 +136,8 @@ językowe opisuje [docs/anonymyzer-design.md](docs/anonymyzer-design.md).
 - prezentacja tekstowego typu kolumny wraz z długością albo `MAX`;
 - klasyfikacja typów SQL Server/PostgreSQL oraz kandydaci wykrywani po nazwie
   także dla pól liczbowych, np. PESEL, NIP i telefonów;
+- zgodność roli z typem oraz negatywne tokeny odrzucające m.in. booleanowe
+  ustawienia, liczbowe FK z dodatkowym `id` i pola kontrolne;
 - ręczne `Add column...`, które po walidacji klona pokazuje brakujące kolumny
   niebędące PK i dodaje wybrane jako domyślnie wyłączone;
 - CLI `generate-config` i `run --dry-run`, które pobiera connection string

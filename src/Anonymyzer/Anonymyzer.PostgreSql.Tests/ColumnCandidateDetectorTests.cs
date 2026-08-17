@@ -1,5 +1,6 @@
 ﻿namespace Anonymyzer.PostgreSql.Tests;
 
+using Anonymyzer.Base;
 using Anonymyzer.Base.Detection;
 using Anonymyzer.Configuration;
 using Anonymyzer.Console.GenerateConfiguration;
@@ -46,6 +47,8 @@ public sealed class ColumnCandidateDetectorTests
     [InlineData("WebsiteAddress")]
     [InlineData("net_address")]
     [InlineData("description")]
+    [InlineData("ClientPhoneId")]
+    [InlineData("KontrolaPESEL")]
     public void RejectsFlagsAndUnrelatedNames(string columnName)
     {
         CandidateDetectionConfiguration detection = _detector.Detect(columnName);
@@ -63,5 +66,37 @@ public sealed class ColumnCandidateDetectorTests
         Assert.True(prefixed.IsCandidate);
         Assert.Equal(exact.SuggestedRole, prefixed.SuggestedRole);
         Assert.True(prefixed.Confidence < exact.Confidence);
+    }
+
+    [Theory]
+    [InlineData("PESEL", DbDataType.Integer, "Person.NationalId")]
+    [InlineData("phone_number", DbDataType.Decimal, "Contact.Phone")]
+    [InlineData("birth_date", DbDataType.DateTime, "Person.BirthDate")]
+    [InlineData("plec", DbDataType.Boolean, "Person.Gender")]
+    [InlineData("email", DbDataType.Json, "Contact.Email")]
+    [InlineData("ZrodloNIP", DbDataType.Text, "Company.TaxId")]
+    public void KeepsCandidatesStoredInCompatibleTypes(
+        string columnName,
+        DbDataType dataType,
+        string expectedRole)
+    {
+        CandidateDetectionConfiguration detection = _detector.Detect(columnName, dataType);
+
+        Assert.True(detection.IsCandidate);
+        Assert.Equal(expectedRole, detection.SuggestedRole);
+    }
+
+    [Theory]
+    [InlineData("jpr_PeselJakoNrKontrahenta", DbDataType.Boolean)]
+    [InlineData("IdWojewodztwo", DbDataType.Integer)]
+    [InlineData("operator_imie", DbDataType.Integer)]
+    [InlineData("email", DbDataType.Integer)]
+    [InlineData("telefon", DbDataType.DateTime)]
+    [InlineData("TelefonZrodlo", DbDataType.Integer)]
+    public void RejectsCandidatesStoredInIncompatibleTypes(string columnName, DbDataType dataType)
+    {
+        CandidateDetectionConfiguration detection = _detector.Detect(columnName, dataType);
+
+        Assert.False(detection.IsCandidate);
     }
 }

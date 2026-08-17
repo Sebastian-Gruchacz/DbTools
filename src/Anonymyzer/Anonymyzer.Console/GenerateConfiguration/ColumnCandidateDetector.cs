@@ -2,6 +2,7 @@
 
 using System.Globalization;
 using System.Text;
+using Anonymyzer.Base;
 using Anonymyzer.Base.Detection;
 using Anonymyzer.Configuration;
 
@@ -9,7 +10,13 @@ internal sealed class ColumnCandidateDetector
 {
     private static readonly HashSet<string> NonValueTokens = new(StringComparer.Ordinal)
     {
-        "active", "allowed", "enabled", "flag", "is", "required", "status", "type", "verified"
+        "active", "allowed", "bez", "blokada", "enabled", "flag", "id", "is", "kontrola", "required",
+        "status", "type", "verified"
+    };
+
+    private static readonly HashSet<string> NonTextSourceTokens = new(StringComparer.Ordinal)
+    {
+        "source", "zrodlo"
     };
 
     private readonly IReadOnlyList<PreparedRule> _rules;
@@ -27,11 +34,32 @@ internal sealed class ColumnCandidateDetector
 
     public CandidateDetectionConfiguration Detect(string columnName)
     {
+        return Detect(columnName, _ => true, additionalNonValueTokens: null);
+    }
+
+    public CandidateDetectionConfiguration Detect(string columnName, DbDataType dataType)
+    {
+        IReadOnlySet<string>? additionalNonValueTokens = dataType is
+            DbDataType.Text or DbDataType.Json or DbDataType.Xml or DbDataType.Other
+            ? null
+            : NonTextSourceTokens;
+        return Detect(
+            columnName,
+            rule => IsCompatible(rule.SemanticRole, dataType),
+            additionalNonValueTokens);
+    }
+
+    private CandidateDetectionConfiguration Detect(
+        string columnName,
+        Func<ColumnCandidateRule, bool> isCompatible,
+        IReadOnlySet<string>? additionalNonValueTokens)
+    {
         ArgumentException.ThrowIfNullOrWhiteSpace(columnName);
 
         IReadOnlyList<string> columnTokens = Tokenize(columnName);
         Match? bestMatch = _rules
-            .Select(rule => TryMatch(rule, columnTokens))
+            .Where(rule => isCompatible(rule.Rule))
+            .Select(rule => TryMatch(rule, columnTokens, additionalNonValueTokens))
             .Where(match => match is not null)
             .Cast<Match>()
             .OrderByDescending(match => match.Confidence)
@@ -51,7 +79,27 @@ internal sealed class ColumnCandidateDetector
             };
     }
 
-    private static Match? TryMatch(PreparedRule rule, IReadOnlyList<string> columnTokens)
+    private static bool IsCompatible(string semanticRole, DbDataType dataType)
+    {
+        if (dataType is DbDataType.Text or DbDataType.Json or DbDataType.Xml or DbDataType.Other)
+        {
+            return true;
+        }
+
+        return semanticRole switch
+        {
+            "Person.BirthDate" => dataType is DbDataType.Date or DbDataType.DateTime or DbDataType.Integer,
+            "Person.Gender" => dataType is DbDataType.Integer or DbDataType.Boolean,
+            "Person.NationalId" or "Contact.Phone" or "Address.PostalCode" or "Company.TaxId"
+                or "Financial.BankAccount" => dataType is DbDataType.Integer or DbDataType.Decimal,
+            _ => false
+        };
+    }
+
+    private static Match? TryMatch(
+        PreparedRule rule,
+        IReadOnlyList<string> columnTokens,
+        IReadOnlySet<string>? additionalNonValueTokens)
     {
         if (columnTokens.Count < rule.Tokens.Count)
         {
@@ -67,7 +115,9 @@ internal sealed class ColumnCandidateDetector
 
             IEnumerable<string> remainingTokens = columnTokens.Take(start)
                 .Concat(columnTokens.Skip(start + rule.Tokens.Count));
-            if (remainingTokens.Any(NonValueTokens.Contains))
+            if (remainingTokens.Any(token =>
+                    NonValueTokens.Contains(token)
+                    || additionalNonValueTokens?.Contains(token) == true))
             {
                 return null;
             }

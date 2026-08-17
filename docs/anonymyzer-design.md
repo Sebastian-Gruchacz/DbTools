@@ -257,8 +257,14 @@ schemacie myliła adres pocztowy z adresem strony, sieci i nadawcy e-maila.
 
 Generator konfiguracji pobiera wszystkie kolumny niebędące PK i klasyfikuje je
 do przenośnych kategorii: tekst, liczba całkowita/dziesiętna, boolean, data/czas,
-GUID, binaria, JSON, XML lub `Other`. Detekcja po nazwie działa niezależnie od
-tej kategorii, więc liczbowy PESEL, NIP albo telefon nadal zostanie oznaczony.
-Automatyczny `TextShuffler` jest przypisywany wyłącznie tekstowi; pozostałe typy
-czekają na jawny, zgodny generator. Dla liczbowych identyfikatorów generator musi
-uwzględnić utracone zera wiodące i ograniczenia typu docelowego.
+GUID, binaria, JSON, XML lub `Other`. Najpierw dopasowuje nazwę, a potem sprawdza
+zgodność roli z typem. Liczbowe PESEL, NIP, telefon, kod pocztowy i rachunek nadal
+są kandydatami, ale liczbowe imię, e-mail lub region oraz booleanowy NIP już nie.
+Boolean pozostaje zgodny z płcią, a data z datą urodzenia. Dodatkowe tokeny
+techniczne, np. `id`, `kontrola`, `blokada` i `bez`, odrzucają ustawienia oraz FK;
+`source`/`zrodlo` odrzucają tylko typy liczbowe, daty, boolean, GUID i binaria,
+aby nie ukryć właściwych wartości tekstowych, JSON/XML ani nieznanych.
+Automatyczny `TextShuffler` jest przypisywany wyłącznie
+tekstowi; pozostałe typy czekają na jawny, zgodny generator. Dla liczbowych
+identyfikatorów generator musi uwzględnić utracone zera wiodące i ograniczenia
+typu docelowego.
