@@ -1,0 +1,30 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.11" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="10.0.11" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Anonymyzer.Configuration\Anonymyzer.Configuration.csproj" />
+    <ProjectReference Include="..\Anonymyzer.Interfaces\Anonymyzer.Base.csproj" />
+    <ProjectReference Include="..\Anonymyzer.SqlServer\Anonymyzer.SqlServer.csproj" />
+    <ProjectReference Include="..\Anonymyzer.PostgreSql\Anonymyzer.PostgreSql.csproj" />
+    <ProjectReference Include="..\Generators\Anonymyzer.Generators.Person\Anonymyzer.Generators.Person.csproj" />
+    <ProjectReference Include="..\Generators\Anonymyzer.Generators.Simple\Anonymyzer.Generators.Simple.csproj" />
+    <ProjectReference Include="..\LanguagePacks\Anonymyzer.LanguagePack.Polish\Anonymyzer.LanguagePack.Polish.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Anonymyzer.PostgreSql.Tests" />
+  </ItemGroup>
+
+</Project>

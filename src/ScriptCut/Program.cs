@@ -1,151 +1,169 @@
-﻿namespace ScriptCut
+﻿namespace ScriptCut;
+
+using System.Text.RegularExpressions;
+
+internal static class Program
 {
-    using System;
-    using System.Collections.Generic;
-    using System.IO;
-    using System.Text.RegularExpressions;
+    private const string DefaultDatabase = "_database_";
+    private const string DefaultServer = @".\SQLEXPRESS";
 
-    public static class Program
+    public static int Main(string[] args)
     {
-        private static readonly Regex TableStartRegex;
-        private static readonly Regex TableEndRegex;
-        private static readonly Regex KeepInsertingRegex;
-
-        static Program()
+        if (args.Length == 1 && args[0] is "-h" or "--help")
         {
-            TableEndRegex = new Regex(@"[\s]*SET IDENTITY_INSERT \[dbo\]\.\[([^\]]*)\] OFF", RegexOptions.Compiled | RegexOptions.IgnoreCase);
-            TableStartRegex = new Regex(@"[\s]*SET IDENTITY_INSERT \[dbo\]\.\[([^\]]*)\] ON", RegexOptions.Compiled | RegexOptions.IgnoreCase);
-            KeepInsertingRegex = new Regex(@"[\s]*INSERT \[dbo\]\.\[([^\]]*)\][\s\S]*", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+            PrintUsage();
+            return 0;
         }
 
-        static void Main(string[] args)
+        if (args.Length is < 1 or > 3)
         {
-            bool useEndRegex = false; // previous file ends at beginning of the previous one.
+            PrintUsage();
+            return 2;
+        }
 
-            string source = @"C:\SQL Scripts\data-script.sql"; // default
-            string dbName = "_database_";
-            if (args.Length > 0 && !string.IsNullOrWhiteSpace(args[0]))
+        try
+        {
+            var sourcePath = Path.GetFullPath(args[0]);
+            if (!File.Exists(sourcePath))
             {
-                source = args[0];
-            }
-            if (args.Length > 1 && !string.IsNullOrWhiteSpace(args[1]))
-            {
-                dbName = args[1];
+                Console.Error.WriteLine($"Source file does not exist: {sourcePath}");
+                return 2;
             }
 
-            FileInfo ifo;
-            try
+            var database = GetArgument(args, 1, DefaultDatabase);
+            var server = GetArgument(args, 2, DefaultServer);
+            var result = new SqlScriptSplitter(database).Split(sourcePath);
+
+            BatchFileWriter.Write(result.OutputDirectory, result.PartFiles, server);
+            Console.WriteLine($"Created {result.PartFiles.Count} part(s) in: {result.OutputDirectory}");
+            return 0;
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException)
+        {
+            Console.Error.WriteLine(exception.Message);
+            return 1;
+        }
+    }
+
+    private static string GetArgument(string[] args, int index, string defaultValue) =>
+        args.Length > index && !string.IsNullOrWhiteSpace(args[index]) ? args[index] : defaultValue;
+
+    private static void PrintUsage()
+    {
+        Console.WriteLine("Usage: ScriptCut <source.sql> [database] [server]");
+        Console.WriteLine($"Defaults: database={DefaultDatabase}, server={DefaultServer}");
+    }
+}
+
+internal sealed partial class SqlScriptSplitter
+{
+    private readonly string _database;
+
+    public SqlScriptSplitter(string database)
+    {
+        _database = database;
+    }
+
+    public SplitResult Split(string sourcePath)
+    {
+        var source = new FileInfo(sourcePath);
+        var outputDirectory = Path.Combine(
+            source.DirectoryName!,
+            $"{Path.GetFileNameWithoutExtension(source.Name)}.parts");
+
+        Directory.CreateDirectory(outputDirectory);
+
+        var partFiles = new List<string>();
+        PartWriter? currentPart = null;
+        string? currentTable = null;
+
+        try
+        {
+            foreach (var line in File.ReadLines(source.FullName))
             {
-                ifo = new FileInfo(source);
-                if (!ifo.Exists)
+                var table = FindTable(line);
+                if (table is not null && !table.Equals(currentTable, StringComparison.OrdinalIgnoreCase))
                 {
-                    Console.WriteLine("Source file does not exists!");
-                    return;
+                    currentPart?.Dispose();
+                    currentTable = table;
+
+                    var fileName = $"{partFiles.Count + 1:D3}.{SafeFileName(table)}.sql";
+                    partFiles.Add(fileName);
+                    currentPart = new PartWriter(Path.Combine(outputDirectory, fileName), _database, table);
+                    Console.WriteLine($"Extracting table [{table}] to {fileName}");
                 }
+
+                currentPart?.WriteLine(line);
             }
-            catch
-            {
-                Console.WriteLine("'{0}' is not a valid file name.", source);
-                return;
-            }
+        }
+        finally
+        {
+            currentPart?.Dispose();
+        }
 
-            string targetsFolder = Path.Combine(ifo.DirectoryName, Path.GetFileNameWithoutExtension(ifo.Name) + ".parts");
-            if (!Directory.Exists(targetsFolder))
-            {
-                Directory.CreateDirectory(targetsFolder);
-            }
+        return new SplitResult(outputDirectory, partFiles);
+    }
 
-            int tableIndex = 1;
-            string currentTable = null;
-            StreamWriter sw = null;
-            var sqlFiles = new List<string>();
+    private static string? FindTable(string line)
+    {
+        var match = TableStartRegex().Match(line);
+        return match.Success ? match.Groups["table"].Value : null;
+    }
 
-            try
-            {
-                using (var sourceStream = ifo.OpenText())
-                {
-                    string line = null;
+    private static string SafeFileName(string tableName)
+    {
+        var invalidCharacters = Path.GetInvalidFileNameChars();
+        return string.Concat(tableName.Select(character => invalidCharacters.Contains(character) ? '_' : character));
+    }
 
-                    while ((line = sourceStream.ReadLine()) != null)
-                    {
-                        if (!useEndRegex || currentTable == null)
-                        {
-                            var match = TableStartRegex.Match(line);
-                            if (!match.Success)
-                            {
-                                match = KeepInsertingRegex.Match(line);
-                            }
+    [GeneratedRegex(
+        @"^\s*(?:SET\s+IDENTITY_INSERT\s+\[dbo\]\.\[(?<table>[^\]]+)\]\s+ON\b|INSERT\s+\[dbo\]\.\[(?<table>[^\]]+)\])",
+        RegexOptions.IgnoreCase)]
+    private static partial Regex TableStartRegex();
+}
 
-                            if (match.Success)
-                            {
-                                string potentiallyNewTableName = match.Groups[1].Value;
+internal sealed class PartWriter : IDisposable
+{
+    private readonly StreamWriter _writer;
+    private readonly string _table;
 
-                                if (potentiallyNewTableName != currentTable)
-                                {
-                                    if (!useEndRegex)
-                                    {
-                                        sw?.Flush();
-                                        sw?.Close();
-                                        tableIndex++;
-                                    }
+    public PartWriter(string path, string database, string table)
+    {
+        _table = table;
+        _writer = new StreamWriter(path, append: false);
+        _writer.WriteLine($"USE [{EscapeIdentifier(database)}]");
+        _writer.WriteLine("GO");
+        _writer.WriteLine($"DISABLE TRIGGER ALL ON [dbo].[{EscapeIdentifier(table)}]");
+        _writer.WriteLine("GO");
+    }
 
-                                    currentTable = potentiallyNewTableName;
-                                    string fileName = $"{tableIndex:D3}.{currentTable}.sql";
-                                    string targetFullPath = Path.Combine(targetsFolder, fileName);
+    public void WriteLine(string line) => _writer.WriteLine(line);
 
-                                    sqlFiles.Add(fileName);
+    public void Dispose()
+    {
+        _writer.WriteLine($"ENABLE TRIGGER ALL ON [dbo].[{EscapeIdentifier(_table)}]");
+        _writer.WriteLine("GO");
+        _writer.Dispose();
+    }
 
-                                    Console.WriteLine("Started extracting '{0}' table script into file", currentTable);
+    private static string EscapeIdentifier(string identifier) => identifier.Replace("]", "]]", StringComparison.Ordinal);
+}
 
-                                    sw = new StreamWriter(targetFullPath, append: false);
-                                    sw.WriteLine($"USE [{dbName}]");
-                                }
-                            }
-                        }
+internal static class BatchFileWriter
+{
+    public static void Write(string outputDirectory, IReadOnlyList<string> partFiles, string server)
+    {
+        using var writer = new StreamWriter(Path.Combine(outputDirectory, "insert_all.bat"), append: false);
+        writer.WriteLine("@ECHO OFF");
+        writer.WriteLine("IF NOT EXIST output MD output");
 
-                        if (currentTable != null)
-                        {
-                            sw?.WriteLine(line);
-
-                            if (useEndRegex)
-                            {
-                                var match = TableEndRegex.Match(line);
-                                if (match.Success)
-                                {
-                                    currentTable = null;
-                                    sw.Flush();
-                                    sw.Close();
-                                    sw = null;
-                                    tableIndex++;
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            finally
-            {
-                if (!useEndRegex)
-                {
-                    sw?.Flush();
-                    sw?.Close();
-                }
-            }
-
-            using (var batchFile = new StreamWriter(Path.Combine(targetsFolder, "insert_all.bat"), append: false))
-            {
-                batchFile.WriteLine("md output");
-
-                foreach (var sqlFile in sqlFiles)
-                {
-                    string targetFullPath = Path.Combine(targetsFolder, sqlFile);
-                    string outputFullPath = Path.Combine(targetsFolder, "output", $"{Path.GetFileNameWithoutExtension(sqlFile)}.txt");
-
-                    batchFile.WriteLine($"sqlcmd -S .\\SQLEXPRESS -i \"{targetFullPath}\" -o \"{outputFullPath}\"");
-                }
-            }
-
-            Console.WriteLine("DONE!");
+        foreach (var partFile in partFiles)
+        {
+            var outputFile = Path.Combine("output", $"{Path.GetFileNameWithoutExtension(partFile)}.txt");
+            writer.WriteLine($"sqlcmd -S \"{server}\" -b -i \"{partFile}\" -o \"{outputFile}\"");
+            writer.WriteLine("IF ERRORLEVEL 1 EXIT /B %ERRORLEVEL%");
         }
     }
 }
+
+internal sealed record SplitResult(string OutputDirectory, IReadOnlyList<string> PartFiles);

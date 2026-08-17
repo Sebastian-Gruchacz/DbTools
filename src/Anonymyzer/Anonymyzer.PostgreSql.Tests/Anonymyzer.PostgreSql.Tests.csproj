@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.9.0" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
+    <PackageReference Include="xunit.v3" Version="4.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Anonymyzer.Configuration\Anonymyzer.Configuration.csproj" />
+    <ProjectReference Include="..\Anonymyzer.PostgreSql\Anonymyzer.PostgreSql.csproj" />
+    <ProjectReference Include="..\Anonymyzer.Console\Anonymyzer.Console.csproj" />
+    <ProjectReference Include="..\Generators\Anonymyzer.Generators.Person\Anonymyzer.Generators.Person.csproj" />
+    <ProjectReference Include="..\Generators\Anonymyzer.Generators.Simple\Anonymyzer.Generators.Simple.csproj" />
+    <ProjectReference Include="..\LanguagePacks\Anonymyzer.LanguagePack.Polish\Anonymyzer.LanguagePack.Polish.csproj" />
+  </ItemGroup>
+
+</Project>

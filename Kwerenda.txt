@@ -1,0 +1,25 @@
+
+Witam kolegów (i koleżanki?), widzę od dawna nic się działo, to chciałbym podrzucić pod rozkminę kwestię, z którą sie zmagam od kilku dni. Może będziecie mieli jakieś lepsze pomysły, niż ja mam.
+
+Otóż zagadnienie jest takie: potrzebuję w wydajny, ale dynamiczny sposób zaktualizować kilka (potencjalnie) wielkich tabel w bazie.
+
+Strony pozytywne:
+baza jest na bocznicy, mam do niej ekskluzywny dostęp, nikt mi się nie wtrynia w robotę, mogę nie przejmować się transakcjami, a jak zrobię deadlocki - to sobie sam ;-P
+póki co działam tylko w SQL Server (bo innych systemów i tak za bardzo nie znam), ale jakby w innych były jakieś specyficzne sztuczki, to mogę sobie zapamiętać na przyszłość...
+Wyzwania:
+baza jest ogromna, a trochę na czasie mi zależy (jedne tabelki są duże, ale niektóre mają miliony wierszy)
+zmiana wartości w tabelach jest na tyle złożona, że robię ją w kodzie zewnętrznym
+Zależy mi na ogólnym zachowaniu wszelkich indeksów, warunków, spójności kluczy obcych itd. - więc o ile mogę tymczasowo wyłączyć indeksowanie na czas przetwarzania, to potem i tak muszę je włączyć ponownie
+Nie wszystkie tabele posiadają klucze główne, a niektóre mają klucze złożone
+Póki co skupiam się na polach tekstowych, ale w teorii także takich JSON, XML czy NTEXT
+Rozwiązanie, które opracuję musi być możliwie uniwersalne - powiedzmy w granicy, że z kody generuję sobie polecenia SQL lub tSQL, ale że nie odstawiam żadnych sztuczek specyficznych dla danych w tabelkach
+Wyzwanie dodatkowe: jedna tabela będzie miała zmieniany fragment klucza głównego, który przy okazji jest kluczem obcym w innej tabeli
+Wyzwanie dodatkowe z mega gwiazdką - podczas aktualizacji wierszy w "aktywnej" tabeli, w wybranych algorytmach mogę potrzebować odwołać się nie tylko do pól z bieżącego wiersza, ale także wartościami z innych tabel lub (co gorsza) innych wierszy tej samej tabeli...
+
+Pomysły:
+Naprzemienne wczytywanie batchy wierszy i ich aktualizacja w bazie (UPDATE). Podstawowa wada- zadziała tylko tam, gdzie mogę posłużyć się kluczem głównym. Wydajność raczej średnia, ale najpewniejsza, bo nie psuję relacji ani nie przebudowuję struktur bazy. Opcje przyspieszenia: generowanie procedur aktualizujących i ich uruchamianie lub generowanie batchy skryptowych aktualizujących za jednym zamachem wiele pól. Oczywiście indeksy wyłączone na czas operacji i przywrócone po jej zakończeniu.
+Tworzę kopię tabeli (sama struktura) i batchami kopiuję do niej wiersze, modyfikując je w locie i wrzucając każdy batch za pomocą bulk insert. Po przetworzeniu całej tabeli, trunkuję ją, i przenoszę dane w drugą stronę. Oczywiście natenczas wyłączam walidację spójności referencyjnej, kluczy głównych oraz indeksy. Pytanie - zakładając, że statystyczny rozkład indeksowanych wartości, które zmieniłem (a realia są takie, że najpewniej te kolumny, które będę modyfikował, będą należały do indeksów) zmieni się lub nie zmieni, jak to może wpłynąć na wydajność wynikowej bazy?
+Alternatywa wersja - tworzę całkowitą kopię tabeli, z całym bagażem i przenoszę do niej dane jak wyżej. A potem kasują starą i robię rename tej nowej. Raczej mi się nie podoba, bo wolne i trudne. Zwłaszcza odtwarzanie wszystkich szczegółów ustawień tabeli, defaultów czy indeksów. Że o triggerach nie wspomnę... (Oj, kolejna rzecz, którą by trzeba tymczasowo wyłączać...) Ale zapewne powstałe indeksy byłyby najbliższe tym oryginalnym jeśli chodzi o fragmentację itp.
+Reasumując, wydaje mi się, że skłaniałbym się głównie ku opcji 2, ewentualnie, jeśli mam PK, to może jakaś wersja opcji 1. Szczególnie w sytuacji, przetwarzania też kluczy obcych... zapewne potrzebowałbym tworzyć w locie jakieś tabele konwersji, czy coś...
+
+Z góry dzięki za wszelkie uwagi krytyczne i wskazanie dziur w moim pomyśle. Ewentualnie jakieś hinty, naprowadzające na rozwiązania, na które zupełnie nie wpadłem.

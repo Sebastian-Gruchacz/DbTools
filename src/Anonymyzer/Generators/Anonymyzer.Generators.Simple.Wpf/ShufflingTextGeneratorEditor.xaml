@@ -1,0 +1,28 @@
+﻿<UserControl x:Class="Anonymyzer.Generators.Simple.Wpf.ShufflingTextGeneratorEditor"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Grid Margin="16">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="Auto" />
+            <ColumnDefinition Width="180" />
+        </Grid.ColumnDefinitions>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <TextBlock Grid.Row="0" Grid.ColumnSpan="2" Margin="0,0,0,14" TextWrapping="Wrap"
+                   Text="The generator reads the complete source column and applies a deterministic permutation. The multiset of values is preserved exactly." />
+
+        <TextBlock Grid.Row="1" Margin="0,0,12,8" VerticalAlignment="Center" Text="Seed:" />
+        <TextBox x:Name="SeedTextBox" Grid.Row="1" Grid.Column="1" Margin="0,0,0,8" />
+
+        <TextBlock Grid.Row="2" Margin="0,0,12,8" VerticalAlignment="Center" Text="Minimum population:" />
+        <TextBox x:Name="MinimumPopulationTextBox" Grid.Row="2" Grid.Column="1" Margin="0,0,0,8" />
+
+        <CheckBox x:Name="PreserveNullsCheckBox" Grid.Row="3" Grid.ColumnSpan="2"
+                  Content="Preserve null positions" />
+    </Grid>
+</UserControl>
