@@ -13,6 +13,7 @@
             serviceCollection.AddTransient<IGenerator, SequentialTextGenerator>();
             serviceCollection.AddTransient<IGenerator, EmailAddressGenerator>();
             serviceCollection.AddTransient<IGenerator, PhoneNumberGenerator>();
+            serviceCollection.AddTransient<IGenerator, UuidGenerator>();
         }
     }
 }

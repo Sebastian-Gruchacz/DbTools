@@ -20,6 +20,7 @@ internal sealed class GeneratorCatalog
             new PolishPhoneNumberLocaleDataProvider(),
             new EnglishPhoneNumberLocaleDataProvider()
         ]),
+        new UuidGenerator(),
         new PersonIdentityGenerator(new[] { new PolishPersonLocaleDataProvider() })
     };
 

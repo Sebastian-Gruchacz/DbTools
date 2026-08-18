@@ -264,6 +264,20 @@ Panel WPF udostępnia dokładnie parametry własnego codeca. Nieznane locale jes
 poprawnym JSON-em pluginu, lecz przygotowanie sesji kończy się czytelnym błędem,
 jeżeli odpowiadający provider nie został zainstalowany.
 
+### Uuid 1.0.0
+
+`Uuid` generuje tekstowe identyfikatory z markerem wersji 4 i prawidłowym
+wariantem UUID. Nie jest to źródło losowych UUID v4. Profil
+zawiera tekstowy `Seed`, początek sekwencji, format `Hyphenated`, `Compact`,
+`Braced` albo `Parenthesized`, wielkość liter i zachowanie pozycji `NULL`.
+Identyfikator powstaje z SHA-256 seeda oraz kolejnego numeru, dlatego ta sama
+konfiguracja i kolejność wierszy dają ten sam wynik.
+
+Generator nie używa losowości kryptograficznej i nie służy do tworzenia sekretów.
+Kolizja skrótu jest skrajnie mało prawdopodobna, ale nie jest matematycznie
+niemożliwa. Zachowany `NULL` nie zużywa numeru sekwencji, a po wygenerowaniu
+wartości dla `Int64.MaxValue` następne wywołanie kończy się błędem.
+
 ### Pierwszy generator Row: PersonIdentity 1.0.0
 
 `PersonIdentity` wykonuje jedno atomowe wywołanie dla wiersza i może wystawić

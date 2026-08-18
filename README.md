@@ -100,7 +100,7 @@ językowe opisuje [docs/anonymyzer-design.md](docs/anonymyzer-design.md).
   `information_schema`;
 - `Anonymyzer.PostgreSql.Tests` — testy buildera i opcjonalna integracja z bazą;
 - `Anonymyzer.Generators.Simple` — `TextShuffler`, `FixedText`, `SequentialText`,
-  `EmailAddress` i `PhoneNumber`;
+  `EmailAddress`, `PhoneNumber` i `Uuid`;
 - `Anonymyzer.Generators.Person` — generator spójnej tożsamości w jednym wierszu;
 - `Anonymyzer.ConfigEditor.Abstractions` — kontrakt opcjonalnych paneli WPF;
 - `Anonymyzer.Generators.Simple.Wpf` — panele konfiguracji generatorów prostych;
@@ -134,7 +134,9 @@ językowe opisuje [docs/anonymyzer-design.md](docs/anonymyzer-design.md).
   nazwiska, z zależnością od ich wartości oryginalnych lub wygenerowanych;
 - `PhoneNumber` 1.0.0: deterministyczne formaty `pl-PL` i `en-US`, krajowe albo
   międzynarodowe; wariant amerykański korzysta z zastrzeżonego zakresu 555-0100–0199;
-- dedykowane panele WPF parametrów wszystkich pięciu generatorów prostych;
+- `Uuid` 1.0.0: deterministyczne tekstowe UUID w formacie hyphenated, compact,
+  braced albo parenthesized, z wyborem wielkości liter;
+- dedykowane panele WPF parametrów wszystkich sześciu generatorów prostych;
 - rozwijane `Profiles → Add` tworzące kompletny profil domyślny wybranego
   generatora także w starszej konfiguracji;
 - `PersonIdentity` 1.0.0 w zakresie `Row`: spójne imię, nazwisko, rodzaj i e-mail
