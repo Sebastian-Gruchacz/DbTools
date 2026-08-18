@@ -33,12 +33,6 @@ internal sealed class ProcessAnonymyzerCommand
 
     public int Process(ProcessAnonymyzerCommandParameters parameters)
     {
-        if (!parameters.DryRun)
-        {
-            _logger.Error("Data modification is not implemented. Use --dry-run to validate a detached clone.");
-            return (int)ErrorCodes.ConfigurationError;
-        }
-
         AnonymizationConfiguration configuration = LoadConfiguration(parameters.ConfigurationFilePath);
         ConfigurationValidator.EnsureValid(configuration);
         DetachedCopySafetyValidator.EnsureConfigurationDoesNotTargetMarker(configuration);
@@ -67,13 +61,33 @@ internal sealed class ProcessAnonymyzerCommand
             .Inspect(configuration, plan, engine);
         ExecutionWriteSliceAssessment writeSlice = new ExecutionWriteSliceValidator()
             .Assess(plan, inspection);
-        _logger.Info(
-            $"Dry-run passed for {configuration.Database.DatabaseEngine} database " +
-            $"'{configuration.Database.DatabaseName}', marker {marker.MarkerId:D}. No data was modified.");
         foreach (string line in ExecutionPlanFormatter.Format(plan, inspection, writeSlice))
         {
             _logger.Info(line);
         }
+
+        if (parameters.DryRun)
+        {
+            _logger.Info(
+                $"Dry-run passed for {configuration.Database.DatabaseEngine} database " +
+                $"'{configuration.Database.DatabaseName}', marker {marker.MarkerId:D}. No data was modified.");
+            return (int)ErrorCodes.Success;
+        }
+
+        if (!parameters.Execute || !writeSlice.IsSupported)
+        {
+            _logger.Error($"Execution refused: {writeSlice.Message}.");
+            return (int)ErrorCodes.ConfigurationError;
+        }
+
+        var store = new DatabaseExecutionRowStore(connection, configuration.Database.DatabaseEngine);
+        long processedRows = new AnonymizationRowExecutor(_generatorsProvider.GetAllGenerators())
+            .ExecuteAsync(plan, writeSlice, store)
+            .GetAwaiter()
+            .GetResult();
+        _logger.Info(
+            $"Execution completed on detached clone '{configuration.Database.DatabaseName}', " +
+            $"marker {marker.MarkerId:D}. Updated {processedRows:N0} row(s).");
 
         return (int)ErrorCodes.Success;
     }
@@ -99,4 +113,6 @@ internal sealed class ProcessAnonymyzerCommandParameters : DbParameters
     public Guid ExpectedMarkerId { get; set; }
 
     public bool DryRun { get; set; }
+
+    public bool Execute { get; set; }
 }

@@ -75,7 +75,7 @@ internal static class CliParser
         string? error = RequireOnly(
             parsed,
             valueOptions: ["config", "connection-env", "marker-id"],
-            flags: ["dry-run"]);
+            flags: ["dry-run", "execute"]);
         if (error is not null)
         {
             return new CliParseResult(null, error, ShowHelp: false);
@@ -88,9 +88,14 @@ internal static class CliParser
             return new CliParseResult(null, error, ShowHelp: false);
         }
 
-        if (!parsed.Flags.Contains("dry-run"))
+        bool dryRun = parsed.Flags.Contains("dry-run");
+        bool execute = parsed.Flags.Contains("execute");
+        if (dryRun == execute)
         {
-            return new CliParseResult(null, "The run command currently requires --dry-run.", ShowHelp: false);
+            return new CliParseResult(
+                null,
+                "The run command requires exactly one of --dry-run or --execute.",
+                ShowHelp: false);
         }
 
         return new CliParseResult(
@@ -98,7 +103,8 @@ internal static class CliParser
                 connectionEnvironment,
                 markerId,
                 config,
-                parsed.Flags.Contains("dry-run")),
+                dryRun,
+                execute),
             null,
             ShowHelp: false);
     }

@@ -186,7 +186,7 @@ językowe opisuje [docs/anonymyzer-design.md](docs/anonymyzer-design.md).
 - rozwijane `Add column`, które pokazuje ukryte kolumny zapisane podczas analizy,
   a na końcu pozwala po walidacji klona wczytać z bazy brakujące kolumny
   niebędące PK; dodane pola są domyślnie wyłączone;
-- CLI `generate-config` i `run --dry-run`, które pobiera connection string
+- CLI `generate-config`, `run --dry-run` i ograniczone `run --execute`, które pobierają connection string
   wyłącznie ze wskazanej zmiennej środowiskowej;
 - potrójna walidacja markera odłączonej kopii: argument operatora, konfiguracja
   i pojedynczy rekord w bazie muszą wskazywać ten sam identyfikator;
@@ -206,10 +206,9 @@ językowe opisuje [docs/anonymyzer-design.md](docs/anonymyzer-design.md).
 
 ### Czego jeszcze nie ma
 
-- wykonania konfiguracji modyfikującego dane — `run` przyjmuje obecnie wyłącznie
-  `--dry-run` i kończy pracę po walidacji bezpieczeństwa oraz generatorów;
-- wykonawcy planu, który dostarczy generatorom strumienie danych i zapisze wynik
-  ich sesji do bazy;
+- wykonania planów wielotabelowych, `Column` i `Relational`; `--execute` obsługuje
+  obecnie tylko jedną tabelę, kroki `Row` i pojedynczy niezmieniany PK;
+- checkpointów, wznawiania przerwanego wykonania i raportu walidacji po zapisie;
 - pozostałych generatorów grupowych;
 - podglądu generatorów `Relational` oraz przyszłych generatorów `Column`
   wymagających wielu skanów lub przypisanych przez grupę;
@@ -251,6 +250,11 @@ dotnet run --project .\src\Anonymyzer\Anonymyzer.Console -- generate-config `
 dotnet run --project .\src\Anonymyzer\Anonymyzer.Console -- run `
   --config .\anonymyzer-config.json `
   --connection-env ANONYMYZER_CONNECTION --marker-id $marker --dry-run
+
+# Mutuje wyłącznie zwalidowany klon i tylko plan oznaczony przez dry-run jako ready:
+dotnet run --project .\src\Anonymyzer\Anonymyzer.Console -- run `
+  --config .\anonymyzer-config.json `
+  --connection-env ANONYMYZER_CONNECTION --marker-id $marker --execute
 ```
 
 Obie komendy sprawdzają nazwę bazy i marker. `generate-config` tylko czyta
@@ -259,8 +263,10 @@ waliduje konfigurację, dokładne wersje generatorów i target, wypisuje kolejno
 kroków, mapowania, wymagane pełne skany i proponowany batch. Dodatkowo odrzuca
 zmiany schematu aktywnych kolumn oraz pokazuje szacowaną liczbę wierszy i pamięć
 pełnych skanów. Dla nieograniczonego `text` pamięć pozostaje jawnie nieznana.
-Komenda kończy bez zapisu danych. Wywołanie `run` bez `--dry-run` jest obecnie
-odrzucane.
+Komenda kończy bez zapisu danych. `--execute` wymaga jawnego trybu, ponawia te
+same walidacje, odrzuca plan bez statusu `write slice ready`, czyta wiersze
+keyset pagingiem po PK i zapisuje każdy batch w osobnej transakcji. Wywołanie
+bez `--dry-run` i `--execute` albo z obiema flagami jest odrzucane.
 
 Edytor konfiguracji można uruchomić poleceniem:
 

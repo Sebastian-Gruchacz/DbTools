@@ -29,7 +29,8 @@ transakcji obejmującej całą bazę.
    bazy, konfigurację generatorów, relacje oraz kolejność operacji. Porównuje
    aktywne kolumny z bieżącym schematem klona i raportuje estymowaną liczbę
    wierszy oraz górne zużycie pamięci pełnych skanów.
-6. `run` przetwarza dane batchami, zapisuje checkpointy i raport końcowy.
+6. `run --execute` w pierwszym wycinku przetwarza jedną tabelę batchami po PK;
+   checkpointy i raport końcowy pozostają kolejnym etapem.
 7. Walidacja po wykonaniu sprawdza constrainty, liczbę wierszy i spójność
    relacji. Kopia może dopiero wtedy zostać przekazana dalej.
 
@@ -207,11 +208,15 @@ Liczbę wierszy i koszt pamięci uzupełnia osobny inspektor bieżącego schemat
 uruchamiany przez `run --dry-run` po zbudowaniu planu.
 
 Ten sam inspektor zapisuje rzeczywiste kolumny PK. Walidator pierwszego wycinka
-zapisu ocenia plan, ale jeszcze go nie wykonuje: dopuszcza dokładnie jedną tabelę,
+zapisu dopuszcza dokładnie jedną tabelę,
 wyłącznie kroki `Row`, jeden niezmieniany klucz główny i wymagania danych z tego
 samego wiersza. Pełny skan, scope `Column`/`Relational`, brak lub złożony PK,
 zmiana PK albo odczyt innej tabeli daje w `dry-run` jawny status `not ready`.
-Pozwala to zbudować executor bez zgadywania tożsamości aktualizowanego wiersza.
+`--execute` działa wyłącznie dla statusu `ready`: czyta kolejne batche keyset
+pagingiem, utrzymuje sesje generatorów między batchami i zapisuje batch w jednej
+transakcji. Aktualizacja innej liczby wierszy niż dokładnie jeden dla danego PK
+powoduje rollback batcha. Nie ma jeszcze checkpointu ani automatycznej walidacji
+constraintów po zakończeniu.
 
 Reader przekazuje dane strumieniowo, natomiast generator decyduje, co buforuje.
 Dokładny shuffle ma koszt pamięci `O(n)` i nie nadaje się bezpośrednio do każdej

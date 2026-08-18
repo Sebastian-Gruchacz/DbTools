@@ -10,9 +10,11 @@ internal static class CliHelp
                           --connection-env <variable> --marker-id <guid>
                           --output <path> [--force]
 
-          run --config <path> --connection-env <variable> --marker-id <guid> --dry-run
+          run --config <path> --connection-env <variable> --marker-id <guid>
+              (--dry-run | --execute)
 
         Connection strings are accepted only through the named environment variable.
-        The current run command validates safety and configuration but never modifies data.
+        --execute modifies only a validated detached clone and currently supports one table,
+        Row generators, a single unchanged primary key, and no cross-table/full-scan input.
         """;
 }

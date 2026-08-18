@@ -61,7 +61,7 @@ public sealed class CliParserTests
     }
 
     [Fact]
-    public void RunRequiresDryRunUntilDataModificationIsImplemented()
+    public void RunRequiresExactlyOneExecutionMode()
     {
         CliParseResult result = CliParser.Parse(
         [
@@ -72,6 +72,40 @@ public sealed class CliParserTests
         ]);
 
         Assert.False(result.IsSuccess);
-        Assert.Contains("requires --dry-run", result.Error);
+        Assert.Contains("exactly one", result.Error);
+    }
+
+    [Fact]
+    public void ParsesExplicitExecuteMode()
+    {
+        CliParseResult result = CliParser.Parse(
+        [
+            "run",
+            "--config", "config.json",
+            "--connection-env", "ANONYMYZER_CONNECTION",
+            "--marker-id", MarkerId.ToString("D"),
+            "--execute"
+        ]);
+
+        var options = Assert.IsType<RunCliOptions>(result.Command);
+        Assert.True(options.Execute);
+        Assert.False(options.DryRun);
+    }
+
+    [Fact]
+    public void RejectsDryRunAndExecuteTogether()
+    {
+        CliParseResult result = CliParser.Parse(
+        [
+            "run",
+            "--config", "config.json",
+            "--connection-env", "ANONYMYZER_CONNECTION",
+            "--marker-id", MarkerId.ToString("D"),
+            "--dry-run",
+            "--execute"
+        ]);
+
+        Assert.False(result.IsSuccess);
+        Assert.Contains("exactly one", result.Error);
     }
 }

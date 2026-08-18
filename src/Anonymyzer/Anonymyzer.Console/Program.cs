@@ -61,7 +61,8 @@ try
                 ConnectionString = connectionString,
                 ExpectedMarkerId = options.MarkerId,
                 ConfigurationFilePath = options.ConfigurationPath,
-                DryRun = options.DryRun
+                DryRun = options.DryRun,
+                Execute = options.Execute
             }),
         _ => (int)ErrorCodes.ConfigurationError
     };
