@@ -81,6 +81,7 @@ internal sealed class GeneratorCatalog
             or "NationalIdentifier" or "PostalAddress"
             ? "pl-PL"
             : string.Empty,
+        Origin = "Built-in",
         Options = generator.Configuration.Serialize(generator.Configuration.CreateDefault())
     };
 }

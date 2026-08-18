@@ -154,6 +154,9 @@ językowe opisuje [docs/anonymyzer-design.md](docs/anonymyzer-design.md).
 - `BankAccount` 1.0.0: polski IBAN lub NRB z poprawną sumą modulo 97,
   deterministyczną numeracją i zerowym, celowo nieroutowalnym segmentem banku;
 - dedykowane panele WPF parametrów wszystkich wbudowanych generatorów prostych;
+- merge profili przy otwieraniu starszej konfiguracji: profile z pliku pozostają
+  bez zmian, bieżące profile wbudowane są dodawane pod unikalnymi identyfikatorami,
+  a kolumna `Origin` pokazuje ich pochodzenie;
 - rozwijane `Profiles → Add` tworzące kompletny profil domyślny wybranego
   generatora także w starszej konfiguracji;
 - `PersonIdentity` 1.0.0 w zakresie `Row`: spójne imię, nazwisko, rodzaj i e-mail
@@ -185,6 +188,8 @@ językowe opisuje [docs/anonymyzer-design.md](docs/anonymyzer-design.md).
   konfiguracji: limit 1–50, wiele okien naraz, kopiowanie i ponowna walidacja
   nazwy oraz markera klona przed każdym odczytem;
 - prezentacja tekstowego typu kolumny wraz z długością albo `MAX`;
+- menu `Help` z legendą oznaczeń tabel i kolumn, dokumentacją oraz oknem `About`
+  pokazującym wersję, autora i odnośniki do projektu oraz zgłoszeń;
 - klasyfikacja typów SQL Server/PostgreSQL oraz kandydaci wykrywani po nazwie
   także dla pól liczbowych, np. PESEL, NIP i telefonów;
 - zgodność roli z typem oraz negatywne tokeny odrzucające m.in. booleanowe

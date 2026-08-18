@@ -21,6 +21,12 @@
             <MenuItem Header="_Generators">
                 <MenuItem Header="_Profiles..." Click="Profiles_Click" />
             </MenuItem>
+            <MenuItem Header="_Help">
+                <MenuItem Header="Table marking _legend" Click="TableLegend_Click" />
+                <MenuItem Header="Online _documentation" Click="Documentation_Click" />
+                <Separator />
+                <MenuItem Header="_About Anonymyzer" Click="About_Click" />
+            </MenuItem>
         </Menu>
 
         <StatusBar DockPanel.Dock="Bottom">

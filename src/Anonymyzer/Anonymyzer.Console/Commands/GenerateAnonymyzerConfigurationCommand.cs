@@ -172,6 +172,7 @@ internal class GenerateAnonymyzerConfigurationCommand// : ICommand<GenerateAnony
                 DisplayName = $"{generator.Descriptor.DisplayName} ({DEFAULT})",
                 GeneratorType = generator.Descriptor.Type,
                 GeneratorVersion = generator.Descriptor.Version,
+                Origin = "Built-in",
                 Options = generator.Configuration.Serialize(generator.Configuration.CreateDefault())
             })
             .ToList();

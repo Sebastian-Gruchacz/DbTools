@@ -17,5 +17,7 @@ public sealed class GeneratorProfileConfiguration
 
     public string Locale { get; set; } = string.Empty;
 
+    public string Origin { get; set; } = string.Empty;
+
     public JObject Options { get; set; } = new();
 }

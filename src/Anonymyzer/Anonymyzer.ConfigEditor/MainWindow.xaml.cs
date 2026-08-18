@@ -1,6 +1,7 @@
 ﻿namespace Anonymyzer.ConfigEditor;
 
 using System.ComponentModel;
+using System.Diagnostics;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
@@ -80,7 +81,21 @@ public partial class MainWindow : Window
             return;
         }
 
-        RunFileOperation(() => _viewModel.Load(_fileService.Load(dialog.FileName), dialog.FileName));
+        RunFileOperation(() =>
+        {
+            AnonymizationConfiguration configuration = _fileService.Load(dialog.FileName);
+            GeneratorProfileMergeResult merge = new GeneratorProfileMerger().Merge(
+                configuration.GeneratorProfiles,
+                _generatorCatalog.CreateDefaultProfiles());
+            _viewModel.Load(configuration, dialog.FileName);
+            if (merge.Changed)
+            {
+                _viewModel.MarkDirty();
+                _viewModel.Status = $"Opened {dialog.FileName}; merged built-in profiles: " +
+                                    $"{merge.AddedProfiles} added, {merge.UpdatedProfiles} updated, " +
+                                    $"{merge.IdCollisions} id collision(s). Save to persist the merge.";
+            }
+        });
     }
 
     private void Save_Click(object sender, RoutedEventArgs e)
@@ -341,6 +356,32 @@ public partial class MainWindow : Window
     private void Exit_Click(object sender, RoutedEventArgs e)
     {
         Close();
+    }
+
+    private void TableLegend_Click(object sender, RoutedEventArgs e)
+    {
+        MessageBox.Show(
+            this,
+            "● in the table list means that the latest saved analysis found at least one anonymization candidate.\n" +
+            "The adjacent number is the candidate-column count. An empty marker means no automatic candidate was found.\n\n" +
+            "The same ● in the column grid marks an automatically detected candidate; hover it to see the suggested " +
+            "semantic role, confidence and matched rule. Markers are suggestions only and never enable anonymization.",
+            "Table and column markings",
+            MessageBoxButton.OK,
+            MessageBoxImage.Information);
+    }
+
+    private void Documentation_Click(object sender, RoutedEventArgs e) =>
+        OpenWebPage("https://github.com/Sebastian-Gruchacz/DbTools#readme");
+
+    private void About_Click(object sender, RoutedEventArgs e)
+    {
+        new AboutWindow { Owner = this }.ShowDialog();
+    }
+
+    private static void OpenWebPage(string url)
+    {
+        Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
     }
 
     private void Window_Closing(object? sender, CancelEventArgs e)

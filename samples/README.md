@@ -24,3 +24,17 @@ Powtarzalny downloader Chinook, Northwind, AdventureWorksLT, Pagila i opcjonalne
 WideWorldImporters opisuje [docs/sample-databases.md](../docs/sample-databases.md).
 Pobrane pliki trafiają do ignorowanego katalogu `artifacts/sample-databases` i nie
 są commitowane.
+
+Wygenerowane configi tych środowisk również są lokalne i celowo ignorowane:
+
+- `artifacts/sample-configurations/postgresql/anonymyzer_chinook.json`;
+- `artifacts/sample-configurations/postgresql/anonymyzer_pagila.json`;
+- `artifacts/sample-configurations/sqlserver/anonymyzer_chinook_sqlserver.json`;
+- `artifacts/sample-configurations/sqlserver/anonymyzer_northwind.json`;
+- `artifacts/sample-configurations/sqlserver/anonymyzer_adventureworkslt.json`;
+- `artifacts/sample-configurations/sqlserver/anonymyzer_wideworldimporters.json`.
+
+Nie są kopiowane do `samples`, ponieważ każdy zawiera marker konkretnego lokalnego
+klona. Skrypty `Invoke-PostgreSqlSampleEnvironment.ps1 -Action Initialize` oraz
+`Invoke-SqlServerSampleEnvironment.ps1 -Action Initialize` odświeżają je bieżącą
+wersją detektora i zestawem profili.

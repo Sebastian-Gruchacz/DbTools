@@ -162,6 +162,7 @@ public partial class GeneratorProfilesWindow : Window
         public string GeneratorType { get; set; } = string.Empty;
         public string GeneratorVersion { get; set; } = string.Empty;
         public string Locale { get; set; } = string.Empty;
+        public string Origin { get; set; } = string.Empty;
         public string OptionsJson { get; set; } = "{}";
 
         public static GeneratorProfileRow FromModel(GeneratorProfileConfiguration model)
@@ -173,6 +174,7 @@ public partial class GeneratorProfilesWindow : Window
                 GeneratorType = model.GeneratorType,
                 GeneratorVersion = model.GeneratorVersion,
                 Locale = model.Locale,
+                Origin = model.Origin,
                 OptionsJson = model.Options.ToString(Formatting.None)
             };
         }
@@ -201,6 +203,7 @@ public partial class GeneratorProfilesWindow : Window
                 GeneratorType = GeneratorType.Trim(),
                 GeneratorVersion = GeneratorVersion.Trim(),
                 Locale = Locale.Trim(),
+                Origin = string.IsNullOrWhiteSpace(Origin) ? "User" : Origin.Trim(),
                 Options = JObject.Parse(OptionsJson)
             };
         }
