@@ -10,6 +10,7 @@ using Anonymyzer.ConfigEditor.ViewModels;
 using Anonymyzer.ConfigEditor.Abstractions;
 using Anonymyzer.Configuration;
 using Anonymyzer.DatabaseAccess;
+using Anonymyzer.Generators.Address.Wpf;
 using Anonymyzer.Generators.Person.Wpf;
 using Anonymyzer.Generators.Simple.Wpf;
 using Microsoft.Win32;
@@ -32,7 +33,8 @@ public partial class MainWindow : Window
         new UuidGeneratorEditorFactory(),
         new TaxIdentifierGeneratorEditorFactory(),
         new NationalIdentifierGeneratorEditorFactory(),
-        new PersonIdentityGeneratorEditorFactory()
+        new PersonIdentityGeneratorEditorFactory(),
+        new PostalAddressGeneratorEditorFactory()
     };
 
     public MainWindow()

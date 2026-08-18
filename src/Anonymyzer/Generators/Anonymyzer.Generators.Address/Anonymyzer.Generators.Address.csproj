@@ -8,13 +8,11 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.11" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\Anonymyzer.Interfaces\Anonymyzer.Base.csproj" />
-    <ProjectReference Include="..\..\Generators\Anonymyzer.Generators.Address\Anonymyzer.Generators.Address.csproj" />
-    <ProjectReference Include="..\..\Generators\Anonymyzer.Generators.Person\Anonymyzer.Generators.Person.csproj" />
-    <ProjectReference Include="..\..\Generators\Anonymyzer.Generators.Simple\Anonymyzer.Generators.Simple.csproj" />
   </ItemGroup>
 
 </Project>

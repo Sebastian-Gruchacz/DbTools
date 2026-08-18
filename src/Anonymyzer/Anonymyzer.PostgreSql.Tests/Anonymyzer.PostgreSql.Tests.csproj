@@ -20,6 +20,7 @@
     <ProjectReference Include="..\Anonymyzer.PostgreSql\Anonymyzer.PostgreSql.csproj" />
     <ProjectReference Include="..\Anonymyzer.SqlServer\Anonymyzer.SqlServer.csproj" />
     <ProjectReference Include="..\Anonymyzer.Console\Anonymyzer.Console.csproj" />
+    <ProjectReference Include="..\Generators\Anonymyzer.Generators.Address\Anonymyzer.Generators.Address.csproj" />
     <ProjectReference Include="..\Generators\Anonymyzer.Generators.Person\Anonymyzer.Generators.Person.csproj" />
     <ProjectReference Include="..\Generators\Anonymyzer.Generators.Simple\Anonymyzer.Generators.Simple.csproj" />
     <ProjectReference Include="..\LanguagePacks\Anonymyzer.LanguagePack.English\Anonymyzer.LanguagePack.English.csproj" />

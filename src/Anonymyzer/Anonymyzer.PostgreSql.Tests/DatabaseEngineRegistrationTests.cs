@@ -3,6 +3,7 @@
 using Anonymyzer.Base;
 using Anonymyzer.Base.Generation;
 using Anonymyzer.Console;
+using Anonymyzer.Generators.Address;
 using Anonymyzer.Generators.Person;
 using Anonymyzer.Generators.Simple;
 using Anonymyzer.PostgreSql;
@@ -44,11 +45,17 @@ public class DatabaseEngineRegistrationTests
         Assert.Contains(generators, generator => generator is UuidGenerator);
         Assert.Contains(generators, generator => generator is TaxIdentifierGenerator);
         Assert.Contains(generators, generator => generator is NationalIdentifierGenerator);
+        Assert.Contains(generators, generator => generator is PostalAddressGenerator);
         Assert.Contains(
             provider.GetServices<INationalIdentifierLocaleDataProvider>(),
             localeProvider => localeProvider.Locale == "en-US");
         Assert.Contains(
             provider.GetServices<IPersonLocaleDataProvider>(),
             localeProvider => localeProvider.Locale == "en-US");
+        Assert.Equal(
+            ["en-US", "pl-PL"],
+            provider.GetServices<IPostalAddressLocaleDataProvider>()
+                .Select(localeProvider => localeProvider.Locale)
+                .OrderBy(locale => locale));
     }
 }

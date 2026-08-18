@@ -103,9 +103,11 @@ językowe opisuje [docs/anonymyzer-design.md](docs/anonymyzer-design.md).
   `EmailAddress`, `PhoneNumber`, `Uuid` i `TaxIdentifier`;
 - `Anonymyzer.Generators.Person` — generatory spójnej tożsamości oraz krajowego
   identyfikatora osoby;
+- `Anonymyzer.Generators.Address` — grupowy generator spójnego adresu pocztowego;
 - `Anonymyzer.ConfigEditor.Abstractions` — kontrakt opcjonalnych paneli WPF;
 - `Anonymyzer.Generators.Simple.Wpf` — panele konfiguracji generatorów prostych;
 - `Anonymyzer.Generators.Person.Wpf` — panel konfiguracji `PersonIdentity` 1.0.0;
+- `Anonymyzer.Generators.Address.Wpf` — panel konfiguracji `PostalAddress` 1.0.0;
 - `Anonymyzer.LanguagePack.Polish` — dane i reguły regionalne `pl-PL`;
 - `Anonymyzer.LanguagePack.English` — reguły `en-US` oraz bezpieczne numery
   telefonów i SSN;
@@ -150,6 +152,9 @@ językowe opisuje [docs/anonymyzer-design.md](docs/anonymyzer-design.md).
   albo bezpiecznie nieprzydzielony amerykański SSN z prefiksem `000`; generator
   obsługuje konfigurowalny zakres dat i seed oraz jawne zależności od kolumn daty
   urodzenia i płci (`Original`/`Generated`);
+- `PostalAddress` 1.0.0: atomowo generowane kraj, region, miasto, ulica i kod
+  pocztowy dla `pl-PL` albo `en-US`; kod jest wybierany razem z miastem, a nie
+  losowany niezależnie;
 - dwa schematy e-mail: oparty na imieniu i nazwisku oraz opaque; domyślna domena
   `example.invalid` jest celowo niedostarczalna;
 - dedykowany panel WPF konfiguracji `PersonIdentity`;

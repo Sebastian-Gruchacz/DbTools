@@ -2,6 +2,7 @@
 
 using Anonymyzer.Base.Generation;
 using Anonymyzer.Configuration;
+using Anonymyzer.Generators.Address;
 using Anonymyzer.Generators.Person;
 using Anonymyzer.Generators.Simple;
 using Anonymyzer.LanguagePack.English;
@@ -26,6 +27,11 @@ internal sealed class GeneratorCatalog
         [
             new PolishNationalIdentifierLocaleDataProvider(),
             new EnglishNationalIdentifierLocaleDataProvider()
+        ]),
+        new PostalAddressGenerator(
+        [
+            new PolishPostalAddressLocaleDataProvider(),
+            new EnglishPostalAddressLocaleDataProvider()
         ]),
         new PersonIdentityGenerator(
         [
@@ -60,7 +66,8 @@ internal sealed class GeneratorCatalog
         DisplayName = $"{generator.Descriptor.DisplayName} (Default)",
         GeneratorType = generator.Descriptor.Type,
         GeneratorVersion = generator.Descriptor.Version,
-        Locale = generator.Descriptor.Type is "PersonIdentity" or "PhoneNumber" or "TaxIdentifier" or "NationalIdentifier"
+        Locale = generator.Descriptor.Type is "PersonIdentity" or "PhoneNumber" or "TaxIdentifier"
+            or "NationalIdentifier" or "PostalAddress"
             ? "pl-PL"
             : string.Empty,
         Options = generator.Configuration.Serialize(generator.Configuration.CreateDefault())

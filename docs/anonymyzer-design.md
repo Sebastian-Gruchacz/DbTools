@@ -369,6 +369,19 @@ traktować ich jako modeli rozkładu populacji. Docelowy pakiet danych
 powinien zawierać wersjonowane częstotliwości wraz z pochodzeniem danych i
 testami jakości. Generator nie tworzy jeszcze PESEL ani NIP.
 
+### PostalAddress 1.0.0
+
+`PostalAddress` jest generatorem `Row` z opcjonalnymi wyjściami `Country`,
+`Region`, `City`, `Street` i `PostalCode`. Provider regionalny najpierw wybiera
+rekord lokalizacji, który wiąże region, miasto i kod pocztowy, a następnie ulicę
+i numer domu. Dzięki temu operator może związać dowolny podzbiór kolumn, ale kod
+nie powstaje niezależnie od miasta w tym samym wierszu.
+
+Pierwsze providery `pl-PL` i `en-US` mają małe, równomierne zestawy startowe.
+Kody są przypisane do miasta; zestaw nie gwarantuje jeszcze zgodności kodu z
+konkretnym numerem budynku ani reprezentatywnego rozkładu geograficznego. Pełne
+dane powinny później trafić do wersjonowanych zasobów pakietu językowego.
+
 ## Słowniki kandydatów
 
 Pierwszy zakres językowy to angielski (`en`) i polski (`pl`). Kolejne języki

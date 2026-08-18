@@ -8,6 +8,7 @@ using Anonymyzer.Console.Commands;
 using Anonymyzer.Console.Implementation;
 using Anonymyzer.Console.InternalInterfaces;
 using Anonymyzer.Configuration.Safety;
+using Anonymyzer.Generators.Address;
 using Anonymyzer.Generators.Person;
 using Anonymyzer.Generators.Simple;
 using Anonymyzer.LanguagePack.English;
@@ -47,6 +48,7 @@ internal static class LocalExtensions
         {
             builder.AddLoader<SimpleGeneratorsLoader>();
             builder.AddLoader<PersonGeneratorsLoader>();
+            builder.AddLoader<AddressGeneratorsLoader>();
         });
     }
 
