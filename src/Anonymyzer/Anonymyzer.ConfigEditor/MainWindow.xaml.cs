@@ -34,6 +34,7 @@ public partial class MainWindow : Window
         new UuidGeneratorEditorFactory(),
         new CompanyNameGeneratorEditorFactory(),
         new TaxIdentifierGeneratorEditorFactory(),
+        new BankAccountGeneratorEditorFactory(),
         new BirthDateGeneratorEditorFactory(),
         new GenderGeneratorEditorFactory(),
         new NationalIdentifierGeneratorEditorFactory(),

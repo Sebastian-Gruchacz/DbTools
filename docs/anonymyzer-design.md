@@ -255,6 +255,19 @@ licznik jest zawsze obecny i zapewnia unikalność w sesji; `StartAt`, minimalna
 liczba cyfr i zachowanie `NULL` należą do konfiguracji generatora. Normalizacja
 korzysta z tych samych zasad transliteracji co `EmailAddress`.
 
+### BankAccount 1.0.0
+
+`BankAccount` generuje tekst dla roli `Financial.BankAccount`. Pierwszy provider
+obsługuje `pl-PL` i formaty zwartego IBAN-u, IBAN-u grupowanego spacjami oraz
+krajowego NRB. Każda wartość przechodzi kontrolę modulo 97, a sekwencja jest
+deterministyczna i nie powtarza wartości w ramach sesji.
+
+Ośmiocyfrowy segment banku i oddziału ma stałą wartość `00000000`. Dzięki temu
+dane zachowują strukturę i checksum wymaganą przez typową walidację formularza,
+ale nie wskazują świadomie wybranego działającego banku. Nie wolno używać tych
+wartości do wykonywania przelewów ani traktować ich jako potwierdzenia istnienia
+rachunku. Profil wybiera locale, format, seed oraz zachowanie pozycji `NULL`.
+
 ### PhoneNumber 1.0.0
 
 `PhoneNumber` jest generatorem `Row` z jednym wyjściem `Value` dla roli

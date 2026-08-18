@@ -100,7 +100,8 @@ językowe opisuje [docs/anonymyzer-design.md](docs/anonymyzer-design.md).
   `information_schema`;
 - `Anonymyzer.PostgreSql.Tests` — testy buildera i opcjonalna integracja z bazą;
 - `Anonymyzer.Generators.Simple` — `TextShuffler`, `FixedText`, `SequentialText`,
-  `EmailAddress`, `PhoneNumber`, `Uuid`, `CompanyName` i `TaxIdentifier`;
+  `EmailAddress`, `AccountLogin`, `PhoneNumber`, `Uuid`, `CompanyName`,
+  `TaxIdentifier` i `BankAccount`;
 - `Anonymyzer.Generators.Person` — generatory spójnej tożsamości oraz krajowego
   identyfikatora osoby;
 - `Anonymyzer.Generators.Address` — grupowy generator spójnego adresu pocztowego;
@@ -147,7 +148,9 @@ językowe opisuje [docs/anonymyzer-design.md](docs/anonymyzer-design.md).
   markerem syntetycznym i opcjonalną lokalną formą prawną;
 - `TaxIdentifier` 1.0.0: polskie NIP-y oraz REGON 9/14 z poprawnymi cyframi
   kontrolnymi i bez powtórzeń; brak `Variant` w starszym JSON-ie oznacza NIP;
-- dedykowane panele WPF parametrów wszystkich siedmiu generatorów prostych;
+- `BankAccount` 1.0.0: polski IBAN lub NRB z poprawną sumą modulo 97,
+  deterministyczną numeracją i zerowym, celowo nieroutowalnym segmentem banku;
+- dedykowane panele WPF parametrów wszystkich wbudowanych generatorów prostych;
 - rozwijane `Profiles → Add` tworzące kompletny profil domyślny wybranego
   generatora także w starszej konfiguracji;
 - `PersonIdentity` 1.0.0 w zakresie `Row`: spójne imię, nazwisko, rodzaj i e-mail

@@ -29,6 +29,7 @@ internal sealed class GeneratorCatalog
             new EnglishCompanyNameLocaleDataProvider()
         ]),
         new TaxIdentifierGenerator([new PolishTaxIdentifierLocaleDataProvider()]),
+        new BankAccountGenerator([new PolishBankAccountLocaleDataProvider()]),
         new BirthDateGenerator(),
         new GenderGenerator(),
         new NationalIdentifierGenerator(
@@ -75,6 +76,7 @@ internal sealed class GeneratorCatalog
         GeneratorType = generator.Descriptor.Type,
         GeneratorVersion = generator.Descriptor.Version,
         Locale = generator.Descriptor.Type is "PersonIdentity" or "PhoneNumber" or "CompanyName" or "TaxIdentifier"
+            or "BankAccount"
             or "NationalIdentifier" or "PostalAddress"
             ? "pl-PL"
             : string.Empty,

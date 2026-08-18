@@ -16,6 +16,7 @@ public static class PolishLanguagePackLoader
         services.AddSingleton<ITaxIdentifierLocaleDataProvider, PolishTaxIdentifierLocaleDataProvider>();
         services.AddSingleton<INationalIdentifierLocaleDataProvider, PolishNationalIdentifierLocaleDataProvider>();
         services.AddSingleton<ICompanyNameLocaleDataProvider, PolishCompanyNameLocaleDataProvider>();
+        services.AddSingleton<IBankAccountLocaleDataProvider, PolishBankAccountLocaleDataProvider>();
         services.AddSingleton<IColumnCandidateRuleProvider, PolishColumnCandidateRuleProvider>();
         return services;
     }

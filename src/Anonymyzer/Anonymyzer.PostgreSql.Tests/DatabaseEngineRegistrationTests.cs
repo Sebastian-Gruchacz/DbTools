@@ -46,6 +46,7 @@ public class DatabaseEngineRegistrationTests
         Assert.Contains(generators, generator => generator is UuidGenerator);
         Assert.Contains(generators, generator => generator is CompanyNameGenerator);
         Assert.Contains(generators, generator => generator is TaxIdentifierGenerator);
+        Assert.Contains(generators, generator => generator is BankAccountGenerator);
         Assert.Contains(generators, generator => generator is BirthDateGenerator);
         Assert.Contains(generators, generator => generator is GenderGenerator);
         Assert.Contains(generators, generator => generator is NationalIdentifierGenerator);
@@ -61,6 +62,9 @@ public class DatabaseEngineRegistrationTests
             provider.GetServices<IPostalAddressLocaleDataProvider>()
                 .Select(localeProvider => localeProvider.Locale)
                 .OrderBy(locale => locale));
+        Assert.Contains(
+            provider.GetServices<IBankAccountLocaleDataProvider>(),
+            localeProvider => localeProvider.Locale == "pl-PL");
         Assert.Equal(
             ["en-US", "pl-PL"],
             provider.GetServices<ICompanyNameLocaleDataProvider>()
