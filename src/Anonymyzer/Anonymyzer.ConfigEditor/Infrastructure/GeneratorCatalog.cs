@@ -27,7 +27,11 @@ internal sealed class GeneratorCatalog
             new PolishNationalIdentifierLocaleDataProvider(),
             new EnglishNationalIdentifierLocaleDataProvider()
         ]),
-        new PersonIdentityGenerator(new[] { new PolishPersonLocaleDataProvider() })
+        new PersonIdentityGenerator(
+        [
+            new PolishPersonLocaleDataProvider(),
+            new EnglishPersonLocaleDataProvider()
+        ])
     };
 
     public IReadOnlyList<GeneratorDescriptor> Descriptors => _generators.Select(generator => generator.Descriptor).ToArray();

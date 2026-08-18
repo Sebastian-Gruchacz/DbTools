@@ -359,8 +359,13 @@ Domyślna domena `example.invalid` jest zastrzeżona do przykładów i nie prowa
 do prawdziwej skrzynki. Pakiet `pl-PL` odpowiada za pary męskich/żeńskich form
 nazwisk oraz transliterację polskich znaków w local-part e-maila.
 
-Aktualny pakiet zawiera mały, równomiernie losowany zestaw startowy. Nie należy
-traktować go jako modelu rozkładu polskiej populacji. Docelowy pakiet danych
+Pakiet `en-US` udostępnia osobne listy imion żeńskich i męskich oraz wspólną
+listę nazwisk. Normalizacja local-part usuwa znaki diakrytyczne i interpunkcję,
+więc np. `José O'Connor` staje się `joseoconnor`. Oba pakiety są wybierane przez
+to samo pole `Locale` bez rozgałęzień regionalnych w samym generatorze.
+
+Aktualne pakiety zawierają małe, równomiernie losowane zestawy startowe. Nie należy
+traktować ich jako modeli rozkładu populacji. Docelowy pakiet danych
 powinien zawierać wersjonowane częstotliwości wraz z pochodzeniem danych i
 testami jakości. Generator nie tworzy jeszcze PESEL ani NIP.
 

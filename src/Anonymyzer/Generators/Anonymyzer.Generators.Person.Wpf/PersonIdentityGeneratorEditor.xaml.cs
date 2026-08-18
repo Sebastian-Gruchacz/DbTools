@@ -15,9 +15,10 @@ public partial class PersonIdentityGeneratorEditor : UserControl, IGeneratorConf
         InitializeComponent();
 
         var configuration = (PersonIdentityGeneratorConfiguration)_codec.Deserialize(options);
+        LocaleComboBox.ItemsSource = new[] { "pl-PL", "en-US" };
         EmailPatternComboBox.ItemsSource = Enum.GetValues<PersonEmailPattern>();
         SeedTextBox.Text = configuration.Seed.ToString(CultureInfo.InvariantCulture);
-        LocaleTextBox.Text = configuration.Locale;
+        LocaleComboBox.Text = configuration.Locale;
         EmailPatternComboBox.SelectedItem = configuration.EmailPattern;
         EmailDomainTextBox.Text = configuration.EmailDomain;
     }
@@ -70,7 +71,7 @@ public partial class PersonIdentityGeneratorEditor : UserControl, IGeneratorConf
         configuration = new PersonIdentityGeneratorConfiguration
         {
             Seed = seed,
-            Locale = LocaleTextBox.Text.Trim(),
+            Locale = LocaleComboBox.Text.Trim(),
             EmailPattern = emailPattern,
             EmailDomain = EmailDomainTextBox.Text.Trim()
         };

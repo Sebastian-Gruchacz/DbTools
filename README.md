@@ -145,7 +145,7 @@ językowe opisuje [docs/anonymyzer-design.md](docs/anonymyzer-design.md).
 - rozwijane `Profiles → Add` tworzące kompletny profil domyślny wybranego
   generatora także w starszej konfiguracji;
 - `PersonIdentity` 1.0.0 w zakresie `Row`: spójne imię, nazwisko, rodzaj i e-mail
-  na podstawie pakietu `pl-PL`, bez dodatkowego skanu bazy;
+  na podstawie pakietu `pl-PL` albo `en-US`, bez dodatkowego skanu bazy;
 - `NationalIdentifier` 1.0.0: polski PESEL z prawidłową datą, płcią i checksum
   albo bezpiecznie nieprzydzielony amerykański SSN z prefiksem `000`; generator
   obsługuje konfigurowalny zakres dat i seed oraz jawne zależności od kolumn daty
@@ -188,7 +188,7 @@ językowe opisuje [docs/anonymyzer-design.md](docs/anonymyzer-design.md).
   `--dry-run` i kończy pracę po walidacji bezpieczeństwa oraz generatorów;
 - wykonawcy planu, który dostarczy generatorom strumienie danych i zapisze wynik
   ich sesji do bazy;
-- pozostałych generatorów grupowych i pełnego angielskiego pakietu danych osoby;
+- pozostałych generatorów grupowych;
 - podglądu generatorów `Column` i `Relational`, które wymagają odczytu danych
   z odłączonego klona;
 - pełnych, ważonych zbiorów danych regionalnych;

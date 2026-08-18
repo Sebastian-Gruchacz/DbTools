@@ -47,5 +47,8 @@ public class DatabaseEngineRegistrationTests
         Assert.Contains(
             provider.GetServices<INationalIdentifierLocaleDataProvider>(),
             localeProvider => localeProvider.Locale == "en-US");
+        Assert.Contains(
+            provider.GetServices<IPersonLocaleDataProvider>(),
+            localeProvider => localeProvider.Locale == "en-US");
     }
 }

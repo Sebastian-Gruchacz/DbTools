@@ -2,6 +2,7 @@
 
 using Anonymyzer.Base.Generation;
 using Anonymyzer.Generators.Person;
+using Anonymyzer.LanguagePack.English;
 using Anonymyzer.LanguagePack.Polish;
 using Newtonsoft.Json.Linq;
 
@@ -49,6 +50,47 @@ public class PersonIdentityGeneratorTests
         Assert.Equal($"{localeProvider.NormalizeEmailToken(firstName)}.{localeProvider.NormalizeEmailToken(lastName)}.000001@example.invalid", email);
         Assert.Contains(Assert.IsType<string>(row.GetValue("gender")), new[] { "Female", "Male" });
         Assert.Empty(generator.GetDataRequirements(binding, configuration));
+    }
+
+    [Fact]
+    public async Task GeneratesCoherentEnglishIdentityAndNameBasedEmailInOneRow()
+    {
+        var localeProvider = new EnglishPersonLocaleDataProvider();
+        var generator = new PersonIdentityGenerator(new IPersonLocaleDataProvider[]
+        {
+            new PolishPersonLocaleDataProvider(),
+            localeProvider
+        });
+        var configuration = new PersonIdentityGeneratorConfiguration
+        {
+            Seed = 456,
+            Locale = "en-US",
+            EmailPattern = PersonEmailPattern.NameBased,
+            EmailDomain = "example.invalid"
+        };
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+        var row = new DictionaryGeneratorRow();
+
+        await using IGeneratorSession session = await generator.PrepareAsync(
+            new GeneratorPreparationContext(CreateBinding(), new RejectingDataReader()),
+            configuration,
+            cancellationToken);
+        await session.ApplyAsync(row, cancellationToken);
+
+        string firstName = Assert.IsType<string>(row.GetValue("first_name"));
+        string lastName = Assert.IsType<string>(row.GetValue("last_name"));
+        Assert.Equal(
+            $"{localeProvider.NormalizeEmailToken(firstName)}.{localeProvider.NormalizeEmailToken(lastName)}.000001@example.invalid",
+            row.GetValue("email"));
+        Assert.Contains(Assert.IsType<string>(row.GetValue("gender")), new[] { "Female", "Male" });
+    }
+
+    [Theory]
+    [InlineData("José O'Connor", "joseoconnor")]
+    [InlineData("Anne-Marie 42", "annemarie42")]
+    public void EnglishPackNormalizesEmailTokens(string value, string expected)
+    {
+        Assert.Equal(expected, new EnglishPersonLocaleDataProvider().NormalizeEmailToken(value));
     }
 
     [Fact]

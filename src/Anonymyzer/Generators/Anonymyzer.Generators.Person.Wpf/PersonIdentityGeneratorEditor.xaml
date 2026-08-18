@@ -21,7 +21,7 @@
         <TextBox x:Name="SeedTextBox" Grid.Row="1" Grid.Column="1" Margin="0,0,0,8" />
 
         <TextBlock Grid.Row="2" Margin="0,0,12,8" VerticalAlignment="Center" Text="Locale:" />
-        <TextBox x:Name="LocaleTextBox" Grid.Row="2" Grid.Column="1" Margin="0,0,0,8" />
+        <ComboBox x:Name="LocaleComboBox" Grid.Row="2" Grid.Column="1" Margin="0,0,0,8" IsEditable="True" />
 
         <TextBlock Grid.Row="3" Margin="0,0,12,8" VerticalAlignment="Center" Text="E-mail pattern:" />
         <ComboBox x:Name="EmailPatternComboBox" Grid.Row="3" Grid.Column="1" Margin="0,0,0,8" />
