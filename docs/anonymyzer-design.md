@@ -355,6 +355,18 @@ wygenerowana przez `BirthDate` może zostać wskazana w `NationalIdentifier` jak
 `BirthDateColumn` ze źródłem `Generated`, dzięki czemu planner ustawi kolejność,
 a PESEL zakoduje dokładnie tę samą datę.
 
+### Gender 1.0.0
+
+`Gender` generuje pojedynczą tekstową wartość dla roli `Person.Gender`. Profil
+zawiera osobne wartości żeńską i męską, całkowity udział żeński od 0 do 100,
+seed oraz zachowanie `NULL`. Pozwala to dopasować wynik do konwencji konkretnej
+bazy, np. `Female`/`Male`, `K`/`M` albo `F`/`M`.
+
+`NationalIdentifier` może czytać tę kolumnę jako `GenderColumn` ze źródłem
+`Generated`. Wspólnie z `BirthDate` tworzy to trzy kroki, które planner układa
+w kolejności data+płeć, a następnie zależny PESEL. Mapowania wartości pozostają
+w profilu identyfikatora, więc generator płci nie zależy od formatu PESEL.
+
 ### Pierwszy generator Row: PersonIdentity 1.0.0
 
 `PersonIdentity` wykonuje jedno atomowe wywołanie dla wiersza i może wystawić

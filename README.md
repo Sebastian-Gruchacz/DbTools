@@ -150,6 +150,8 @@ językowe opisuje [docs/anonymyzer-design.md](docs/anonymyzer-design.md).
   na podstawie pakietu `pl-PL` albo `en-US`, bez dodatkowego skanu bazy;
 - `BirthDate` 1.0.0: deterministyczna data z konfigurowalnego zakresu dla kolumn
   `Date` i `DateTime`, gotowa jako zależność `Generated` dla identyfikatora;
+- `Gender` 1.0.0: konfigurowalne wartości żeńska/męska, proporcja i seed, gotowe
+  jako druga zależność `Generated` dla identyfikatora;
 - `NationalIdentifier` 1.0.0: polski PESEL z prawidłową datą, płcią i checksum
   albo bezpiecznie nieprzydzielony amerykański SSN z prefiksem `000`; generator
   obsługuje konfigurowalny zakres dat i seed oraz jawne zależności od kolumn daty

@@ -137,6 +137,57 @@ public sealed class AnonymizationExecutionPlannerTests
         Assert.Contains("Date or DateTime", exception.Message);
     }
 
+    [Fact]
+    public void OrdersBirthDateAndGenderBeforeDependentNationalIdentifier()
+    {
+        var birthDate = new BirthDateGenerator();
+        var gender = new GenderGenerator();
+        var nationalIdentifier = new NationalIdentifierGenerator([new PolishNationalIdentifierLocaleDataProvider()]);
+        GeneratorProfileConfiguration nationalProfile = CreateProfile("national-id", nationalIdentifier);
+        nationalProfile.Options = nationalIdentifier.Configuration.Serialize(new NationalIdentifierGeneratorConfiguration
+        {
+            BirthDateColumn = "birth_date",
+            BirthDateValueSource = GeneratorValueSource.Generated,
+            GenderColumn = "gender",
+            GenderValueSource = GeneratorValueSource.Generated
+        });
+        AnonymizationConfiguration configuration = new()
+        {
+            GeneratorProfiles =
+            {
+                CreateProfile("birth-date", birthDate),
+                CreateProfile("gender", gender),
+                nationalProfile
+            },
+            Tables =
+            {
+                new TableProcessingOptions
+                {
+                    SchemaName = "public",
+                    TableName = "people",
+                    Enabled = true,
+                    Columns =
+                    {
+                        CreateColumn(1, "birth_date", "birth-date", birthDate),
+                        CreateColumn(2, "gender", "gender", gender),
+                        CreateColumn(3, "national_id", "national-id", nationalIdentifier)
+                    }
+                }
+            }
+        };
+        configuration.Tables[0].Columns[0].DataType = DbDataType.Date.ToString();
+        configuration.Tables[0].Columns[1].DataType = DbDataType.Text.ToString();
+        configuration.Tables[0].Columns[2].DataType = DbDataType.Text.ToString();
+        var planner = new AnonymizationExecutionPlanner([nationalIdentifier, gender, birthDate]);
+
+        AnonymizationExecutionPlan plan = planner.Build(configuration);
+
+        Assert.Equal("public.people/column:national_id", plan.Steps[^1].Id);
+        Assert.Equal(
+            ["public.people/column:birth_date", "public.people/column:gender"],
+            plan.Steps.Take(2).Select(step => step.Id).OrderBy(id => id));
+    }
+
     private static AnonymizationConfiguration CreateBuiltInConfiguration(
         PersonIdentityGenerator person,
         ShufflingTextGenerator shuffler)

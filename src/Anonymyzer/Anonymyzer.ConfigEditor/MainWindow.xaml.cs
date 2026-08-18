@@ -33,6 +33,7 @@ public partial class MainWindow : Window
         new UuidGeneratorEditorFactory(),
         new TaxIdentifierGeneratorEditorFactory(),
         new BirthDateGeneratorEditorFactory(),
+        new GenderGeneratorEditorFactory(),
         new NationalIdentifierGeneratorEditorFactory(),
         new PersonIdentityGeneratorEditorFactory(),
         new PostalAddressGeneratorEditorFactory()
