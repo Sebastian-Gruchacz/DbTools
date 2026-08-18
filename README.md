@@ -322,6 +322,10 @@ nazwach, uruchamiają `PersonIdentity`, a na PostgreSQL także pełny `TextShuff
 i usuwają wyłącznie te tabele w `finally`; nie modyfikują istniejących tabel
 klona. Connection string nie trafia do logu ani konfiguracji.
 
+Powtarzalne lokalne środowiska Chinook, Northwind, AdventureWorksLT i Pagila,
+wraz z komendami pobrania, inicjalizacji i generowania configów, opisuje
+[katalog przykładowych baz](docs/sample-databases.md).
+
 ## Stan gałęzi
 
 | Gałąź | Zawartość | Ocena |

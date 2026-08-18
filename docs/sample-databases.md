@@ -89,6 +89,36 @@ Aktualny baseline detektora po wygenerowaniu configów:
 Oba wygenerowane JSON-y przeszły `run --dry-run` ze swoimi markerami; żadne dane
 nie zostały zmodyfikowane.
 
+## Lokalne środowisko SQL Server
+
+Chinook, Northwind i AdventureWorksLT mogą działać w oddzielnym kontenerze SQL
+Server 2022 Developer:
+
+```powershell
+.\tools\Invoke-SqlServerSampleEnvironment.ps1 -Action Initialize
+.\tools\Invoke-SqlServerSampleEnvironment.ps1 -Action Status
+.\tools\Invoke-SqlServerSampleEnvironment.ps1 -Action Remove
+```
+
+Środowisko używa wyłącznie oficjalnego obrazu
+`mcr.microsoft.com/mssql/server:2022-latest`, publikuje losowy port na
+`127.0.0.1` i rozpoznaje własny kontener po etykiecie. Configi trafiają do
+`artifacts/sample-configurations/sqlserver`; connection string nie jest w nich
+zapisywany. `Remove` usuwa własny kontener oraz powiązane configi.
+
+Aktualny baseline detektora po wygenerowaniu configów:
+
+- Chinook: 10 tabel, 21 kandydatów, 0 automatycznie włączonych kolumn;
+- Northwind: 11 tabel, 24 kandydatów, 0 automatycznie włączonych kolumn;
+- AdventureWorksLT: 12 tabel, 11 kandydatów, 0 automatycznie włączonych kolumn.
+
+Wszystkie trzy JSON-y przeszły `run --dry-run` ze swoimi markerami; żadne dane
+nie zostały zmodyfikowane. Kandydaci pozostają wyłączeni do decyzji operatora.
+
+WideWorldImporters nie należy do domyślnego środowiska. Jego backup jest pobrany,
+ale restore zostanie dodany osobno po przygotowaniu obsługi wszystkich plików
+logicznych i kontroli wymaganego miejsca.
+
 ## Zasady bezpieczeństwa
 
 Pobrany plik jest seedem, a nie bazą przeznaczoną do bezpośredniej anonimizacji.
