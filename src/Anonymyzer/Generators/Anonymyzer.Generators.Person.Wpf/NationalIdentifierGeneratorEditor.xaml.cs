@@ -14,7 +14,7 @@ public partial class NationalIdentifierGeneratorEditor : UserControl, IGenerator
     public NationalIdentifierGeneratorEditor(JObject options)
     {
         InitializeComponent();
-        LocaleComboBox.ItemsSource = new[] { "pl-PL" };
+        LocaleComboBox.ItemsSource = new[] { "pl-PL", "en-US" };
         GenderComboBox.ItemsSource = Enum.GetValues<PersonGenderSelection>();
         BirthDateValueSourceComboBox.ItemsSource = Enum.GetValues<GeneratorValueSource>();
         GenderValueSourceComboBox.ItemsSource = Enum.GetValues<GeneratorValueSource>();

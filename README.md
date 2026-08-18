@@ -107,6 +107,8 @@ językowe opisuje [docs/anonymyzer-design.md](docs/anonymyzer-design.md).
 - `Anonymyzer.Generators.Simple.Wpf` — panele konfiguracji generatorów prostych;
 - `Anonymyzer.Generators.Person.Wpf` — panel konfiguracji `PersonIdentity` 1.0.0;
 - `Anonymyzer.LanguagePack.Polish` — dane i reguły regionalne `pl-PL`;
+- `Anonymyzer.LanguagePack.English` — reguły `en-US` oraz bezpieczne numery
+  telefonów i SSN;
 - `Anonymyzer.ConfigEditor` — edytor konfiguracji WPF;
 - `Anonymyzer.Console` — DI, generowanie konfiguracji i przyszłe wykonanie.
 
@@ -144,9 +146,10 @@ językowe opisuje [docs/anonymyzer-design.md](docs/anonymyzer-design.md).
   generatora także w starszej konfiguracji;
 - `PersonIdentity` 1.0.0 w zakresie `Row`: spójne imię, nazwisko, rodzaj i e-mail
   na podstawie pakietu `pl-PL`, bez dodatkowego skanu bazy;
-- `NationalIdentifier` 1.0.0: polski PESEL z prawidłową datą, płcią i checksum,
-  konfigurowalnym zakresem dat i seedem albo jawnymi zależnościami od kolumn
-  daty urodzenia i płci (`Original`/`Generated`);
+- `NationalIdentifier` 1.0.0: polski PESEL z prawidłową datą, płcią i checksum
+  albo bezpiecznie nieprzydzielony amerykański SSN z prefiksem `000`; generator
+  obsługuje konfigurowalny zakres dat i seed oraz jawne zależności od kolumn daty
+  urodzenia i płci (`Original`/`Generated`);
 - dwa schematy e-mail: oparty na imieniu i nazwisku oraz opaque; domyślna domena
   `example.invalid` jest celowo niedostarczalna;
 - dedykowany panel WPF konfiguracji `PersonIdentity`;
@@ -188,7 +191,7 @@ językowe opisuje [docs/anonymyzer-design.md](docs/anonymyzer-design.md).
 - pozostałych generatorów grupowych i pełnego angielskiego pakietu danych osoby;
 - podglądu generatorów `Column` i `Relational`, które wymagają odczytu danych
   z odłączonego klona;
-- pełnych, ważonych zbiorów danych regionalnych oraz generatora SSN;
+- pełnych, ważonych zbiorów danych regionalnych;
 - automatycznej analizy niestabilnych kolekcji, JSON, XML i tekstu swobodnego;
 - obsługi XML/JSON oraz zmian PK/FK;
 - strategii wyłączania i odbudowy indeksów, constraintów i triggerów.
@@ -314,7 +317,7 @@ skasowany po wypchnięciu lub zarchiwizowaniu nowego repozytorium.
    zachowania.
 4. Zrealizować mały pionowy wycinek: jedna tabela, grupa `PersonIdentity`,
    deterministyczny seed, batche, `dry-run` i test na lokalnej bazie.
-5. Rozszerzyć pakiety regionalne o ważone dane oraz generator SSN.
+5. Rozszerzyć pakiety regionalne o ważone dane.
 6. Dopiero po pomiarach dodać planowanie zależności FK, mapowanie zmienianych
    kluczy, indeksy, XML/JSON i generatory odwołujące się do innych wierszy.
 

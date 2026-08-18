@@ -93,7 +93,9 @@ public sealed class NationalIdentifierGenerator : GeneratorBase<NationalIdentifi
                 PersonGenderSelection gender = ResolveGender(row);
                 DateOnly effectiveMinimum = sourcedBirthDate ?? minimum;
                 DateOnly effectiveMaximum = sourcedBirthDate ?? maximum;
-                var key = (sourcedBirthDate, gender);
+                var key = provider.PartitionsIdentitySpaceByDemographicContext
+                    ? (sourcedBirthDate, gender)
+                    : (null, PersonGenderSelection.Any);
                 _ordinals.TryGetValue(key, out long ordinal);
                 long capacity = provider.GetCapacity(effectiveMinimum, effectiveMaximum, gender);
                 if (ordinal >= capacity)

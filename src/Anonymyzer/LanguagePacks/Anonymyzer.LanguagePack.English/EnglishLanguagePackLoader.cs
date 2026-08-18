@@ -1,6 +1,7 @@
 ﻿namespace Anonymyzer.LanguagePack.English;
 
 using Anonymyzer.Base.Detection;
+using Anonymyzer.Generators.Person;
 using Anonymyzer.Generators.Simple;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -10,6 +11,7 @@ public static class EnglishLanguagePackLoader
     {
         services.AddSingleton<IColumnCandidateRuleProvider, EnglishColumnCandidateRuleProvider>();
         services.AddSingleton<IPhoneNumberLocaleDataProvider, EnglishPhoneNumberLocaleDataProvider>();
+        services.AddSingleton<INationalIdentifierLocaleDataProvider, EnglishNationalIdentifierLocaleDataProvider>();
         return services;
     }
 }

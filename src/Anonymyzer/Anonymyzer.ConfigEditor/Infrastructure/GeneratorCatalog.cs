@@ -22,7 +22,11 @@ internal sealed class GeneratorCatalog
         ]),
         new UuidGenerator(),
         new TaxIdentifierGenerator([new PolishTaxIdentifierLocaleDataProvider()]),
-        new NationalIdentifierGenerator([new PolishNationalIdentifierLocaleDataProvider()]),
+        new NationalIdentifierGenerator(
+        [
+            new PolishNationalIdentifierLocaleDataProvider(),
+            new EnglishNationalIdentifierLocaleDataProvider()
+        ]),
         new PersonIdentityGenerator(new[] { new PolishPersonLocaleDataProvider() })
     };
 

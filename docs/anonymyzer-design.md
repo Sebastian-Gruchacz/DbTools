@@ -308,7 +308,7 @@ Wagi checksum są testowane osobno dla obu długości. Pole `Variant` ma domyśl
 wartość `NIP`, więc konfiguracje utworzone przed dodaniem REGON zachowują
 dotychczasowe działanie.
 
-### NationalIdentifier 1.0.0 i polski PESEL
+### NationalIdentifier 1.0.0: PESEL i bezpieczny SSN
 
 `NationalIdentifier` generuje pojedynczą wartość dla roli `Person.NationalId`.
 Profil określa locale, zakres dat urodzenia zapisany jako `yyyy-MM-dd`, płeć
@@ -329,6 +329,18 @@ osobno wskazując `Original` albo `Generated`; wymagania uczestniczą wtedy w gr
 plannera. Wartości płci są mapowane przez konfigurowalne listy żeńskie i męskie.
 Sesja utrzymuje osobny licznik dla każdej pary data+płeć, dzięki czemu powtarzająca
 się data nie powoduje kolizji przed wyczerpaniem 5 000 numerów danej płci.
+
+Provider `en-US` generuje wyłącznie wartości w formacie `000-xx-xxxx`. Prefiks
+`000` nie jest przydzielany: SSA zaleca go do przykładów, aby nie pokazać
+przypadkiem prawdziwego SSN. Daje to milion unikalnych, deterministycznych
+wartości. Data i płeć mogą nadal uczestniczyć w konfiguracji wiersza, ale nie
+dzielą przestrzeni numerów na osobne liczniki, ponieważ SSN ich nie koduje.
+
+To celowy kompromis bezpieczeństwa: walidator wymagający numeru możliwego do
+przydzielenia odrzuci prefiks `000`. Generator nie próbuje obchodzić takiej
+walidacji przez tworzenie numerów, które mogłyby należeć do rzeczywistych osób.
+Format 3-2-4 odpowiada opisowi SSA, a zasada nieprzydzielonego prefiksu `000`
+pochodzi z [instrukcji SSA](https://secure.ssa.gov/apps10/poms.nsf/links/0110201020).
 
 ### Pierwszy generator Row: PersonIdentity 1.0.0
 

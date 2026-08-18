@@ -2,6 +2,7 @@
 
 using Anonymyzer.Base.Generation;
 using Anonymyzer.Generators.Person;
+using Anonymyzer.LanguagePack.English;
 using Anonymyzer.LanguagePack.Polish;
 
 public class NationalIdentifierGeneratorTests
@@ -26,6 +27,66 @@ public class NationalIdentifierGeneratorTests
         {
             Assert.Equal(selection.ToString(), generated.Gender.ToString());
         }
+    }
+
+    [Fact]
+    public void EnglishProviderUsesOnlySafeUnassignedSsnPrefix()
+    {
+        var provider = new EnglishNationalIdentifierLocaleDataProvider();
+        var minimum = new DateOnly(1980, 1, 1);
+        var maximum = new DateOnly(2000, 12, 31);
+
+        GeneratedNationalIdentifier first = provider.Generate(0, 0, minimum, maximum, PersonGenderSelection.Any);
+        GeneratedNationalIdentifier last = provider.Generate(
+            EnglishNationalIdentifierLocaleDataProvider.SafeValueCapacity - 1,
+            0,
+            minimum,
+            maximum,
+            PersonGenderSelection.Any);
+
+        Assert.Equal(EnglishNationalIdentifierLocaleDataProvider.SafeValueCapacity,
+            provider.GetCapacity(minimum, maximum, PersonGenderSelection.Any));
+        Assert.Equal("000-00-0000", first.Value);
+        Assert.Equal("000-99-9999", last.Value);
+        Assert.Matches(@"^000-\d{2}-\d{4}$", first.Value);
+        Assert.Matches(@"^000-\d{2}-\d{4}$", last.Value);
+    }
+
+    [Fact]
+    public async Task EnglishProviderDoesNotRestartSequenceForDifferentDemographicValues()
+    {
+        var configuration = new NationalIdentifierGeneratorConfiguration
+        {
+            Locale = "en-US",
+            BirthDateColumn = "birth_date",
+            GenderColumn = "gender",
+            PreserveNulls = false
+        };
+        var generator = new NationalIdentifierGenerator([new EnglishNationalIdentifierLocaleDataProvider()]);
+        GeneratorBinding binding = new(
+            new GeneratorTableReference("public", "people"),
+            new Dictionary<string, string> { [NationalIdentifierGenerator.ValueOutput] = "ssn" });
+        await using IGeneratorSession session = await generator.PrepareAsync(
+            new GeneratorPreparationContext(binding, new RejectingDataReader()),
+            configuration,
+            TestContext.Current.CancellationToken);
+        var first = new DictionaryRow(new Dictionary<string, object?>
+        {
+            ["ssn"] = null,
+            ["birth_date"] = new DateOnly(1980, 1, 1),
+            ["gender"] = "F"
+        });
+        var second = new DictionaryRow(new Dictionary<string, object?>
+        {
+            ["ssn"] = null,
+            ["birth_date"] = new DateOnly(1990, 2, 2),
+            ["gender"] = "M"
+        });
+
+        await session.ApplyAsync(first, TestContext.Current.CancellationToken);
+        await session.ApplyAsync(second, TestContext.Current.CancellationToken);
+
+        Assert.NotEqual(first.GetValue("ssn"), second.GetValue("ssn"));
     }
 
     [Fact]

@@ -23,7 +23,7 @@
         </Grid.RowDefinitions>
 
         <TextBlock Grid.Row="0" Grid.ColumnSpan="2" Margin="0,0,0,14" TextWrapping="Wrap"
-                   Text="Generates checksum-valid synthetic national identifiers. pl-PL generates PESEL with an internally consistent birth date and gender, but does not update separate columns." />
+                   Text="Generates synthetic national identifiers. pl-PL produces checksum-valid PESEL values. en-US produces safely unassigned 000-prefix SSN-shaped values, which strict SSN validators may reject." />
 
         <TextBlock Grid.Row="1" Margin="0,0,12,8" VerticalAlignment="Center" Text="Locale:" />
         <ComboBox x:Name="LocaleComboBox" Grid.Row="1" Grid.Column="1" Margin="0,0,0,8" IsEditable="True" />

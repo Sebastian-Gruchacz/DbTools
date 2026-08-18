@@ -9,6 +9,8 @@ public sealed class PolishNationalIdentifierLocaleDataProvider : INationalIdenti
 
     public string Locale => "pl-PL";
 
+    public bool PartitionsIdentitySpaceByDemographicContext => true;
+
     public long GetCapacity(DateOnly minimumBirthDate, DateOnly maximumBirthDate, PersonGenderSelection gender)
     {
         long days = maximumBirthDate.DayNumber - minimumBirthDate.DayNumber + 1L;
