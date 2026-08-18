@@ -46,7 +46,14 @@ internal sealed class ExecutionPlanDatabaseInspector
 
             stepInspections.Add(
                 step.Id,
-                new GeneratorStepDatabaseInspection(target.Table.EstimatedRowCount, requirementEstimates));
+                new GeneratorStepDatabaseInspection(
+                    target.Table.EstimatedRowCount,
+                    target.Columns.Values
+                        .Where(column => column.IsPartOfThePrimaryKey)
+                        .OrderBy(column => column.Ordinal)
+                        .Select(column => column.Name)
+                        .ToArray(),
+                    requirementEstimates));
         }
 
         return new ExecutionPlanDatabaseInspection(stepInspections);

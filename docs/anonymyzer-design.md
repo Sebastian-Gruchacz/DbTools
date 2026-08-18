@@ -206,6 +206,13 @@ Planner nadal nie odczytuje liczby wierszy ani nie wykonuje sesji generatorów.
 Liczbę wierszy i koszt pamięci uzupełnia osobny inspektor bieżącego schematu,
 uruchamiany przez `run --dry-run` po zbudowaniu planu.
 
+Ten sam inspektor zapisuje rzeczywiste kolumny PK. Walidator pierwszego wycinka
+zapisu ocenia plan, ale jeszcze go nie wykonuje: dopuszcza dokładnie jedną tabelę,
+wyłącznie kroki `Row`, jeden niezmieniany klucz główny i wymagania danych z tego
+samego wiersza. Pełny skan, scope `Column`/`Relational`, brak lub złożony PK,
+zmiana PK albo odczyt innej tabeli daje w `dry-run` jawny status `not ready`.
+Pozwala to zbudować executor bez zgadywania tożsamości aktualizowanego wiersza.
+
 Reader przekazuje dane strumieniowo, natomiast generator decyduje, co buforuje.
 Dokładny shuffle ma koszt pamięci `O(n)` i nie nadaje się bezpośrednio do każdej
 wielkiej tabeli. Kolejne strategie powinny obejmować limit pamięci, spill do

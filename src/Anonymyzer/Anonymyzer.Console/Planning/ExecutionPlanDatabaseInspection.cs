@@ -5,6 +5,7 @@ internal sealed record ExecutionPlanDatabaseInspection(
 
 internal sealed record GeneratorStepDatabaseInspection(
     long EstimatedTargetRows,
+    IReadOnlyList<string> PrimaryKeyColumns,
     IReadOnlyDictionary<string, DataRequirementEstimate> DataRequirements);
 
 internal sealed record DataRequirementEstimate(

@@ -65,10 +65,12 @@ internal sealed class ProcessAnonymyzerCommand
                 $"Database engine '{configuration.Database.DatabaseEngine}' is not installed.");
         ExecutionPlanDatabaseInspection inspection = new ExecutionPlanDatabaseInspector()
             .Inspect(configuration, plan, engine);
+        ExecutionWriteSliceAssessment writeSlice = new ExecutionWriteSliceValidator()
+            .Assess(plan, inspection);
         _logger.Info(
             $"Dry-run passed for {configuration.Database.DatabaseEngine} database " +
             $"'{configuration.Database.DatabaseName}', marker {marker.MarkerId:D}. No data was modified.");
-        foreach (string line in ExecutionPlanFormatter.Format(plan, inspection))
+        foreach (string line in ExecutionPlanFormatter.Format(plan, inspection, writeSlice))
         {
             _logger.Info(line);
         }

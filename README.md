@@ -194,6 +194,8 @@ językowe opisuje [docs/anonymyzer-design.md](docs/anonymyzer-design.md).
   zakresy generatorów, mapowania wyjść, wymagane skany i batch po 1000 wierszy;
 - porównanie aktywnego planu z bieżącym schematem klona przed wykonaniem,
   wraz z estymacją liczby wierszy i górnego zużycia pamięci pełnych skanów;
+- ocena gotowości pierwszego wycinka zapisu: dokładnie jedna tabela, wyłącznie
+  kroki `Row`, jeden niezmieniany PK oraz brak pełnych i międzytabelowych skanów;
 - deterministyczny detektor kandydatów EN/PL: `snake_case`, `camelCase`,
   prefiksy techniczne, polskie znaki, score i negatywne flagi; propozycje nigdy
   nie ustawiają `Enabled`;
