@@ -14,6 +14,7 @@ internal sealed class GeneratorCatalog
     {
         new ShufflingTextGenerator(),
         new FixedTextGenerator(),
+        new JsonPathRedactorGenerator(),
         new SequentialTextGenerator(),
         new EmailAddressGenerator(),
         new AccountLoginGenerator(),

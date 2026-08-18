@@ -10,6 +10,7 @@
         {
             serviceCollection.AddTransient<IGenerator, ShufflingTextGenerator>();
             serviceCollection.AddTransient<IGenerator, FixedTextGenerator>();
+            serviceCollection.AddTransient<IGenerator, JsonPathRedactorGenerator>();
             serviceCollection.AddTransient<IGenerator, SequentialTextGenerator>();
             serviceCollection.AddTransient<IGenerator, EmailAddressGenerator>();
             serviceCollection.AddTransient<IGenerator, PhoneNumberGenerator>();

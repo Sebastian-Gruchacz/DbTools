@@ -29,6 +29,7 @@ public partial class MainWindow : Window
     {
         new ShufflingTextGeneratorEditorFactory(),
         new FixedTextGeneratorEditorFactory(),
+        new JsonPathRedactorGeneratorEditorFactory(),
         new SequentialTextGeneratorEditorFactory(),
         new EmailAddressGeneratorEditorFactory(),
         new AccountLoginGeneratorEditorFactory(),

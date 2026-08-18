@@ -251,6 +251,30 @@ konfigurację przez ten sam wersjonowany codec JSON co wykonanie CLI. Menu
 `Profiles → Add` buduje gotowy profil z domyślnej konfiguracji właściciela
 generatora; pusty profil pozostaje dostępny dla zewnętrznych pluginów.
 
+### JsonPathRedactor 1.0.0
+
+`JsonPathRedactor` jest generatorem `Row` dla dokumentów JSON zapisanych w
+kolumnie tekstowej. Reguła składa się ze ścieżki raportowanej przez profiler
+próbek oraz zastępczego literału JSON. Składnia obsługuje root `$`, właściwości
+rozdzielane `/`, escaping JSON Pointer (`~0`, `~1`) i przejście po wszystkich
+elementach tablicy przez `[]`. Dzięki temu `$/Events[]/DriverID` podmienia pole
+we wszystkich elementach bez znajomości długości tablicy.
+
+Generator parsuje dokument, zmienia tylko wskazane tokeny i serializuje wynik
+bez dodatkowego formatowania. Typ wartości zastępczej wynika z literału JSON,
+więc `0`, `null`, `false`, `"tekst"`, obiekt i tablica pozostają odpowiednimi
+typami. `NULL` bazy jest zachowywany. Niepoprawny dokument przerywa wiersz, ale
+komunikat nigdy nie zawiera wartości źródłowej. `RequireEveryPath` pozwala
+operatorowi wybrać między tolerowaniem opcjonalnych gałęzi i rygorystycznym
+odrzuceniem dokumentu z brakującą ścieżką.
+
+Codec wymaga co najmniej jednej reguły i odrzuca niepoprawne literały, duplikaty
+oraz ścieżki nakładające się rodzic–potomek. Zapobiega to zależności wyniku od
+kolejności reguł. Dedykowany panel WPF udostępnia tabelę ścieżek i literałów.
+Wersja 1.0.0 deklaruje wyłącznie `DbDataType.Text`: bieżący executor nie ustawia
+typu parametrów Npgsql dla `json/jsonb`, więc natywne typy PostgreSQL pozostają
+odrębnym zadaniem warstwy zapisu.
+
 ### Samodzielny EmailAddress 1.0.0
 
 `EmailAddress` ma jedno wyjście `Value` sugerujące rolę `Contact.Email` i dwa

@@ -134,6 +134,8 @@ językowe opisuje [docs/anonymyzer-design.md](docs/anonymyzer-design.md).
 - `TextShuffler` 1.0.0: deterministyczna permutacja całej kolumny zachowująca
   dokładny multizbiór wartości oraz opcjonalnie pozycje `NULL`;
 - `FixedText` 1.0.0: stała wartość tekstowa z opcjonalnym zachowaniem `NULL`;
+- `JsonPathRedactor` 1.0.0: selektywna zamiana wartości pod ścieżkami JSON
+  w kolumnach tekstowych, bez ujawniania błędnej wartości źródłowej w komunikacie;
 - `SequentialText` 1.0.0: unikalny w ramach sesji tekst z prefiksem, sufiksem,
   początkiem numeracji i konfigurowalnym dopełnieniem zerami;
 - `EmailAddress` 1.0.0: tryb opaque albo adres oparty na kolumnach imienia i
@@ -213,8 +215,8 @@ językowe opisuje [docs/anonymyzer-design.md](docs/anonymyzer-design.md).
 - podglądu generatorów `Relational` oraz przyszłych generatorów `Column`
   wymagających wielu skanów lub przypisanych przez grupę;
 - pełnych, ważonych zbiorów danych regionalnych;
-- automatycznej analizy niestabilnych kolekcji, JSON, XML i tekstu swobodnego;
-- obsługi XML/JSON oraz zmian PK/FK;
+- automatycznej analizy semantyki niestabilnych kolekcji, XML i tekstu swobodnego;
+- zapisu natywnych typów PostgreSQL `json/jsonb`, obsługi XML oraz zmian PK/FK;
 - strategii wyłączania i odbudowy indeksów, constraintów i triggerów.
 
 Kod jest na .NET 10. SQL Server używa `Microsoft.Data.SqlClient` 7.0.2, a
@@ -303,6 +305,16 @@ JSON. Dla odporności na patologiczne dokumenty profil kończy analizę na 16
 poziomach, 200 różnych ścieżkach lub 10 000 wartościach na próbkę i jawnie
 sygnalizuje osiągnięcie limitu. Profil służy wyłącznie operatorowi i nie jest
 zapisywany w configu.
+
+Profil może zostać ręcznie przełożony na reguły generatora `JsonPathRedactor`.
+Generator przyjmuje te same ścieżki (`$/property`, `$/array[]/property`) i osobny
+literał JSON dla każdej wartości zastępczej. Zachowuje wszystkie nieskonfigurowane
+gałęzie, istniejący `NULL` bazy oraz typ literału; wynik zapisuje jako zwarty JSON.
+Może ignorować brakujące ścieżki albo przerwać wiersz, gdy `RequireEveryPath` jest
+włączone. Reguły zduplikowane i nakładające się są odrzucane, aby wynik nie zależał
+od kolejności. Wersja 1.0.0 jest celowo ograniczona do JSON-u przechowywanego w
+kolumnach tekstowych. Natywne `json/jsonb` wymaga jeszcze typowanych parametrów
+zapisu w providerze PostgreSQL.
 
 `Add column` rozwija najpierw kolumny zapisane w konfiguracji podczas analizy,
 które nie są kandydatami ani nie zostały jeszcze skonfigurowane. Wybranie pozycji
