@@ -89,9 +89,11 @@ Skrypt `tools/Test-PostgreSqlProvider.ps1` realizuje już pierwszy bezpieczny
 wzorzec integracyjny: uruchamia własny kontener, ładuje fixture i usuwa kontener
 w `finally`. Nie korzysta z istniejących kontenerów ani baz.
 
-Opcjonalny test SQL Servera wymaga `ANONYMYZER_SQLSERVER_CONNECTION` i tylko
-odczytuje metadane jawnie wskazanego klona. Fixture lub klon musi zawierać marker
-`dbo.__AnonymyzerDetachedCopy`; test nie tworzy ani nie modyfikuje bazy.
+Opcjonalne testy executora wymagają `ANONYMYZER_POSTGRES_CONNECTION` albo
+`ANONYMYZER_SQLSERVER_CONNECTION`. Po walidacji markera tworzą w jawnie wskazanym
+klonie tabelę o losowej, jednoznacznej nazwie, wykonują na trzech wierszach grupę
+`PersonIdentity`, weryfikują wynik i usuwają dokładnie tę tabelę w `finally`.
+Istniejące tabele klona nie są odczytywane ani modyfikowane przez ten scenariusz.
 
 ## Model generatorów i konfiguracji 0.4
 

@@ -316,10 +316,11 @@ Można wskazać inny lokalny obraz przez `-Image`. Sam test korzysta ze zmiennej
 jednostkowe nadal się wykonują. Fixture znajduje się w
 `tests/postgresql/init.sql`. Bieżąca implementacja generowania konfiguracji
 tylko czyta metadane odłączonej kopii i nie zapisuje connection stringa w JSON.
-Przyszła komenda `run` będzie modyfikowała dane w
-odłączonej kopii. Testy wykonania muszą tworzyć nową bazę z fixture'a albo
-odtwarzać backup/dump (np. Northwind) i nigdy nie mogą wskazywać istniejącej
-bazy roboczej użytkownika.
+Testy executora są opt-in dla `ANONYMYZER_POSTGRES_CONNECTION` oraz
+`ANONYMYZER_SQLSERVER_CONNECTION`. Po walidacji markera tworzą tabelę o unikalnej
+nazwie, uruchamiają `PersonIdentity` i usuwają wyłącznie tę tabelę w `finally`;
+nie modyfikują istniejących tabel klona. Connection string nie trafia do logu ani
+konfiguracji.
 
 ## Stan gałęzi
 
