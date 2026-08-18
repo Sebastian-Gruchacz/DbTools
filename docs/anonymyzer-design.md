@@ -407,6 +407,18 @@ Kody są przypisane do miasta; zestaw nie gwarantuje jeszcze zgodności kodu z
 konkretnym numerem budynku ani reprezentatywnego rozkładu geograficznego. Pełne
 dane powinny później trafić do wersjonowanych zasobów pakietu językowego.
 
+### CompanyName 1.0.0
+
+`CompanyName` generuje pojedynczy tekst dla roli `Company.Name`. Provider
+`pl-PL` albo `en-US` składa regionalnie brzmiący rdzeń, określenie branży oraz
+opcjonalną formę prawną. Licznik sesji zapewnia unikalność, a seed powtarzalność.
+
+Każdy profil musi zawierać widoczny `SyntheticMarker` (domyślnie `TEST`), który
+jest częścią każdej nazwy obok sześciocyfrowego licznika. To świadomy bezpiecznik:
+nawet jeśli losowe człony przypominają istniejącą firmę, wynik pozostaje jawnie
+syntetyczny. Marker można dopasować do konwencji testowanej organizacji, ale nie
+można go wyłączyć.
+
 ## Słowniki kandydatów
 
 Pierwszy zakres językowy to angielski (`en`) i polski (`pl`). Kolejne języki

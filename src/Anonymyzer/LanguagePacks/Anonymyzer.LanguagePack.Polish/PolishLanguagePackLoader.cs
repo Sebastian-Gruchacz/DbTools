@@ -15,6 +15,7 @@ public static class PolishLanguagePackLoader
         services.AddSingleton<IPhoneNumberLocaleDataProvider, PolishPhoneNumberLocaleDataProvider>();
         services.AddSingleton<ITaxIdentifierLocaleDataProvider, PolishTaxIdentifierLocaleDataProvider>();
         services.AddSingleton<INationalIdentifierLocaleDataProvider, PolishNationalIdentifierLocaleDataProvider>();
+        services.AddSingleton<ICompanyNameLocaleDataProvider, PolishCompanyNameLocaleDataProvider>();
         services.AddSingleton<IColumnCandidateRuleProvider, PolishColumnCandidateRuleProvider>();
         return services;
     }

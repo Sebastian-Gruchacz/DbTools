@@ -15,6 +15,7 @@ public static class EnglishLanguagePackLoader
         services.AddSingleton<IPersonLocaleDataProvider, EnglishPersonLocaleDataProvider>();
         services.AddSingleton<IPhoneNumberLocaleDataProvider, EnglishPhoneNumberLocaleDataProvider>();
         services.AddSingleton<INationalIdentifierLocaleDataProvider, EnglishNationalIdentifierLocaleDataProvider>();
+        services.AddSingleton<ICompanyNameLocaleDataProvider, EnglishCompanyNameLocaleDataProvider>();
         return services;
     }
 }

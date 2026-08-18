@@ -15,6 +15,7 @@
             serviceCollection.AddTransient<IGenerator, PhoneNumberGenerator>();
             serviceCollection.AddTransient<IGenerator, UuidGenerator>();
             serviceCollection.AddTransient<IGenerator, TaxIdentifierGenerator>();
+            serviceCollection.AddTransient<IGenerator, CompanyNameGenerator>();
         }
     }
 }

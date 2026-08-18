@@ -100,7 +100,7 @@ językowe opisuje [docs/anonymyzer-design.md](docs/anonymyzer-design.md).
   `information_schema`;
 - `Anonymyzer.PostgreSql.Tests` — testy buildera i opcjonalna integracja z bazą;
 - `Anonymyzer.Generators.Simple` — `TextShuffler`, `FixedText`, `SequentialText`,
-  `EmailAddress`, `PhoneNumber`, `Uuid` i `TaxIdentifier`;
+  `EmailAddress`, `PhoneNumber`, `Uuid`, `CompanyName` i `TaxIdentifier`;
 - `Anonymyzer.Generators.Person` — generatory spójnej tożsamości oraz krajowego
   identyfikatora osoby;
 - `Anonymyzer.Generators.Address` — grupowy generator spójnego adresu pocztowego;
@@ -141,6 +141,8 @@ językowe opisuje [docs/anonymyzer-design.md](docs/anonymyzer-design.md).
   międzynarodowe; wariant amerykański korzysta z zastrzeżonego zakresu 555-0100–0199;
 - `Uuid` 1.0.0: deterministyczne tekstowe UUID w formacie hyphenated, compact,
   braced albo parenthesized, z wyborem wielkości liter;
+- `CompanyName` 1.0.0: unikalne w sesji nazwy `pl-PL`/`en-US` z obowiązkowym
+  markerem syntetycznym i opcjonalną lokalną formą prawną;
 - `TaxIdentifier` 1.0.0: polskie NIP-y oraz REGON 9/14 z poprawnymi cyframi
   kontrolnymi i bez powtórzeń; brak `Variant` w starszym JSON-ie oznacza NIP;
 - dedykowane panele WPF parametrów wszystkich siedmiu generatorów prostych;
