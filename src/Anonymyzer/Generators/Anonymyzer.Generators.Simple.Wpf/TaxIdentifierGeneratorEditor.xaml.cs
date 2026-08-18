@@ -14,10 +14,12 @@ public partial class TaxIdentifierGeneratorEditor : UserControl, IGeneratorConfi
     {
         InitializeComponent();
         LocaleComboBox.ItemsSource = new[] { "pl-PL" };
+        VariantComboBox.ItemsSource = new[] { "NIP", "REGON9", "REGON14" };
         FormatComboBox.ItemsSource = Enum.GetValues<TaxIdentifierFormat>();
 
         var configuration = (TaxIdentifierGeneratorConfiguration)_codec.Deserialize(options);
         LocaleComboBox.Text = configuration.Locale;
+        VariantComboBox.Text = configuration.Variant;
         FormatComboBox.SelectedItem = configuration.Format;
         SeedTextBox.Text = configuration.Seed.ToString(CultureInfo.InvariantCulture);
         PreserveNullsCheckBox.IsChecked = configuration.PreserveNulls;
@@ -73,6 +75,7 @@ public partial class TaxIdentifierGeneratorEditor : UserControl, IGeneratorConfi
         configuration = new TaxIdentifierGeneratorConfiguration
         {
             Locale = LocaleComboBox.Text.Trim(),
+            Variant = VariantComboBox.Text.Trim(),
             Format = format,
             Seed = seed,
             PreserveNulls = PreserveNullsCheckBox.IsChecked == true

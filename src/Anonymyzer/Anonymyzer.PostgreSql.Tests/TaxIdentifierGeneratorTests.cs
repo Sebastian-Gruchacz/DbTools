@@ -92,6 +92,39 @@ public class TaxIdentifierGeneratorTests
         Assert.False(PolishTaxIdentifierLocaleDataProvider.IsValidNip(value));
     }
 
+    [Theory]
+    [InlineData("REGON9", 9)]
+    [InlineData("REGON14", 14)]
+    public async Task GeneratesChecksumValidRegon(string variant, int length)
+    {
+        var configuration = new TaxIdentifierGeneratorConfiguration
+        {
+            Variant = variant,
+            Format = TaxIdentifierFormat.DigitsOnly,
+            PreserveNulls = false
+        };
+        await using IGeneratorSession session = await PrepareAsync(configuration);
+        var row = new FakeGeneratorRow(null);
+
+        await session.ApplyAsync(row, TestContext.Current.CancellationToken);
+
+        string value = Assert.IsType<string>(row.Value);
+        Assert.Equal(length, value.Length);
+        Assert.True(PolishTaxIdentifierLocaleDataProvider.IsValidRegon(value));
+    }
+
+    [Fact]
+    public async Task RejectsFormattedRegon()
+    {
+        var configuration = new TaxIdentifierGeneratorConfiguration
+        {
+            Variant = "REGON9",
+            Format = TaxIdentifierFormat.Hyphenated
+        };
+
+        await Assert.ThrowsAsync<InvalidOperationException>(async () => await PrepareAsync(configuration));
+    }
+
     private static async ValueTask<IGeneratorSession> PrepareAsync(
         TaxIdentifierGeneratorConfiguration configuration)
     {

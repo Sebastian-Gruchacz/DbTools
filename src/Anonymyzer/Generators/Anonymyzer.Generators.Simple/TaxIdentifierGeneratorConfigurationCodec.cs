@@ -14,6 +14,11 @@ public sealed class TaxIdentifierGeneratorConfigurationCodec
             yield return "Locale is required.";
         }
 
+        if (string.IsNullOrWhiteSpace(configuration.Variant))
+        {
+            yield return "Variant is required.";
+        }
+
         if (!Enum.IsDefined(configuration.Format))
         {
             yield return $"Unsupported tax-identifier format '{configuration.Format}'.";

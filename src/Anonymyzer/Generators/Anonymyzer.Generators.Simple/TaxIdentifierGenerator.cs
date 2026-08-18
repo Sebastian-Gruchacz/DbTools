@@ -56,6 +56,12 @@ public sealed class TaxIdentifierGenerator : GeneratorBase<TaxIdentifierGenerato
             throw new InvalidOperationException($"Tax-identifier locale '{configuration.Locale}' is not installed.");
         }
 
+        IReadOnlyList<string> providerErrors = localeProvider.Validate(configuration.Variant, configuration.Format);
+        if (providerErrors.Count > 0)
+        {
+            throw new InvalidOperationException(string.Join(Environment.NewLine, providerErrors));
+        }
+
         string columnName = context.Binding.GetRequiredOutput(ValueOutput);
         return ValueTask.FromResult<IGeneratorSession>(new Session(columnName, localeProvider, configuration));
     }
@@ -72,16 +78,21 @@ public sealed class TaxIdentifierGenerator : GeneratorBase<TaxIdentifierGenerato
             cancellationToken.ThrowIfCancellationRequested();
             if (!configuration.PreserveNulls || row.GetValue(columnName) is not null)
             {
-                if (_nextOrdinal >= localeProvider.Capacity)
+                long capacity = localeProvider.GetCapacity(configuration.Variant);
+                if (_nextOrdinal >= capacity)
                 {
                     throw new InvalidOperationException(
                         $"Tax-identifier locale '{localeProvider.Locale}' exhausted its " +
-                        $"{localeProvider.Capacity:N0} distinct synthetic values.");
+                        $"{capacity:N0} distinct synthetic values.");
                 }
 
                 row.SetValue(
                     columnName,
-                    localeProvider.Generate(_nextOrdinal, configuration.Seed, configuration.Format));
+                    localeProvider.Generate(
+                        _nextOrdinal,
+                        configuration.Seed,
+                        configuration.Variant,
+                        configuration.Format));
                 _nextOrdinal++;
             }
 

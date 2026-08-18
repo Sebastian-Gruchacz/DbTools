@@ -137,8 +137,8 @@ językowe opisuje [docs/anonymyzer-design.md](docs/anonymyzer-design.md).
   międzynarodowe; wariant amerykański korzysta z zastrzeżonego zakresu 555-0100–0199;
 - `Uuid` 1.0.0: deterministyczne tekstowe UUID w formacie hyphenated, compact,
   braced albo parenthesized, z wyborem wielkości liter;
-- `TaxIdentifier` 1.0.0: polskie NIP-y z poprawną cyfrą kontrolną, bez powtórzeń,
-  jako same cyfry, zapis z myślnikami albo `PL` z cyframi;
+- `TaxIdentifier` 1.0.0: polskie NIP-y oraz REGON 9/14 z poprawnymi cyframi
+  kontrolnymi i bez powtórzeń; brak `Variant` w starszym JSON-ie oznacza NIP;
 - dedykowane panele WPF parametrów wszystkich siedmiu generatorów prostych;
 - rozwijane `Profiles → Add` tworzące kompletny profil domyślny wybranego
   generatora także w starszej konfiguracji;
@@ -188,7 +188,7 @@ językowe opisuje [docs/anonymyzer-design.md](docs/anonymyzer-design.md).
 - pozostałych generatorów grupowych i pełnego angielskiego pakietu danych osoby;
 - podglądu generatorów `Column` i `Relational`, które wymagają odczytu danych
   z odłączonego klona;
-- pełnych, ważonych zbiorów danych regionalnych oraz generatorów REGON/SSN;
+- pełnych, ważonych zbiorów danych regionalnych oraz generatora SSN;
 - automatycznej analizy niestabilnych kolekcji, JSON, XML i tekstu swobodnego;
 - obsługi XML/JSON oraz zmian PK/FK;
 - strategii wyłączania i odbudowy indeksów, constraintów i triggerów.
@@ -314,7 +314,7 @@ skasowany po wypchnięciu lub zarchiwizowaniu nowego repozytorium.
    zachowania.
 4. Zrealizować mały pionowy wycinek: jedna tabela, grupa `PersonIdentity`,
    deterministyczny seed, batche, `dry-run` i test na lokalnej bazie.
-5. Rozszerzyć pakiety regionalne o ważone dane oraz generatory REGON/SSN.
+5. Rozszerzyć pakiety regionalne o ważone dane oraz generator SSN.
 6. Dopiero po pomiarach dodać planowanie zależności FK, mapowanie zmienianych
    kluczy, indeksy, XML/JSON i generatory odwołujące się do innych wierszy.
 

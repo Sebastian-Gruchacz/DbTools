@@ -299,6 +299,15 @@ nie dowodzi, że NIP jest nieprzydzielony; są to dane syntetyczne przeznaczone
 wyłącznie do odłączonej kopii bazy. Obecna wersja zapisuje tekst i nie obsługuje
 jeszcze liczbowych kolumn z NIP-em.
 
+Ten sam provider obsługuje warianty `REGON9` i `REGON14`, wyłącznie jako
+`DigitsOnly`. REGON9 zawiera osiem cyfr porządkowych i checksum, natomiast
+REGON14 składa się z poprawnego REGON9 jednostki nadrzędnej, czterech cyfr
+jednostki lokalnej i końcowej cyfry kontrolnej. Tę strukturę potwierdza
+[definicja GUS](https://stat.gov.pl/metainformacje/slownik-pojec/pojecia-stosowane-w-statystyce-publicznej/2963%2Cpojecie.html?pdf=1).
+Wagi checksum są testowane osobno dla obu długości. Pole `Variant` ma domyślną
+wartość `NIP`, więc konfiguracje utworzone przed dodaniem REGON zachowują
+dotychczasowe działanie.
+
 ### NationalIdentifier 1.0.0 i polski PESEL
 
 `NationalIdentifier` generuje pojedynczą wartość dla roli `Person.NationalId`.

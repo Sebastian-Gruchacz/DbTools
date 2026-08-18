@@ -4,7 +4,9 @@ public interface ITaxIdentifierLocaleDataProvider
 {
     string Locale { get; }
 
-    long Capacity { get; }
+    long GetCapacity(string variant);
 
-    string Generate(long ordinal, int seed, TaxIdentifierFormat format);
+    IReadOnlyList<string> Validate(string variant, TaxIdentifierFormat format);
+
+    string Generate(long ordinal, int seed, string variant, TaxIdentifierFormat format);
 }
