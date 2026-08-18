@@ -243,6 +243,18 @@ ASCII DNS, długość domeny, długość local-part, licznik i wymagane nazwy ko
 Generator zachowuje `NULL` opcjonalnie, a pominięty wiersz nie zużywa numeru.
 Unikalność, podobnie jak w `SequentialText`, dotyczy jednej sesji wykonawczej.
 
+### AccountLogin 1.0.0
+
+`AccountLogin` generuje tekst dla roli `Account.Login`. Tryb `Opaque` łączy
+znormalizowany prefiks z licznikiem, a `NameBased` dodatkowo czyta wskazane
+kolumny imienia i nazwiska. Źródło `Original`/`Generated` jest deklarowanym
+wymaganiem danych, więc planner może uruchomić producenta nazw wcześniej.
+
+Separator jest ograniczony do krótkich kombinacji `.`, `_` i `-`. Końcowy
+licznik jest zawsze obecny i zapewnia unikalność w sesji; `StartAt`, minimalna
+liczba cyfr i zachowanie `NULL` należą do konfiguracji generatora. Normalizacja
+korzysta z tych samych zasad transliteracji co `EmailAddress`.
+
 ### PhoneNumber 1.0.0
 
 `PhoneNumber` jest generatorem `Row` z jednym wyjściem `Value` dla roli

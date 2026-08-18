@@ -87,7 +87,7 @@ public sealed class EmailAddressGenerator : GeneratorBase<EmailAddressGeneratorC
         return ValueTask.FromResult<IGeneratorSession>(new Session(columnName, configuration));
     }
 
-    private static string NormalizeToken(string value)
+    internal static string NormalizeToken(string value)
     {
         var result = new StringBuilder(value.Length);
         foreach (char character in value.Trim().ToLowerInvariant().Normalize(NormalizationForm.FormD))

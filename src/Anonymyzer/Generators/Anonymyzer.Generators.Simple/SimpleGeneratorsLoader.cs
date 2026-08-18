@@ -16,6 +16,7 @@
             serviceCollection.AddTransient<IGenerator, UuidGenerator>();
             serviceCollection.AddTransient<IGenerator, TaxIdentifierGenerator>();
             serviceCollection.AddTransient<IGenerator, CompanyNameGenerator>();
+            serviceCollection.AddTransient<IGenerator, AccountLoginGenerator>();
         }
     }
 }

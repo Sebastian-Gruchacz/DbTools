@@ -137,6 +137,8 @@ językowe opisuje [docs/anonymyzer-design.md](docs/anonymyzer-design.md).
   początkiem numeracji i konfigurowalnym dopełnieniem zerami;
 - `EmailAddress` 1.0.0: tryb opaque albo adres oparty na kolumnach imienia i
   nazwiska, z zależnością od ich wartości oryginalnych lub wygenerowanych;
+- `AccountLogin` 1.0.0: unikalny login opaque albo złożony z kolumn imienia i
+  nazwiska, również ze źródłem `Original`/`Generated`;
 - `PhoneNumber` 1.0.0: deterministyczne formaty `pl-PL` i `en-US`, krajowe albo
   międzynarodowe; wariant amerykański korzysta z zastrzeżonego zakresu 555-0100–0199;
 - `Uuid` 1.0.0: deterministyczne tekstowe UUID w formacie hyphenated, compact,

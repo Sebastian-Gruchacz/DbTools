@@ -29,6 +29,7 @@ public partial class MainWindow : Window
         new FixedTextGeneratorEditorFactory(),
         new SequentialTextGeneratorEditorFactory(),
         new EmailAddressGeneratorEditorFactory(),
+        new AccountLoginGeneratorEditorFactory(),
         new PhoneNumberGeneratorEditorFactory(),
         new UuidGeneratorEditorFactory(),
         new CompanyNameGeneratorEditorFactory(),

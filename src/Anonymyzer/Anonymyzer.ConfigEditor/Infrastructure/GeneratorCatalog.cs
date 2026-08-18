@@ -16,6 +16,7 @@ internal sealed class GeneratorCatalog
         new FixedTextGenerator(),
         new SequentialTextGenerator(),
         new EmailAddressGenerator(),
+        new AccountLoginGenerator(),
         new PhoneNumberGenerator(
         [
             new PolishPhoneNumberLocaleDataProvider(),
