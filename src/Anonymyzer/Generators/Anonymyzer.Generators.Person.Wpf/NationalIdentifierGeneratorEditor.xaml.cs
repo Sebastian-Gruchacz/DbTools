@@ -3,6 +3,7 @@
 using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
+using Anonymyzer.Base.Generation;
 using Anonymyzer.ConfigEditor.Abstractions;
 using Newtonsoft.Json.Linq;
 
@@ -15,11 +16,19 @@ public partial class NationalIdentifierGeneratorEditor : UserControl, IGenerator
         InitializeComponent();
         LocaleComboBox.ItemsSource = new[] { "pl-PL" };
         GenderComboBox.ItemsSource = Enum.GetValues<PersonGenderSelection>();
+        BirthDateValueSourceComboBox.ItemsSource = Enum.GetValues<GeneratorValueSource>();
+        GenderValueSourceComboBox.ItemsSource = Enum.GetValues<GeneratorValueSource>();
         var configuration = (NationalIdentifierGeneratorConfiguration)_codec.Deserialize(options);
         LocaleComboBox.Text = configuration.Locale;
         MinimumBirthDateTextBox.Text = configuration.MinimumBirthDate;
         MaximumBirthDateTextBox.Text = configuration.MaximumBirthDate;
         GenderComboBox.SelectedItem = configuration.Gender;
+        BirthDateColumnTextBox.Text = configuration.BirthDateColumn;
+        BirthDateValueSourceComboBox.SelectedItem = configuration.BirthDateValueSource;
+        GenderColumnTextBox.Text = configuration.GenderColumn;
+        GenderValueSourceComboBox.SelectedItem = configuration.GenderValueSource;
+        FemaleValuesTextBox.Text = string.Join(", ", configuration.FemaleValues);
+        MaleValuesTextBox.Text = string.Join(", ", configuration.MaleValues);
         SeedTextBox.Text = configuration.Seed.ToString(CultureInfo.InvariantCulture);
         PreserveNullsCheckBox.IsChecked = configuration.PreserveNulls;
     }
@@ -77,9 +86,22 @@ public partial class NationalIdentifierGeneratorEditor : UserControl, IGenerator
             MinimumBirthDate = MinimumBirthDateTextBox.Text.Trim(),
             MaximumBirthDate = MaximumBirthDateTextBox.Text.Trim(),
             Gender = gender,
+            BirthDateColumn = BirthDateColumnTextBox.Text.Trim(),
+            BirthDateValueSource = BirthDateValueSourceComboBox.SelectedItem is GeneratorValueSource birthSource
+                ? birthSource
+                : default,
+            GenderColumn = GenderColumnTextBox.Text.Trim(),
+            GenderValueSource = GenderValueSourceComboBox.SelectedItem is GeneratorValueSource genderSource
+                ? genderSource
+                : default,
+            FemaleValues = SplitValues(FemaleValuesTextBox.Text),
+            MaleValues = SplitValues(MaleValuesTextBox.Text),
             Seed = seed,
             PreserveNulls = PreserveNullsCheckBox.IsChecked == true
         };
         return errors.Count == 0;
     }
+
+    private static List<string> SplitValues(string value) => value.Split(',', StringSplitOptions.RemoveEmptyEntries)
+        .Select(item => item.Trim()).Where(item => item.Length > 0).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
 }

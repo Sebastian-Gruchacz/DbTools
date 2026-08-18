@@ -89,6 +89,42 @@ public class NationalIdentifierGeneratorTests
         Assert.Equal(3, codec.Validate(configuration).Count);
     }
 
+    [Fact]
+    public async Task UsesConfiguredBirthDateAndGenderColumns()
+    {
+        var configuration = new NationalIdentifierGeneratorConfiguration
+        {
+            BirthDateColumn = "birth_date",
+            BirthDateValueSource = GeneratorValueSource.Generated,
+            GenderColumn = "gender",
+            GenderValueSource = GeneratorValueSource.Original
+        };
+        var generator = new NationalIdentifierGenerator([new PolishNationalIdentifierLocaleDataProvider()]);
+        GeneratorBinding binding = new(
+            new GeneratorTableReference("public", "people"),
+            new Dictionary<string, string> { [NationalIdentifierGenerator.ValueOutput] = "pesel" });
+        IReadOnlyList<GeneratorDataRequirement> requirements = generator.GetDataRequirements(binding, configuration);
+        Assert.Contains(requirements, item => item.Alias == "birth-date" && item.ValueSource == GeneratorValueSource.Generated);
+        Assert.Contains(requirements, item => item.Alias == "gender" && item.ValueSource == GeneratorValueSource.Original);
+        await using IGeneratorSession session = await generator.PrepareAsync(
+            new GeneratorPreparationContext(binding, new RejectingDataReader()),
+            configuration,
+            TestContext.Current.CancellationToken);
+        var row = new DictionaryRow(new Dictionary<string, object?>
+        {
+            ["pesel"] = "old",
+            ["birth_date"] = new DateOnly(1992, 7, 18),
+            ["gender"] = "K"
+        });
+
+        await session.ApplyAsync(row, TestContext.Current.CancellationToken);
+
+        string pesel = Assert.IsType<string>(row.GetValue("pesel"));
+        Assert.True(PolishNationalIdentifierLocaleDataProvider.TryDecodeBirthDate(pesel, out DateOnly birthDate));
+        Assert.Equal(new DateOnly(1992, 7, 18), birthDate);
+        Assert.Equal(0, (pesel[9] - '0') % 2);
+    }
+
     private static async ValueTask<IGeneratorSession> PrepareAsync(
         NationalIdentifierGeneratorConfiguration configuration)
     {
@@ -116,5 +152,11 @@ public class NationalIdentifierGeneratorTests
         public object? Value { get; private set; } = value;
         public object? GetValue(string columnName) => Value;
         public void SetValue(string columnName, object? newValue) => Value = newValue;
+    }
+
+    private sealed class DictionaryRow(Dictionary<string, object?> values) : IGeneratorRow
+    {
+        public object? GetValue(string columnName) => values.TryGetValue(columnName, out object? value) ? value : null;
+        public void SetValue(string columnName, object? value) => values[columnName] = value;
     }
 }

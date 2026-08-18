@@ -10,6 +10,20 @@ public sealed class NationalIdentifierGeneratorConfiguration
 
     public PersonGenderSelection Gender { get; set; } = PersonGenderSelection.Any;
 
+    public string BirthDateColumn { get; set; } = string.Empty;
+
+    public Anonymyzer.Base.Generation.GeneratorValueSource BirthDateValueSource { get; set; } =
+        Anonymyzer.Base.Generation.GeneratorValueSource.Original;
+
+    public string GenderColumn { get; set; } = string.Empty;
+
+    public Anonymyzer.Base.Generation.GeneratorValueSource GenderValueSource { get; set; } =
+        Anonymyzer.Base.Generation.GeneratorValueSource.Original;
+
+    public List<string> FemaleValues { get; set; } = ["F", "Female", "K", "Kobieta", "0"];
+
+    public List<string> MaleValues { get; set; } = ["M", "Male", "Mężczyzna", "1"];
+
     public int Seed { get; set; } = 977;
 
     public bool PreserveNulls { get; set; } = true;

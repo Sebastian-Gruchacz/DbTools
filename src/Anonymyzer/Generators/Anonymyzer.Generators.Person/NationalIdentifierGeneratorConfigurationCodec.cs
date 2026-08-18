@@ -49,5 +49,37 @@ public sealed class NationalIdentifierGeneratorConfigurationCodec
         {
             yield return $"Unsupported gender selection '{configuration.Gender}'.";
         }
+
+        if (!string.IsNullOrWhiteSpace(configuration.BirthDateColumn)
+            && !Enum.IsDefined(configuration.BirthDateValueSource))
+        {
+            yield return $"Unsupported birth-date value source '{configuration.BirthDateValueSource}'.";
+        }
+
+        if (!string.IsNullOrWhiteSpace(configuration.GenderColumn))
+        {
+            if (!Enum.IsDefined(configuration.GenderValueSource))
+            {
+                yield return $"Unsupported gender value source '{configuration.GenderValueSource}'.";
+            }
+
+            if (configuration.FemaleValues is not { Count: > 0 }
+                || configuration.MaleValues is not { Count: > 0 })
+            {
+                yield return "FemaleValues and MaleValues must not be empty when GenderColumn is configured.";
+            }
+            else if (configuration.FemaleValues.Intersect(
+                         configuration.MaleValues,
+                         StringComparer.OrdinalIgnoreCase).Any())
+            {
+                yield return "FemaleValues and MaleValues cannot overlap.";
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(configuration.BirthDateColumn)
+            && configuration.BirthDateColumn.Equals(configuration.GenderColumn, StringComparison.OrdinalIgnoreCase))
+        {
+            yield return "BirthDateColumn and GenderColumn must be different.";
+        }
     }
 }

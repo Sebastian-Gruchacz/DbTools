@@ -145,7 +145,8 @@ językowe opisuje [docs/anonymyzer-design.md](docs/anonymyzer-design.md).
 - `PersonIdentity` 1.0.0 w zakresie `Row`: spójne imię, nazwisko, rodzaj i e-mail
   na podstawie pakietu `pl-PL`, bez dodatkowego skanu bazy;
 - `NationalIdentifier` 1.0.0: polski PESEL z prawidłową datą, płcią i checksum,
-  konfigurowalnym zakresem dat oraz deterministycznym seedem;
+  konfigurowalnym zakresem dat i seedem albo jawnymi zależnościami od kolumn
+  daty urodzenia i płci (`Original`/`Generated`);
 - dwa schematy e-mail: oparty na imieniu i nazwisku oraz opaque; domyślna domena
   `example.invalid` jest celowo niedostarczalna;
 - dedykowany panel WPF konfiguracji `PersonIdentity`;

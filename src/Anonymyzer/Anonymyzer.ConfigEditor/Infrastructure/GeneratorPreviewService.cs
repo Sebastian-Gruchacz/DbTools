@@ -154,6 +154,21 @@ internal sealed class GeneratorPreviewService(GeneratorCatalog catalog)
 
     private static string PreviewSourceValue(string columnName)
     {
+        if (columnName.Contains("birth", StringComparison.OrdinalIgnoreCase)
+            || columnName.Contains("date", StringComparison.OrdinalIgnoreCase)
+            || columnName.Contains("urodz", StringComparison.OrdinalIgnoreCase))
+        {
+            return "1985-04-12";
+        }
+
+        if (columnName.Contains("gender", StringComparison.OrdinalIgnoreCase)
+            || columnName.Contains("sex", StringComparison.OrdinalIgnoreCase)
+            || columnName.Contains("plec", StringComparison.OrdinalIgnoreCase)
+            || columnName.Contains("płeć", StringComparison.OrdinalIgnoreCase))
+        {
+            return "Female";
+        }
+
         return columnName.Contains("last", StringComparison.OrdinalIgnoreCase)
             || columnName.Contains("surname", StringComparison.OrdinalIgnoreCase)
             || columnName.Contains("nazw", StringComparison.OrdinalIgnoreCase)

@@ -314,9 +314,12 @@ Numer porządkowy jest mapowany bez powtórzeń; przy jednej dacie dostępne jes
 
 Poprawny strukturalnie PESEL może należeć do rzeczywistej osoby, dlatego wynik
 wolno stosować wyłącznie w odłączonej kopii i nie należy używać go do zapytań
-urzędowych. Wersja 1.0.0 dobiera datę oraz płeć wewnętrznie. Nie synchronizuje
-jeszcze osobnych kolumn `BirthDate` i `Gender`; taka zależność wymaga kolejnej
-wersji generatora i jawnych wymagań `Original`/`Generated`.
+urzędowych. Domyślnie generator dobiera datę oraz płeć wewnętrznie. Opcjonalne
+`BirthDateColumn` i `GenderColumn` pozwalają jednak czytać je z bieżącego wiersza,
+osobno wskazując `Original` albo `Generated`; wymagania uczestniczą wtedy w grafie
+plannera. Wartości płci są mapowane przez konfigurowalne listy żeńskie i męskie.
+Sesja utrzymuje osobny licznik dla każdej pary data+płeć, dzięki czemu powtarzająca
+się data nie powoduje kolizji przed wyczerpaniem 5 000 numerów danej płci.
 
 ### Pierwszy generator Row: PersonIdentity 1.0.0
 
