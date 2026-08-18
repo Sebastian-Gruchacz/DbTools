@@ -25,6 +25,12 @@ public sealed class ColumnCandidateDetectorTests
     [InlineData("customer_phone_number", "Contact.Phone", "en:phone_number", "en")]
     [InlineData("NumerTelefonu", "Contact.Phone", "pl:numer_telefonu", "pl")]
     [InlineData("billing_postal_code", "Address.PostalCode", "en:postal_code", "en")]
+    [InlineData("BillingAddress", "Address.Street", "en:address", "en")]
+    [InlineData("Address2", "Address.Street", "en:address2", "en")]
+    [InlineData("PreferredName", "Person.FirstName", "en:preferred_name", "en")]
+    [InlineData("LogonName", "Account.Login", "en:logon_name", "en")]
+    [InlineData("SupplierName", "Company.Name", "en:supplier_name", "en")]
+    [InlineData("SupplierBankAccountNumber", "Financial.BankAccount", "en:bank_account", "en")]
     public void DetectsEnglishAndPolishNames(
         string columnName,
         string expectedRole,
@@ -49,6 +55,11 @@ public sealed class ColumnCandidateDetectorTests
     [InlineData("description")]
     [InlineData("ClientPhoneId")]
     [InlineData("KontrolaPESEL")]
+    [InlineData("MemoryAddress")]
+    [InlineData("AccountNumber")]
+    [InlineData("BankAccountBranch")]
+    [InlineData("BankAccountCode")]
+    [InlineData("BankAccountName")]
     public void RejectsFlagsAndUnrelatedNames(string columnName)
     {
         CandidateDetectionConfiguration detection = _detector.Detect(columnName);

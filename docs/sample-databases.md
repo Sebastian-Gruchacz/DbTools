@@ -83,8 +83,8 @@ Aktualny baseline detektora po wygenerowaniu configów:
 
 | Baza | Tabele | Kandydaci | Automatycznie włączone kolumny |
 | --- | ---: | ---: | ---: |
-| `anonymyzer_chinook` | 10 | 21 | 0 |
-| `anonymyzer_pagila` | 22 | 13 | 0 |
+| `anonymyzer_chinook` | 10 | 24 | 0 |
+| `anonymyzer_pagila` | 22 | 15 | 0 |
 
 Oba wygenerowane JSON-y przeszły `run --dry-run` ze swoimi markerami; żadne dane
 nie zostały zmodyfikowane.
@@ -108,13 +108,20 @@ zapisywany. `Remove` usuwa własny kontener oraz powiązane configi.
 
 Aktualny baseline detektora po wygenerowaniu configów:
 
-- Chinook: 10 tabel, 21 kandydatów, 0 automatycznie włączonych kolumn;
-- Northwind: 11 tabel, 24 kandydatów, 0 automatycznie włączonych kolumn;
-- AdventureWorksLT: 12 tabel, 11 kandydatów, 0 automatycznie włączonych kolumn;
-- WideWorldImporters: 48 tabel, 46 kandydatów, 0 automatycznie włączonych kolumn.
+- Chinook: 10 tabel, 24 kandydatów, 0 automatycznie włączonych kolumn;
+- Northwind: 11 tabel, 28 kandydatów, 0 automatycznie włączonych kolumn;
+- AdventureWorksLT: 12 tabel, 12 kandydatów, 0 automatycznie włączonych kolumn;
+- WideWorldImporters: 48 tabel, 56 kandydatów, 0 automatycznie włączonych kolumn.
 
 Wszystkie cztery JSON-y przeszły `run --dry-run` ze swoimi markerami; żadne dane
 nie zostały zmodyfikowane. Kandydaci pozostają wyłączeni do decyzji operatora.
+
+Strojenie na wszystkich sześciu configach dodało 30 uzasadnionych trafień,
+między innymi zwykłe i dostawcze pola adresowe, `PreferredName`, `LogonName` oraz
+`SupplierName`. Jednocześnie usunęło 7 mylących sugestii: ogólne
+`AccountNumber` oraz `BankAccountBranch`, `BankAccountCode` i `BankAccountName`
+w tabelach bieżących i archiwalnych WWI. Łączny baseline wzrósł ze 136 do 159
+kandydatów.
 
 Przed restore WideWorldImporters skrypt wymaga co najmniej 4 GiB wolnego miejsca,
 mapuje osobno `WWI_Primary`, `WWI_UserData` i `WWI_Log`, a po zakończeniu usuwa

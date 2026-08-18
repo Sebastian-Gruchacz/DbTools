@@ -494,16 +494,16 @@ regułę, proponowany generator i score. Konfiguracja wynikowa nadal ma
 
 | Kategoria | Angielskie kandydaty | Polskie kandydaty |
 | --- | --- | --- |
-| Imię | `first_name`, `firstname`, `given_name`, `forename` | `imie`, `imię`, `pierwsze_imie` |
+| Imię | `first_name`, `firstname`, `given_name`, `forename`, `preferred_name` | `imie`, `imię`, `pierwsze_imie` |
 | Nazwisko | `last_name`, `lastname`, `surname`, `family_name` | `nazwisko`, `nazwisko_rodowe` |
 | Pełna nazwa osoby | `full_name`, `display_name`, `contact_name` | `pelne_imie`, `pełne_imie`, `nazwa_kontaktu` |
 | E-mail | `email`, `email_address`, `e_mail`, `mail` | `email`, `e_mail`, `adres_email` |
 | Telefon | `phone`, `phone_number`, `mobile`, `telephone` | `telefon`, `nr_telefonu`, `numer_telefonu`, `komorka`, `komórka` |
 | Adres | `address`, `street`, `city`, `postal_code`, `zip_code` | `adres`, `ulica`, `miasto`, `kod_pocztowy` |
-| Login | `login`, `username`, `user_name`, `screen_name` | `login`, `nazwa_uzytkownika`, `nazwa_użytkownika` |
+| Login | `login`, `username`, `user_name`, `logon_name`, `screen_name` | `login`, `nazwa_uzytkownika`, `nazwa_użytkownika` |
 | Data urodzenia | `birth_date`, `date_of_birth`, `dob` | `data_urodzenia`, `urodzony`, `urodzona` |
 | Identyfikator osoby/podatkowy | `ssn`, `tax_id`, `national_id`, `identity_number` | `pesel`, `nip`, `regon`, `nr_dowodu`, `numer_dowodu` |
-| Konto bankowe | `iban`, `bank_account`, `account_number` | `iban`, `rachunek_bankowy`, `numer_konta` |
+| Konto bankowe | `iban`, `bank_account` | `iban`, `rachunek_bankowy`, `numer_konta` |
 
 Lista jest zalążkiem do testów i strojenia, nie zamkniętym słownikiem. Należy
 uwzględnić także prefiksy/sufiksy techniczne (`customer_email`, `billing_city`)
@@ -514,9 +514,11 @@ Pierwszy zestaw jest zaimplementowany jako dwa niezależne providery reguł.
 Wspólny detektor usuwa diakrytykę, rozpoznaje skróty w `PascalCase`, dopasowuje
 pełne sekwencje tokenów i obniża score dla prefiksów technicznych. Tokeny takie
 jak `enabled`, `required`, `type`, `status` i `flag` odrzucają dopasowanie.
-Reguła ogólnego angielskiego `address` została celowo zastąpiona formami
-`street_address`, `mailing_address` i `postal_address`, ponieważ na realnym
-schemacie myliła adres pocztowy z adresem strony, sieci i nadawcy e-maila.
+Reguła ogólnego angielskiego `address` odrzuca techniczne konteksty, takie jak
+`website`, `network`, `ip`, `mac` i `memory`. Provider może dostarczyć własne
+tokeny wykluczające także dla innych niejednoznacznych reguł. Przykładowo
+`bank_account` nie klasyfikuje pól zakończonych `Branch`, `Code` ani `Name`, a
+ogólne `account_number` nie jest uznawane za rachunek bankowy.
 
 Generator konfiguracji pobiera wszystkie kolumny niebędące PK i klasyfikuje je
 do przenośnych kategorii: tekst, liczba całkowita/dziesiętna, boolean, data/czas,

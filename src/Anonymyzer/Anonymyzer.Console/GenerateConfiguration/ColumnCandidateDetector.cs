@@ -113,11 +113,13 @@ internal sealed class ColumnCandidateDetector
                 continue;
             }
 
-            IEnumerable<string> remainingTokens = columnTokens.Take(start)
-                .Concat(columnTokens.Skip(start + rule.Tokens.Count));
+            IReadOnlyList<string> remainingTokens = columnTokens.Take(start)
+                .Concat(columnTokens.Skip(start + rule.Tokens.Count))
+                .ToArray();
             if (remainingTokens.Any(token =>
                     NonValueTokens.Contains(token)
-                    || additionalNonValueTokens?.Contains(token) == true))
+                    || additionalNonValueTokens?.Contains(token) == true
+                    || rule.Rule.ExcludedTokens.Contains(token)))
             {
                 return null;
             }
