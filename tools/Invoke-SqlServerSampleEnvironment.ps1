@@ -23,11 +23,13 @@ $markerScript = Join-Path $PSScriptRoot 'markers\sqlserver.sql'
 $chinookScript = Join-Path $sampleRoot 'Chinook_SqlServer.sql'
 $northwindScript = Join-Path $sampleRoot 'Northwind-SqlServer.sql'
 $adventureWorksBackup = Join-Path $sampleRoot 'AdventureWorksLT2022.bak'
+$wideWorldImportersBackup = Join-Path $sampleRoot 'WideWorldImporters-Standard.bak'
 $sqlCmd = '/opt/mssql-tools18/bin/sqlcmd'
 $databaseNames = @(
     'anonymyzer_chinook_sqlserver',
     'anonymyzer_northwind',
-    'anonymyzer_adventureworkslt'
+    'anonymyzer_adventureworkslt',
+    'anonymyzer_wideworldimporters'
 )
 
 function Invoke-Docker {
@@ -229,6 +231,73 @@ function Import-Samples {
     }
 }
 
+function Assert-WideWorldImportersFreeSpace {
+    $diskUsage = @(Invoke-Docker exec $ContainerName df -Pk '/var/opt/mssql')
+    $dataLine = @($diskUsage | Where-Object { $_ -match '^\S' }) | Select-Object -Last 1
+    $fields = @(([string]$dataLine).Trim() -split '\s+')
+    if ($fields.Count -lt 4 -or $fields[3] -notmatch '^\d+$') {
+        throw 'Could not determine free space available to SQL Server.'
+    }
+
+    $availableKilobytes = [long]$fields[3]
+    $minimumKilobytes = 4GB / 1KB
+    if ($availableKilobytes -lt $minimumKilobytes) {
+        $availableGigabytes = [math]::Round($availableKilobytes / 1MB, 2)
+        throw "WideWorldImporters restore requires at least 4 GiB free; $availableGigabytes GiB is available."
+    }
+}
+
+function Ensure-WideWorldImporters {
+    $databaseName = 'anonymyzer_wideworldimporters'
+    $temporaryBackup = '/tmp/WideWorldImporters-Standard.bak'
+    if (Test-DatabaseExists $databaseName) {
+        Get-MarkerId $databaseName | Out-Null
+        Invoke-Docker exec -u 0 $ContainerName rm -f $temporaryBackup | Out-Null
+        return
+    }
+
+    & (Join-Path $PSScriptRoot 'Get-SampleDatabases.ps1') `
+        -Sample WideWorldImporters | Out-Null
+    if (-not (Test-Path -LiteralPath $wideWorldImportersBackup)) {
+        throw 'Could not acquire the WideWorldImporters backup.'
+    }
+
+    Assert-WideWorldImportersFreeSpace
+    $restoreStarted = $false
+    try {
+        Invoke-Docker cp $wideWorldImportersBackup "${ContainerName}:$temporaryBackup" | Out-Null
+        $restoreStarted = $true
+        Invoke-SqlCmd -Query (
+            "RESTORE DATABASE [$databaseName] " +
+            "FROM DISK = N'$temporaryBackup' WITH " +
+            "MOVE N'WWI_Primary' TO N'/var/opt/mssql/data/${databaseName}.mdf', " +
+            "MOVE N'WWI_UserData' TO N'/var/opt/mssql/data/${databaseName}_UserData.ndf', " +
+            "MOVE N'WWI_Log' TO N'/var/opt/mssql/data/${databaseName}_log.ldf', " +
+            "RECOVERY, STATS = 10;"
+        )
+        Invoke-Docker cp $markerScript "${ContainerName}:/tmp/anonymyzer-marker.sql" | Out-Null
+        Add-Marker $databaseName ([Guid]::NewGuid())
+    }
+    catch {
+        if ($restoreStarted -and (Test-DatabaseExists $databaseName)) {
+            Invoke-SqlCmd -Query (
+                "ALTER DATABASE [$databaseName] SET SINGLE_USER WITH ROLLBACK IMMEDIATE; " +
+                "DROP DATABASE [$databaseName];"
+            )
+        }
+
+        throw
+    }
+    finally {
+        try {
+            Invoke-Docker exec -u 0 $ContainerName rm -f $temporaryBackup | Out-Null
+        }
+        catch {
+            Write-Warning "Could not remove temporary backup '$temporaryBackup': $($_.Exception.Message)"
+        }
+    }
+}
+
 function New-Configurations {
     $hostPort = Get-PublishedPort
     New-Item -ItemType Directory -Path $configurationRoot -Force | Out-Null
@@ -335,6 +404,8 @@ try {
         Wait-SqlServer
         Import-Samples
     }
+
+    Ensure-WideWorldImporters
 
     foreach ($databaseName in $databaseNames) {
         if (-not (Test-DatabaseExists $databaseName)) {

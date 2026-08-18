@@ -91,8 +91,8 @@ nie zostały zmodyfikowane.
 
 ## Lokalne środowisko SQL Server
 
-Chinook, Northwind i AdventureWorksLT mogą działać w oddzielnym kontenerze SQL
-Server 2022 Developer:
+Chinook, Northwind, AdventureWorksLT i WideWorldImporters mogą działać w
+oddzielnym kontenerze SQL Server 2022 Developer:
 
 ```powershell
 .\tools\Invoke-SqlServerSampleEnvironment.ps1 -Action Initialize
@@ -110,14 +110,16 @@ Aktualny baseline detektora po wygenerowaniu configów:
 
 - Chinook: 10 tabel, 21 kandydatów, 0 automatycznie włączonych kolumn;
 - Northwind: 11 tabel, 24 kandydatów, 0 automatycznie włączonych kolumn;
-- AdventureWorksLT: 12 tabel, 11 kandydatów, 0 automatycznie włączonych kolumn.
+- AdventureWorksLT: 12 tabel, 11 kandydatów, 0 automatycznie włączonych kolumn;
+- WideWorldImporters: 48 tabel, 46 kandydatów, 0 automatycznie włączonych kolumn.
 
-Wszystkie trzy JSON-y przeszły `run --dry-run` ze swoimi markerami; żadne dane
+Wszystkie cztery JSON-y przeszły `run --dry-run` ze swoimi markerami; żadne dane
 nie zostały zmodyfikowane. Kandydaci pozostają wyłączeni do decyzji operatora.
 
-WideWorldImporters nie należy do domyślnego środowiska. Jego backup jest pobrany,
-ale restore zostanie dodany osobno po przygotowaniu obsługi wszystkich plików
-logicznych i kontroli wymaganego miejsca.
+Przed restore WideWorldImporters skrypt wymaga co najmniej 4 GiB wolnego miejsca,
+mapuje osobno `WWI_Primary`, `WWI_UserData` i `WWI_Log`, a po zakończeniu usuwa
+kopię backupu z `/tmp`. Istniejące środowisko jest rozszerzane bez odtwarzania
+pozostałych trzech baz.
 
 ## Zasady bezpieczeństwa
 
@@ -130,10 +132,9 @@ Scenariusz integracyjny powinien zawsze:
 4. uruchomić `--dry-run`, a później `--execute` wyłącznie na tej kopii;
 5. usunąć kopię po teście, pozostawiając seed bez zmian.
 
-Skrypt Northwind używa historycznej, stałej nazwy bazy. Przed automatyzacją
-trzeba ją sparametryzować albo uruchomić w jednorazowym kontenerze. Backupów
-AdventureWorksLT i WideWorldImporters nie należy odtwarzać z `WITH REPLACE` pod
-nazwą istniejącej bazy.
+Skrypt środowiska tworzy docelową bazę Northwind przed importem historycznego
+skryptu. Backupów AdventureWorksLT i WideWorldImporters nie odtwarza z
+`WITH REPLACE` ani pod nazwą istniejącej bazy.
 
 ## Proponowana kolejność analizy
 
