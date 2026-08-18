@@ -30,6 +30,7 @@ public partial class MainWindow : Window
         new EmailAddressGeneratorEditorFactory(),
         new PhoneNumberGeneratorEditorFactory(),
         new UuidGeneratorEditorFactory(),
+        new TaxIdentifierGeneratorEditorFactory(),
         new PersonIdentityGeneratorEditorFactory()
     };
 

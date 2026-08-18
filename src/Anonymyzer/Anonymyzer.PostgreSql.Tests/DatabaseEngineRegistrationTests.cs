@@ -42,5 +42,6 @@ public class DatabaseEngineRegistrationTests
         Assert.Contains(generators, generator => generator is EmailAddressGenerator);
         Assert.Contains(generators, generator => generator is PhoneNumberGenerator);
         Assert.Contains(generators, generator => generator is UuidGenerator);
+        Assert.Contains(generators, generator => generator is TaxIdentifierGenerator);
     }
 }

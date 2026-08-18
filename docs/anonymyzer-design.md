@@ -278,6 +278,27 @@ Kolizja skrótu jest skrajnie mało prawdopodobna, ale nie jest matematycznie
 niemożliwa. Zachowany `NULL` nie zużywa numeru sekwencji, a po wygenerowaniu
 wartości dla `Int64.MaxValue` następne wywołanie kończy się błędem.
 
+### TaxIdentifier 1.0.0 i polski NIP
+
+`TaxIdentifier` jest rozszerzalnym generatorem `Row` dla roli `Company.TaxId`.
+Profil zawiera `Locale`, deterministyczny `Seed`, format oraz zachowanie `NULL`.
+Provider regionalny deklaruje pojemność i odpowiada zarówno za cyfry kontrolne,
+jak i prezentację wartości. Brak providera dla wybranego locale zatrzymuje
+przygotowanie sesji.
+
+Pierwszy provider `pl-PL` generuje dziesięciocyfrowy NIP. Dla pierwszych dziewięciu
+cyfr stosuje wagi `6, 5, 7, 2, 3, 4, 5, 6, 7`; reszta z dzielenia sumy przez 11
+jest cyfrą kontrolną, a kombinacje dające resztę 10 są pomijane. Generator oferuje
+format `DigitsOnly`, `Hyphenated` (`XXX-XXX-XX-XX`) oraz `International`
+(`PLXXXXXXXXXX`). Ministerstwo Finansów potwierdza, że urzędowa walidacja NIP
+[sprawdza strukturę identyfikatora i algorytm cyfry kontrolnej](https://www.podatki.gov.pl/pytania-i-odpowiedzi/mikrorachunek/czy-i-w-jaki-sposob-generator-bedzie-weryfikowal-poprawnosc-pesel-i-nip).
+
+Provider mapuje numer porządkowy na jeden z 810 milionów różnych wyników, więc
+nie używa retry ani rosnącego bufora zajętych wartości. Poprawność cyfry kontrolnej
+nie dowodzi, że NIP jest nieprzydzielony; są to dane syntetyczne przeznaczone
+wyłącznie do odłączonej kopii bazy. Obecna wersja zapisuje tekst i nie obsługuje
+jeszcze liczbowych kolumn z NIP-em.
+
 ### Pierwszy generator Row: PersonIdentity 1.0.0
 
 `PersonIdentity` wykonuje jedno atomowe wywołanie dla wiersza i może wystawić
