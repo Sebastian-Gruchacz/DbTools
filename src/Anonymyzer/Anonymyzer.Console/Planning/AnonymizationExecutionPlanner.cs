@@ -135,7 +135,11 @@ internal sealed class AnonymizationExecutionPlanner
 
         var binding = new GeneratorBinding(
             new GeneratorTableReference(table.SchemaName, table.TableName),
-            outputs);
+            outputs,
+            outputs.ToDictionary(
+                output => output.Key,
+                output => ParseDataType(table, output.Value),
+                StringComparer.OrdinalIgnoreCase));
         steps.Add(new GeneratorExecutionPlanStep(
             id,
             binding.Table,
@@ -144,6 +148,15 @@ internal sealed class AnonymizationExecutionPlanner
             generatorConfiguration,
             generator.GetDataRequirements(binding, generatorConfiguration),
             batchSize));
+    }
+
+    private static Anonymyzer.Base.DbDataType ParseDataType(TableProcessingOptions table, string columnName)
+    {
+        string configuredType = table.Columns.Single(column =>
+            column.ColumnName.Equals(columnName, StringComparison.OrdinalIgnoreCase)).DataType;
+        return Enum.TryParse(configuredType, ignoreCase: true, out Anonymyzer.Base.DbDataType dataType)
+            ? dataType
+            : Anonymyzer.Base.DbDataType.Other;
     }
 
     private static IReadOnlyList<GeneratorExecutionPlanStep> OrderByGeneratedDependencies(

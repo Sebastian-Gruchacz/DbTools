@@ -31,11 +31,14 @@ internal sealed class AnonymizationExecutor(IEnumerable<IGenerator> generators)
             cancellationToken);
         try
         {
-            string[] outputColumns = plan.Steps
-                .SelectMany(step => step.Binding.Outputs.Values)
-                .Distinct(StringComparer.OrdinalIgnoreCase)
+            ExecutionOutputColumn[] outputColumns = plan.Steps
+                .SelectMany(step => step.Binding.Outputs.Select(output => new ExecutionOutputColumn(
+                    output.Value,
+                    step.Binding.GetOutputDataType(output.Key))))
+                .DistinctBy(column => column.Name, StringComparer.OrdinalIgnoreCase)
                 .ToArray();
             string[] sourceColumns = outputColumns
+                .Select(column => column.Name)
                 .Concat(plan.Steps.SelectMany(step => step.DataRequirements).SelectMany(requirement => requirement.Columns))
                 .Distinct(StringComparer.OrdinalIgnoreCase)
                 .ToArray();
@@ -68,7 +71,10 @@ internal sealed class AnonymizationExecutor(IEnumerable<IGenerator> generators)
 
                     updatedRows.Add(new ExecutionUpdatedRow(
                         sourceRow.PrimaryKey,
-                        outputColumns.ToDictionary(column => column, row.GetCurrentValue, StringComparer.OrdinalIgnoreCase)));
+                        outputColumns.ToDictionary(
+                            column => column.Name,
+                            column => row.GetCurrentValue(column.Name),
+                            StringComparer.OrdinalIgnoreCase)));
                 }
 
                 await store.WriteBatchAsync(

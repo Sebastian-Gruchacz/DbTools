@@ -1,5 +1,6 @@
 ﻿namespace Anonymyzer.PostgreSql.Tests;
 
+using Anonymyzer.Base;
 using Anonymyzer.Base.Generation;
 using Anonymyzer.Console.Planning;
 
@@ -42,12 +43,12 @@ public sealed class DatabaseExecutionRowStoreTests
             "SqlServer",
             table,
             "id]key",
-            ["display]name"]);
+            [new ExecutionOutputColumn("display]name", DbDataType.Text)]);
         string postgreSql = DatabaseExecutionRowStore.BuildUpdate(
             "PostgreSql",
             table,
             "id\"key",
-            ["display\"name"]);
+            [new ExecutionOutputColumn("display\"name", DbDataType.Text)]);
 
         Assert.Equal(
             "UPDATE [odd]]schema].[user\"data] SET [display]]name] = @value_0 " +
@@ -57,5 +58,23 @@ public sealed class DatabaseExecutionRowStoreTests
             "UPDATE \"odd]schema\".\"user\"\"data\" SET \"display\"\"name\" = @value_0 " +
             "WHERE \"id\"\"key\" = @primary_key;",
             postgreSql);
+    }
+
+    [Fact]
+    public void CastsOnlyPostgreSqlJsonOutputs()
+    {
+        var table = new GeneratorTableReference("app", "documents");
+        ExecutionOutputColumn[] columns =
+        [
+            new("payload", DbDataType.Json),
+            new("description", DbDataType.Text)
+        ];
+
+        string postgreSql = DatabaseExecutionRowStore.BuildUpdate("PostgreSql", table, "id", columns);
+        string sqlServer = DatabaseExecutionRowStore.BuildUpdate("SqlServer", table, "id", columns);
+
+        Assert.Contains("\"payload\" = CAST(@value_0 AS jsonb)", postgreSql, StringComparison.Ordinal);
+        Assert.Contains("\"description\" = @value_1", postgreSql, StringComparison.Ordinal);
+        Assert.Contains("[payload] = @value_0", sqlServer, StringComparison.Ordinal);
     }
 }

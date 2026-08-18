@@ -271,9 +271,11 @@ odrzuceniem dokumentu z brakującą ścieżką.
 Codec wymaga co najmniej jednej reguły i odrzuca niepoprawne literały, duplikaty
 oraz ścieżki nakładające się rodzic–potomek. Zapobiega to zależności wyniku od
 kolejności reguł. Dedykowany panel WPF udostępnia tabelę ścieżek i literałów.
-Wersja 1.0.0 deklaruje wyłącznie `DbDataType.Text`: bieżący executor nie ustawia
-typu parametrów Npgsql dla `json/jsonb`, więc natywne typy PostgreSQL pozostają
-odrębnym zadaniem warstwy zapisu.
+Wersja 1.0.0 deklaruje `DbDataType.Text` i `DbDataType.Json`. Planner przenosi typ
+każdego powiązanego wyjścia do `GeneratorBinding`, a executor przekazuje go do
+warstwy zapisu. PostgreSQL rzutuje wyłącznie parametry wyjść JSON na `jsonb`, który
+ma poprawne przypisanie zarówno do kolumn `jsonb`, jak i `json`; SQL Server nadal
+otrzymuje zwykły parametr tekstowy.
 
 ### Samodzielny EmailAddress 1.0.0
 

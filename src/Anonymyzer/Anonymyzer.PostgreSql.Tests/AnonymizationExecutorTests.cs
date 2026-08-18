@@ -139,7 +139,7 @@ public sealed class AnonymizationExecutorTests
         public Task WriteBatchAsync(
             GeneratorTableReference table,
             string primaryKeyColumn,
-            IReadOnlyList<string> outputColumns,
+            IReadOnlyList<ExecutionOutputColumn> outputColumns,
             IReadOnlyList<ExecutionUpdatedRow> rows,
             CancellationToken cancellationToken)
         {
@@ -148,8 +148,9 @@ public sealed class AnonymizationExecutorTests
             {
                 int index = _rows.FindIndex(row => Equals(row.PrimaryKey, updated.PrimaryKey));
                 var values = new Dictionary<string, object?>(_rows[index].Values, StringComparer.OrdinalIgnoreCase);
-                foreach (string column in outputColumns)
+                foreach (ExecutionOutputColumn outputColumn in outputColumns)
                 {
+                    string column = outputColumn.Name;
                     values[column] = updated.Values[column];
                 }
 

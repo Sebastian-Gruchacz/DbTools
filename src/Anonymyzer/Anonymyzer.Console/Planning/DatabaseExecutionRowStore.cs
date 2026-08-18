@@ -59,7 +59,7 @@ internal sealed class DatabaseExecutionRowStore(
     public Task WriteBatchAsync(
         GeneratorTableReference table,
         string primaryKeyColumn,
-        IReadOnlyList<string> outputColumns,
+        IReadOnlyList<ExecutionOutputColumn> outputColumns,
         IReadOnlyList<ExecutionUpdatedRow> rows,
         CancellationToken cancellationToken)
     {
@@ -81,7 +81,7 @@ internal sealed class DatabaseExecutionRowStore(
                     outputColumns);
                 for (int index = 0; index < outputColumns.Count; index++)
                 {
-                    AddParameter(command, $"value_{index}", row.Values[outputColumns[index]]);
+                    AddParameter(command, $"value_{index}", row.Values[outputColumns[index].Name]);
                 }
 
                 AddParameter(command, "primary_key", row.PrimaryKey);
@@ -136,12 +136,24 @@ internal sealed class DatabaseExecutionRowStore(
         string databaseEngine,
         GeneratorTableReference table,
         string primaryKeyColumn,
-        IReadOnlyList<string> outputColumns)
+        IReadOnlyList<ExecutionOutputColumn> outputColumns)
     {
         string assignments = string.Join(", ", outputColumns.Select((column, index) =>
-            $"{Quote(databaseEngine, column)} = @value_{index}"));
+            $"{Quote(databaseEngine, column.Name)} = {FormatWriteParameter(databaseEngine, column, index)}"));
         return $"UPDATE {Quote(databaseEngine, table.SchemaName)}.{Quote(databaseEngine, table.TableName)} " +
                $"SET {assignments} WHERE {Quote(databaseEngine, primaryKeyColumn)} = @primary_key;";
+    }
+
+    private static string FormatWriteParameter(
+        string databaseEngine,
+        ExecutionOutputColumn column,
+        int index)
+    {
+        string parameter = $"@value_{index}";
+        return databaseEngine.Equals("PostgreSql", StringComparison.OrdinalIgnoreCase)
+               && column.DataType == Anonymyzer.Base.DbDataType.Json
+            ? $"CAST({parameter} AS jsonb)"
+            : parameter;
     }
 
     private static string Quote(string databaseEngine, string identifier)

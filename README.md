@@ -135,7 +135,8 @@ językowe opisuje [docs/anonymyzer-design.md](docs/anonymyzer-design.md).
   dokładny multizbiór wartości oraz opcjonalnie pozycje `NULL`;
 - `FixedText` 1.0.0: stała wartość tekstowa z opcjonalnym zachowaniem `NULL`;
 - `JsonPathRedactor` 1.0.0: selektywna zamiana wartości pod ścieżkami JSON
-  w kolumnach tekstowych, bez ujawniania błędnej wartości źródłowej w komunikacie;
+  w kolumnach tekstowych oraz natywnych PostgreSQL `json/jsonb`, bez ujawniania
+  błędnej wartości źródłowej w komunikacie;
 - `SequentialText` 1.0.0: unikalny w ramach sesji tekst z prefiksem, sufiksem,
   początkiem numeracji i konfigurowalnym dopełnieniem zerami;
 - `EmailAddress` 1.0.0: tryb opaque albo adres oparty na kolumnach imienia i
@@ -216,7 +217,7 @@ językowe opisuje [docs/anonymyzer-design.md](docs/anonymyzer-design.md).
   wymagających wielu skanów lub przypisanych przez grupę;
 - pełnych, ważonych zbiorów danych regionalnych;
 - automatycznej analizy semantyki niestabilnych kolekcji, XML i tekstu swobodnego;
-- zapisu natywnych typów PostgreSQL `json/jsonb`, obsługi XML oraz zmian PK/FK;
+- obsługi XML oraz zmian PK/FK;
 - strategii wyłączania i odbudowy indeksów, constraintów i triggerów.
 
 Kod jest na .NET 10. SQL Server używa `Microsoft.Data.SqlClient` 7.0.2, a
@@ -312,9 +313,9 @@ literał JSON dla każdej wartości zastępczej. Zachowuje wszystkie nieskonfigu
 gałęzie, istniejący `NULL` bazy oraz typ literału; wynik zapisuje jako zwarty JSON.
 Może ignorować brakujące ścieżki albo przerwać wiersz, gdy `RequireEveryPath` jest
 włączone. Reguły zduplikowane i nakładające się są odrzucane, aby wynik nie zależał
-od kolejności. Wersja 1.0.0 jest celowo ograniczona do JSON-u przechowywanego w
-kolumnach tekstowych. Natywne `json/jsonb` wymaga jeszcze typowanych parametrów
-zapisu w providerze PostgreSQL.
+od kolejności. Typ docelowy jest przenoszony przez plan wykonania; provider
+PostgreSQL jawnie rzutuje parametr JSON podczas zapisu, dzięki czemu ten sam
+generator obsługuje zarówno tekst, jak i natywne kolumny `json`/`jsonb`.
 
 `Add column` rozwija najpierw kolumny zapisane w konfiguracji podczas analizy,
 które nie są kandydatami ani nie zostały jeszcze skonfigurowane. Wybranie pozycji

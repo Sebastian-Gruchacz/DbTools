@@ -15,7 +15,7 @@ internal interface IExecutionRowStore
     Task WriteBatchAsync(
         GeneratorTableReference table,
         string primaryKeyColumn,
-        IReadOnlyList<string> outputColumns,
+        IReadOnlyList<ExecutionOutputColumn> outputColumns,
         IReadOnlyList<ExecutionUpdatedRow> rows,
         CancellationToken cancellationToken);
 }
@@ -27,3 +27,5 @@ internal sealed record ExecutionSourceRow(
 internal sealed record ExecutionUpdatedRow(
     object PrimaryKey,
     IReadOnlyDictionary<string, object?> Values);
+
+internal sealed record ExecutionOutputColumn(string Name, Anonymyzer.Base.DbDataType DataType);

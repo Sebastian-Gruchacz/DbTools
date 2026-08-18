@@ -147,6 +147,48 @@ public sealed class AnonymizationExecutorIntegrationTests
         }
     }
 
+    [Fact]
+    public async Task ExecutesJsonPathRedactorOnPostgreSqlJsonAndJsonbColumns()
+    {
+        string connectionString = RequireConnectionString("ANONYMYZER_POSTGRES_CONNECTION", "PostgreSQL");
+        string tableName = "__anonymyzer_json_" + Guid.NewGuid().ToString("N")[..12];
+        using var connection = new NpgsqlConnection(connectionString);
+        connection.Open();
+        DetachedCopyMarker marker = ValidateClone("PostgreSql", connection);
+        ExecuteNonQuery(
+            connection,
+            $"CREATE TABLE public.\"{tableName}\" (\"Id\" integer PRIMARY KEY, \"JsonValue\" json, \"JsonbValue\" jsonb); " +
+            $"INSERT INTO public.\"{tableName}\" (\"Id\", \"JsonValue\", \"JsonbValue\") VALUES " +
+            "(1, '{\"secret\":\"Alice\",\"keep\":1}', '{\"secret\":\"Bob\",\"keep\":2}');");
+
+        try
+        {
+            var generator = new JsonPathRedactorGenerator();
+            AnonymizationConfiguration configuration = CreateJsonConfiguration(
+                generator,
+                connection.Database,
+                marker,
+                tableName);
+            long processed = await ExecutePlanAsync(
+                connection,
+                new PostgreSqlAnonymyzerEngine(connection),
+                "PostgreSql",
+                configuration,
+                [generator]);
+
+            Assert.Equal(1, processed);
+            Assert.Equal(1, ExecuteScalar<int>(
+                connection,
+                $"SELECT COUNT(*) FROM public.\"{tableName}\" WHERE " +
+                "\"JsonValue\"->>'secret' = 'REDACTED' AND \"JsonbValue\"->>'secret' = 'REDACTED' " +
+                "AND (\"JsonValue\"->>'keep')::integer = 1 AND (\"JsonbValue\"->>'keep')::integer = 2;"));
+        }
+        finally
+        {
+            ExecuteNonQuery(connection, $"DROP TABLE public.\"{tableName}\";");
+        }
+    }
+
     private static async Task<long> ExecuteFixtureAsync(
         IDbConnection connection,
         IAnonymyzerEngine engine,
@@ -247,6 +289,75 @@ public sealed class AnonymizationExecutorIntegrationTests
             }
         };
     }
+
+    private static AnonymizationConfiguration CreateJsonConfiguration(
+        JsonPathRedactorGenerator generator,
+        string databaseName,
+        DetachedCopyMarker marker,
+        string tableName)
+    {
+        const string profileId = "json-fixture";
+        var configuration = new AnonymizationConfiguration
+        {
+            Database = new DatabaseTargetConfiguration
+            {
+                DatabaseEngine = "PostgreSql",
+                DatabaseName = databaseName,
+                DetachedCopyMarkerId = marker.MarkerId.ToString("D")
+            },
+            GeneratorProfiles =
+            {
+                new GeneratorProfileConfiguration
+                {
+                    Id = profileId,
+                    GeneratorType = generator.Descriptor.Type,
+                    GeneratorVersion = generator.Descriptor.Version,
+                    Options = generator.Configuration.Serialize(new JsonPathRedactorGeneratorConfiguration
+                    {
+                        Rules =
+                        [
+                            new JsonPathRedactionRuleConfiguration
+                            {
+                                Path = "$/secret",
+                                ReplacementJson = "\"REDACTED\""
+                            }
+                        ],
+                        RequireEveryPath = true
+                    })
+                }
+            }
+        };
+        var table = new TableProcessingOptions
+        {
+            SchemaName = "public",
+            TableName = tableName,
+            Enabled = true
+        };
+        table.Columns.Add(CreateJsonColumn("JsonValue", ordinal: 2, generator, profileId));
+        table.Columns.Add(CreateJsonColumn("JsonbValue", ordinal: 3, generator, profileId));
+        configuration.Tables.Add(table);
+        return configuration;
+    }
+
+    private static ColumnProcessingOptions CreateJsonColumn(
+        string columnName,
+        int ordinal,
+        JsonPathRedactorGenerator generator,
+        string profileId) => new()
+    {
+        Ordinal = ordinal,
+        ColumnName = columnName,
+        DataType = DbDataType.Json.ToString(),
+        MaxLength = 0,
+        Unicode = true,
+        Enabled = true,
+        Generator = new ColumnGeneratorConfiguration
+        {
+            GeneratorType = generator.Descriptor.Type,
+            GeneratorVersion = generator.Descriptor.Version,
+            ProfileId = profileId
+        }
+    };
 
     private static AnonymizationConfiguration CreateConfiguration(
         PersonIdentityGenerator generator,
