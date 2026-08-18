@@ -2,17 +2,19 @@
 
 using System.Data;
 using Anonymyzer.Base;
+using Anonymyzer.Base.Generation;
 using Anonymyzer.Configuration;
 using Anonymyzer.Configuration.Safety;
 using Anonymyzer.Console.Planning;
 using Anonymyzer.Generators.Person;
+using Anonymyzer.Generators.Simple;
 using Anonymyzer.LanguagePack.Polish;
 using Anonymyzer.PostgreSql;
 using Anonymyzer.SqlServer;
 using Microsoft.Data.SqlClient;
 using Npgsql;
 
-public sealed class AnonymizationRowExecutorIntegrationTests
+public sealed class AnonymizationExecutorIntegrationTests
 {
     [Fact]
     public async Task ExecutesPersonIdentityOnIsolatedSqlServerFixture()
@@ -96,6 +98,55 @@ public sealed class AnonymizationRowExecutorIntegrationTests
         }
     }
 
+    [Fact]
+    public async Task ExecutesTextShufflerOnIsolatedPostgreSqlFixture()
+    {
+        string connectionString = RequireConnectionString("ANONYMYZER_POSTGRES_CONNECTION", "PostgreSQL");
+        string tableName = "__anonymyzer_shuffle_" + Guid.NewGuid().ToString("N")[..12];
+        using var connection = new NpgsqlConnection(connectionString);
+        connection.Open();
+        DetachedCopyMarker marker = ValidateClone("PostgreSql", connection);
+        ExecuteNonQuery(
+            connection,
+            $"CREATE TABLE public.\"{tableName}\" (\"Id\" integer PRIMARY KEY, \"Name\" varchar(100)); " +
+            $"INSERT INTO public.\"{tableName}\" (\"Id\", \"Name\") VALUES " +
+            "(1, 'Ada'), (2, 'Grace'), (3, 'Margaret');");
+
+        try
+        {
+            var generator = new ShufflingTextGenerator();
+            AnonymizationConfiguration configuration = CreateShufflerConfiguration(
+                generator,
+                connection.Database,
+                marker,
+                tableName);
+            long processed = await ExecutePlanAsync(
+                connection,
+                new PostgreSqlAnonymyzerEngine(connection),
+                "PostgreSql",
+                configuration,
+                [generator]);
+
+            Assert.Equal(3, processed);
+            Assert.Equal(3, ExecuteScalar<int>(
+                connection,
+                $"SELECT COUNT(*) FROM public.\"{tableName}\" WHERE \"Name\" IN ('Ada', 'Grace', 'Margaret');"));
+            Assert.Equal(3, ExecuteScalar<int>(
+                connection,
+                $"SELECT COUNT(DISTINCT \"Name\") FROM public.\"{tableName}\";"));
+            Assert.True(ExecuteScalar<int>(
+                connection,
+                $"SELECT COUNT(*) FROM public.\"{tableName}\" " +
+                "WHERE (\"Id\" = 1 AND \"Name\" <> 'Ada') " +
+                "OR (\"Id\" = 2 AND \"Name\" <> 'Grace') " +
+                "OR (\"Id\" = 3 AND \"Name\" <> 'Margaret');") > 0);
+        }
+        finally
+        {
+            ExecuteNonQuery(connection, $"DROP TABLE public.\"{tableName}\";");
+        }
+    }
+
     private static async Task<long> ExecuteFixtureAsync(
         IDbConnection connection,
         IAnonymyzerEngine engine,
@@ -112,7 +163,17 @@ public sealed class AnonymizationRowExecutorIntegrationTests
             marker,
             schemaName,
             tableName);
-        AnonymizationExecutionPlan plan = new AnonymizationExecutionPlanner([generator])
+        return await ExecutePlanAsync(connection, engine, databaseEngine, configuration, [generator]);
+    }
+
+    private static async Task<long> ExecutePlanAsync(
+        IDbConnection connection,
+        IAnonymyzerEngine engine,
+        string databaseEngine,
+        AnonymizationConfiguration configuration,
+        IReadOnlyList<IGenerator> generators)
+    {
+        AnonymizationExecutionPlan plan = new AnonymizationExecutionPlanner(generators)
             .Build(configuration, batchSize: 2);
         ExecutionPlanDatabaseInspection inspection = new ExecutionPlanDatabaseInspector()
             .Inspect(configuration, plan, engine);
@@ -120,11 +181,71 @@ public sealed class AnonymizationRowExecutorIntegrationTests
             .Assess(plan, inspection);
         Assert.True(writeSlice.IsSupported, writeSlice.Message);
 
-        return await new AnonymizationRowExecutor([generator]).ExecuteAsync(
+        return await new AnonymizationExecutor(generators).ExecuteAsync(
             plan,
             writeSlice,
             new DatabaseExecutionRowStore(connection, databaseEngine),
             TestContext.Current.CancellationToken);
+    }
+
+    private static AnonymizationConfiguration CreateShufflerConfiguration(
+        ShufflingTextGenerator generator,
+        string databaseName,
+        DetachedCopyMarker marker,
+        string tableName)
+    {
+        const string profileId = "shuffle-fixture";
+        return new AnonymizationConfiguration
+        {
+            Database = new DatabaseTargetConfiguration
+            {
+                DatabaseEngine = "PostgreSql",
+                DatabaseName = databaseName,
+                DetachedCopyMarkerId = marker.MarkerId.ToString("D")
+            },
+            GeneratorProfiles =
+            {
+                new GeneratorProfileConfiguration
+                {
+                    Id = profileId,
+                    GeneratorType = generator.Descriptor.Type,
+                    GeneratorVersion = generator.Descriptor.Version,
+                    Options = generator.Configuration.Serialize(new ShufflingTextGeneratorConfiguration
+                    {
+                        Seed = 42,
+                        MinimumPopulation = 2,
+                        PreserveNulls = true
+                    })
+                }
+            },
+            Tables =
+            {
+                new TableProcessingOptions
+                {
+                    SchemaName = "public",
+                    TableName = tableName,
+                    Enabled = true,
+                    Columns =
+                    {
+                        new ColumnProcessingOptions
+                        {
+                            Ordinal = 2,
+                            ColumnName = "Name",
+                            DataType = DbDataType.Text.ToString(),
+                            MaxLength = 100,
+                            Unicode = true,
+                            Enabled = true,
+                            Generator = new ColumnGeneratorConfiguration
+                            {
+                                GeneratorType = generator.Descriptor.Type,
+                                GeneratorVersion = generator.Descriptor.Version,
+                                ProfileId = profileId
+                            }
+                        }
+                    }
+                }
+            }
+        };
     }
 
     private static AnonymizationConfiguration CreateConfiguration(

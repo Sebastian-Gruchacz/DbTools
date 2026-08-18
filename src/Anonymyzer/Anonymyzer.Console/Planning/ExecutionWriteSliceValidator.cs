@@ -26,19 +26,11 @@ internal sealed class ExecutionWriteSliceValidator
 
         GeneratorTableReference targetTable = targetTables[0];
         GeneratorExecutionPlanStep? unsupportedScope = plan.Steps.FirstOrDefault(step =>
-            step.Generator.Scope != GeneratorExecutionScope.Row);
+            step.Generator.Scope == GeneratorExecutionScope.Relational);
         if (unsupportedScope is not null)
         {
             return Unsupported(
                 $"step '{unsupportedScope.Id}' has unsupported scope {unsupportedScope.Generator.Scope}");
-        }
-
-        GeneratorDataRequirement? completeScan = plan.Steps
-            .SelectMany(step => step.DataRequirements)
-            .FirstOrDefault(requirement => requirement.RequiresCompleteScan);
-        if (completeScan is not null)
-        {
-            return Unsupported($"data requirement '{completeScan.Alias}' requires a complete scan");
         }
 
         GeneratorDataRequirement? externalRequirement = plan.Steps
@@ -49,6 +41,17 @@ internal sealed class ExecutionWriteSliceValidator
         if (externalRequirement is not null)
         {
             return Unsupported($"data requirement '{externalRequirement.Alias}' reads another table");
+        }
+
+        GeneratorDataRequirement? generatedCompleteScan = plan.Steps
+            .SelectMany(step => step.DataRequirements)
+            .FirstOrDefault(requirement =>
+                requirement.RequiresCompleteScan
+                && requirement.ValueSource == GeneratorValueSource.Generated);
+        if (generatedCompleteScan is not null)
+        {
+            return Unsupported(
+                $"complete-scan requirement '{generatedCompleteScan.Alias}' needs generated values");
         }
 
         string[] primaryKeyColumns = plan.Steps
@@ -73,7 +76,7 @@ internal sealed class ExecutionWriteSliceValidator
 
         return new ExecutionWriteSliceAssessment(
             true,
-            "ready for the single-table Row write slice",
+            "ready for the single-table Row/Column write slice",
             targetTable,
             primaryKeyColumn);
     }

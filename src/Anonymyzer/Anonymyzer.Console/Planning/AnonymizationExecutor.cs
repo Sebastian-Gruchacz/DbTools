@@ -2,7 +2,7 @@
 
 using Anonymyzer.Base.Generation;
 
-internal sealed class AnonymizationRowExecutor(IEnumerable<IGenerator> generators)
+internal sealed class AnonymizationExecutor(IEnumerable<IGenerator> generators)
 {
     private readonly IReadOnlyDictionary<string, IGenerator> _generators = generators.ToDictionary(
         generator => GeneratorKey(generator.Descriptor.Type, generator.Descriptor.Version),
@@ -24,7 +24,11 @@ internal sealed class AnonymizationRowExecutor(IEnumerable<IGenerator> generator
             throw new InvalidOperationException($"Execution plan is not write-ready: {writeSlice.Message}.");
         }
 
-        IGeneratorSession[] sessions = await PrepareSessionsAsync(plan, cancellationToken);
+        IGeneratorSession[] sessions = await PrepareSessionsAsync(
+            plan,
+            writeSlice,
+            store,
+            cancellationToken);
         try
         {
             string[] outputColumns = plan.Steps
@@ -88,9 +92,16 @@ internal sealed class AnonymizationRowExecutor(IEnumerable<IGenerator> generator
 
     private async Task<IGeneratorSession[]> PrepareSessionsAsync(
         AnonymizationExecutionPlan plan,
+        ExecutionWriteSliceAssessment writeSlice,
+        IExecutionRowStore store,
         CancellationToken cancellationToken)
     {
         var sessions = new List<IGeneratorSession>(plan.Steps.Count);
+        var dataReader = new StoreGeneratorDataReader(
+            store,
+            writeSlice.TargetTable!,
+            writeSlice.PrimaryKeyColumn!,
+            plan.BatchSize);
         try
         {
             foreach (GeneratorExecutionPlanStep step in plan.Steps)
@@ -102,7 +113,7 @@ internal sealed class AnonymizationRowExecutor(IEnumerable<IGenerator> generator
                     : throw new InvalidOperationException(
                         $"Generator {step.Generator.Type} {step.Generator.Version} is not installed.");
                 sessions.Add(await generator.PrepareAsync(
-                    new GeneratorPreparationContext(step.Binding, new RejectingDataReader()),
+                    new GeneratorPreparationContext(step.Binding, dataReader),
                     step.Configuration,
                     cancellationToken));
             }
@@ -122,15 +133,50 @@ internal sealed class AnonymizationRowExecutor(IEnumerable<IGenerator> generator
 
     private static string GeneratorKey(string type, string version) => $"{type}\u001f{version}";
 
-    private sealed class RejectingDataReader : IGeneratorDataReader
+    private sealed class StoreGeneratorDataReader(
+        IExecutionRowStore store,
+        GeneratorTableReference targetTable,
+        string primaryKeyColumn,
+        int batchSize) : IGeneratorDataReader
     {
-        public IAsyncEnumerable<GeneratorDataRow> ReadAsync(
+        public async IAsyncEnumerable<GeneratorDataRow> ReadAsync(
             GeneratorDataRequirement requirement,
+            [System.Runtime.CompilerServices.EnumeratorCancellation]
             CancellationToken cancellationToken = default)
         {
-            throw new InvalidOperationException(
-                "The first Row write slice cannot prepare a generator from a database scan.");
+            if (!TableKey(requirement.Table).Equals(TableKey(targetTable), StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidOperationException(
+                    $"Generator data requirement '{requirement.Alias}' reads outside the validated target table.");
+            }
+
+            object? afterPrimaryKey = null;
+            while (true)
+            {
+                IReadOnlyList<ExecutionSourceRow> rows = await store.ReadNextBatchAsync(
+                    targetTable,
+                    primaryKeyColumn,
+                    requirement.Columns,
+                    afterPrimaryKey,
+                    batchSize,
+                    cancellationToken);
+                if (rows.Count == 0)
+                {
+                    yield break;
+                }
+
+                foreach (ExecutionSourceRow row in rows)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    yield return new GeneratorDataRow(row.Values);
+                }
+
+                afterPrimaryKey = rows[^1].PrimaryKey;
+            }
         }
+
+        private static string TableKey(GeneratorTableReference table) =>
+            $"{table.SchemaName}\u001f{table.TableName}";
     }
 
     private sealed class MutableExecutionRow(ExecutionSourceRow sourceRow)

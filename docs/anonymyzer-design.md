@@ -91,9 +91,10 @@ w `finally`. Nie korzysta z istniejących kontenerów ani baz.
 
 Opcjonalne testy executora wymagają `ANONYMYZER_POSTGRES_CONNECTION` albo
 `ANONYMYZER_SQLSERVER_CONNECTION`. Po walidacji markera tworzą w jawnie wskazanym
-klonie tabelę o losowej, jednoznacznej nazwie, wykonują na trzech wierszach grupę
-`PersonIdentity`, weryfikują wynik i usuwają dokładnie tę tabelę w `finally`.
-Istniejące tabele klona nie są odczytywane ani modyfikowane przez ten scenariusz.
+klonie tabele o losowych, jednoznacznych nazwach, wykonują na trzech wierszach
+grupę `PersonIdentity`, a na PostgreSQL także pełny `TextShuffler`, weryfikują
+wynik i usuwają dokładnie te tabele w `finally`. Istniejące tabele klona nie są
+odczytywane ani modyfikowane przez ten scenariusz.
 
 ## Model generatorów i konfiguracji 0.4
 
@@ -210,14 +211,17 @@ Liczbę wierszy i koszt pamięci uzupełnia osobny inspektor bieżącego schemat
 uruchamiany przez `run --dry-run` po zbudowaniu planu.
 
 Ten sam inspektor zapisuje rzeczywiste kolumny PK. Walidator pierwszego wycinka
-zapisu dopuszcza dokładnie jedną tabelę,
-wyłącznie kroki `Row`, jeden niezmieniany klucz główny i wymagania danych z tego
-samego wiersza. Pełny skan, scope `Column`/`Relational`, brak lub złożony PK,
-zmiana PK albo odczyt innej tabeli daje w `dry-run` jawny status `not ready`.
-`--execute` działa wyłącznie dla statusu `ready`: czyta kolejne batche keyset
-pagingiem, utrzymuje sesje generatorów między batchami i zapisuje batch w jednej
-transakcji. Aktualizacja innej liczby wierszy niż dokładnie jeden dla danego PK
-powoduje rollback batcha. Nie ma jeszcze checkpointu ani automatycznej walidacji
+zapisu dopuszcza dokładnie jedną tabelę, kroki `Row`/`Column`, jeden niezmieniany
+klucz główny i wymagania danych z tej samej tabeli. Scope `Relational`, pełny skan
+wartości `Generated`, brak lub złożony PK, zmiana PK albo odczyt innej tabeli daje
+w `dry-run` jawny status `not ready`. `--execute` działa wyłącznie dla statusu
+`ready`: przed pierwszym
+zapisem przygotowuje sesje `Column` z pełnego, oryginalnego skanu keyset, potem
+czyta kolejne batche tym samym pagingiem, utrzymuje sesje generatorów między
+batchami i zapisuje batch w jednej transakcji. Aktualizacja innej liczby wierszy
+niż dokładnie jeden dla danego PK powoduje rollback batcha. Pełny skan jest
+buforowany przez generator, dlatego estymata pamięci z `dry-run` jest istotnym
+ostrzeżeniem operatora. Nie ma jeszcze checkpointu ani automatycznej walidacji
 constraintów po zakończeniu.
 
 Reader przekazuje dane strumieniowo, natomiast generator decyduje, co buforuje.

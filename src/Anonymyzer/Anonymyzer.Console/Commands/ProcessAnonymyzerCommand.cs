@@ -81,7 +81,7 @@ internal sealed class ProcessAnonymyzerCommand
         }
 
         var store = new DatabaseExecutionRowStore(connection, configuration.Database.DatabaseEngine);
-        long processedRows = new AnonymizationRowExecutor(_generatorsProvider.GetAllGenerators())
+        long processedRows = new AnonymizationExecutor(_generatorsProvider.GetAllGenerators())
             .ExecuteAsync(plan, writeSlice, store)
             .GetAwaiter()
             .GetResult();

@@ -15,6 +15,6 @@ internal static class CliHelp
 
         Connection strings are accepted only through the named environment variable.
         --execute modifies only a validated detached clone and currently supports one table,
-        Row generators, a single unchanged primary key, and no cross-table/full-scan input.
+        Row and Column generators, a single unchanged primary key, and no cross-table input.
         """;
 }

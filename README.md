@@ -194,8 +194,8 @@ językowe opisuje [docs/anonymyzer-design.md](docs/anonymyzer-design.md).
   zakresy generatorów, mapowania wyjść, wymagane skany i batch po 1000 wierszy;
 - porównanie aktywnego planu z bieżącym schematem klona przed wykonaniem,
   wraz z estymacją liczby wierszy i górnego zużycia pamięci pełnych skanów;
-- ocena gotowości pierwszego wycinka zapisu: dokładnie jedna tabela, wyłącznie
-  kroki `Row`, jeden niezmieniany PK oraz brak pełnych i międzytabelowych skanów;
+- ocena gotowości pierwszego wycinka zapisu: dokładnie jedna tabela, kroki
+  `Row`/`Column`, jeden niezmieniany PK oraz brak skanów międzytabelowych;
 - deterministyczny detektor kandydatów EN/PL: `snake_case`, `camelCase`,
   prefiksy techniczne, polskie znaki, score i negatywne flagi; propozycje nigdy
   nie ustawiają `Enabled`;
@@ -206,8 +206,8 @@ językowe opisuje [docs/anonymyzer-design.md](docs/anonymyzer-design.md).
 
 ### Czego jeszcze nie ma
 
-- wykonania planów wielotabelowych, `Column` i `Relational`; `--execute` obsługuje
-  obecnie tylko jedną tabelę, kroki `Row` i pojedynczy niezmieniany PK;
+- wykonania planów wielotabelowych i `Relational`; `--execute` obsługuje obecnie
+  jedną tabelę, kroki `Row`/`Column` i pojedynczy niezmieniany PK;
 - checkpointów, wznawiania przerwanego wykonania i raportu walidacji po zapisie;
 - pozostałych generatorów grupowych;
 - podglądu generatorów `Relational` oraz przyszłych generatorów `Column`
@@ -317,10 +317,10 @@ jednostkowe nadal się wykonują. Fixture znajduje się w
 `tests/postgresql/init.sql`. Bieżąca implementacja generowania konfiguracji
 tylko czyta metadane odłączonej kopii i nie zapisuje connection stringa w JSON.
 Testy executora są opt-in dla `ANONYMYZER_POSTGRES_CONNECTION` oraz
-`ANONYMYZER_SQLSERVER_CONNECTION`. Po walidacji markera tworzą tabelę o unikalnej
-nazwie, uruchamiają `PersonIdentity` i usuwają wyłącznie tę tabelę w `finally`;
-nie modyfikują istniejących tabel klona. Connection string nie trafia do logu ani
-konfiguracji.
+`ANONYMYZER_SQLSERVER_CONNECTION`. Po walidacji markera tworzą tabele o unikalnych
+nazwach, uruchamiają `PersonIdentity`, a na PostgreSQL także pełny `TextShuffler`,
+i usuwają wyłącznie te tabele w `finally`; nie modyfikują istniejących tabel
+klona. Connection string nie trafia do logu ani konfiguracji.
 
 ## Stan gałęzi
 

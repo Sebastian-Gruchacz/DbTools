@@ -4,7 +4,7 @@ using Anonymyzer.Base.Generation;
 using Anonymyzer.Console.Planning;
 using Anonymyzer.Generators.Simple;
 
-public sealed class AnonymizationRowExecutorTests
+public sealed class AnonymizationExecutorTests
 {
     [Fact]
     public async Task ProcessesRowsInKeysetBatchesAndWritesGeneratedValues()
@@ -31,7 +31,7 @@ public sealed class AnonymizationRowExecutorTests
             new ExecutionSourceRow(3, new Dictionary<string, object?> { ["id"] = 3, ["name"] = "Grace" })
         ]);
 
-        long processed = await new AnonymizationRowExecutor([generator]).ExecuteAsync(
+        long processed = await new AnonymizationExecutor([generator]).ExecuteAsync(
             plan,
             writeSlice,
             store,
@@ -51,7 +51,7 @@ public sealed class AnonymizationRowExecutorTests
         var store = new FakeExecutionRowStore(Array.Empty<ExecutionSourceRow>());
 
         InvalidOperationException exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
-            new AnonymizationRowExecutor([generator]).ExecuteAsync(
+            new AnonymizationExecutor([generator]).ExecuteAsync(
                 plan,
                 new ExecutionWriteSliceAssessment(false, "no primary key", null, null),
                 store,
@@ -59,6 +59,50 @@ public sealed class AnonymizationRowExecutorTests
 
         Assert.Contains("not write-ready", exception.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Empty(store.WrittenBatchSizes);
+    }
+
+    [Fact]
+    public async Task PreparesColumnShufflerFromCompleteOriginalColumnBeforeWritingBatches()
+    {
+        var generator = new ShufflingTextGenerator();
+        var table = new GeneratorTableReference("public", "people");
+        var binding = new GeneratorBinding(
+            table,
+            new Dictionary<string, string> { [ShufflingTextGenerator.ValueOutput] = "name" });
+        GeneratorDataRequirement requirement = generator.GetDataRequirements(
+            binding,
+            new ShufflingTextGeneratorConfiguration()).Single();
+        var step = new GeneratorExecutionPlanStep(
+            "public.people/column:name",
+            table,
+            generator.Descriptor,
+            binding,
+            new ShufflingTextGeneratorConfiguration { Seed = 42, MinimumPopulation = 2 },
+            [requirement],
+            2);
+        var plan = new AnonymizationExecutionPlan(2, [step]);
+        var store = new FakeExecutionRowStore(
+        [
+            new ExecutionSourceRow(1, new Dictionary<string, object?> { ["id"] = 1, ["name"] = "Ada" }),
+            new ExecutionSourceRow(2, new Dictionary<string, object?> { ["id"] = 2, ["name"] = "Grace" }),
+            new ExecutionSourceRow(3, new Dictionary<string, object?> { ["id"] = 3, ["name"] = "Margaret" })
+        ]);
+
+        long processed = await new AnonymizationExecutor([generator]).ExecuteAsync(
+            plan,
+            new ExecutionWriteSliceAssessment(true, "ready", table, "id"),
+            store,
+            TestContext.Current.CancellationToken);
+
+        Assert.Equal(3, processed);
+        Assert.Equal([2, 1], store.WrittenBatchSizes);
+        Assert.Equal(
+            ["Ada", "Grace", "Margaret"],
+            store.Rows.Select(row => (string)row.Values["name"]!).Order().ToArray());
+        Assert.NotEqual(
+            ["Ada", "Grace", "Margaret"],
+            store.Rows.Select(row => (string)row.Values["name"]!).ToArray());
+        Assert.Equal(6, store.ReadColumnSets.Count);
     }
 
     private sealed class FakeExecutionRowStore(IEnumerable<ExecutionSourceRow> rows) : IExecutionRowStore

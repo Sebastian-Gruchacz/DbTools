@@ -24,15 +24,36 @@ public sealed class ExecutionWriteSliceValidatorTests
     }
 
     [Fact]
-    public void RejectsColumnScope()
+    public void AcceptsSameTableColumnScopeWithCompleteScan()
     {
-        GeneratorExecutionPlanStep step = CreateStep(GeneratorExecutionScope.Column, "notes");
+        var requirement = new GeneratorDataRequirement(
+            "source-column",
+            new GeneratorTableReference("public", "people"),
+            ["notes"],
+            GeneratorValueSource.Original,
+            RequiresCompleteScan: true);
+        GeneratorExecutionPlanStep step = CreateStep(
+            GeneratorExecutionScope.Column,
+            "notes",
+            [requirement]);
+
+        ExecutionWriteSliceAssessment assessment = new ExecutionWriteSliceValidator()
+            .Assess(CreatePlan(step), CreateInspection(step, "id"));
+
+        Assert.True(assessment.IsSupported);
+        Assert.Contains("Row/Column", assessment.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void RejectsRelationalScope()
+    {
+        GeneratorExecutionPlanStep step = CreateStep(GeneratorExecutionScope.Relational, "notes");
 
         ExecutionWriteSliceAssessment assessment = new ExecutionWriteSliceValidator()
             .Assess(CreatePlan(step), CreateInspection(step, "id"));
 
         Assert.False(assessment.IsSupported);
-        Assert.Contains("unsupported scope Column", assessment.Message, StringComparison.Ordinal);
+        Assert.Contains("unsupported scope Relational", assessment.Message, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -83,6 +104,27 @@ public sealed class ExecutionWriteSliceValidatorTests
 
         Assert.False(assessment.IsSupported);
         Assert.Contains("reads another table", assessment.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void RejectsCompleteScanOfGeneratedValues()
+    {
+        var requirement = new GeneratorDataRequirement(
+            "generated-source",
+            new GeneratorTableReference("public", "people"),
+            ["name"],
+            GeneratorValueSource.Generated,
+            RequiresCompleteScan: true);
+        GeneratorExecutionPlanStep step = CreateStep(
+            GeneratorExecutionScope.Column,
+            "notes",
+            [requirement]);
+
+        ExecutionWriteSliceAssessment assessment = new ExecutionWriteSliceValidator()
+            .Assess(CreatePlan(step), CreateInspection(step, "id"));
+
+        Assert.False(assessment.IsSupported);
+        Assert.Contains("needs generated values", assessment.Message, StringComparison.Ordinal);
     }
 
     private static GeneratorExecutionPlanStep CreateStep(
