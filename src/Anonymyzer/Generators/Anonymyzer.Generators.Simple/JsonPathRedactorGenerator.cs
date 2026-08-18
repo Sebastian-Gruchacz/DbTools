@@ -19,7 +19,8 @@ public sealed class JsonPathRedactorGenerator : GeneratorBase<JsonPathRedactorGe
         DbDataType.Text)
     {
         Outputs = [new GeneratorOutputDescriptor(ValueOutput, "JSON value", string.Empty, Required: true)],
-        SupportedDataTypes = [DbDataType.Text, DbDataType.Json]
+        SupportedDataTypes = [DbDataType.Text, DbDataType.Json],
+        RequiresExistingValue = true
     };
 
     private static readonly JsonPathRedactorGeneratorConfigurationCodec ConfigurationCodec = new();

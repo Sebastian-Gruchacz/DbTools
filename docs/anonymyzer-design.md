@@ -149,11 +149,14 @@ JSON nie zmieniają dokumentu. `New`, `Open` i zamknięcie aplikacji wymagają w
 decyzji `Save / Don't Save / Cancel`. Flaga jest czyszczona dopiero po udanym
 zapisie albo załadowaniu innego dokumentu.
 
-Podgląd generatorów `Row` uruchamia ich rzeczywistą sesję w pamięci, bez dostępu
-do bazy. Obejmuje grupy wielokolumnowe i generatory `Row` przypisane bezpośrednio
-do jednej kolumny; lokalne `Options` są nakładane na profil tak samo jak w
-plannerze. Dla pojedynczej kolumny operator może otworzyć kilka niemodalnych okien
-surowych wartości `non-null` z odłączonego klona.
+Podgląd generatorów `Row` uruchamia ich rzeczywistą sesję w pamięci. Generatory
+syntetyczne nie wymagają dostępu do bazy. Generator z flagą
+`RequiresExistingValue`, obecnie `JsonPathRedactor`, pobiera małą próbkę po
+ponownej walidacji markera klona, po czym modyfikuje dokumenty wyłącznie w pamięci.
+Obejmuje to przypisanie bezpośrednie oraz jednowyjściową grupę. Lokalne `Options`
+są nakładane na profil tak samo jak w plannerze. Obcięte próbki nie są przekazywane
+do parsera. Dla pojedynczej kolumny operator może również otworzyć kilka
+niemodalnych okien surowych wartości `non-null` z odłączonego klona.
 
 Bezpośrednio przypisany `TextShuffler` ma ograniczony podgląd `Column`. Operator
 wskazuje zmienną środowiskową połączenia i limit 2–50 wierszy. Reader ponownie

@@ -7,6 +7,15 @@ using Newtonsoft.Json.Linq;
 public class JsonPathRedactorGeneratorTests
 {
     [Fact]
+    public void DescriptorRequiresAnExistingTextOrJsonValue()
+    {
+        GeneratorDescriptor descriptor = new JsonPathRedactorGenerator().Descriptor;
+
+        Assert.True(descriptor.RequiresExistingValue);
+        Assert.Equal([Anonymyzer.Base.DbDataType.Text, Anonymyzer.Base.DbDataType.Json], descriptor.SupportedDataTypes);
+    }
+
+    [Fact]
     public async Task ReplacesConfiguredValuesAndLeavesTheRestOfDocumentUntouched()
     {
         JsonPathRedactorGeneratorConfiguration configuration = Configure(

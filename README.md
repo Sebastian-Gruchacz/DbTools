@@ -173,11 +173,14 @@ językowe opisuje [docs/anonymyzer-design.md](docs/anonymyzer-design.md).
   `example.invalid` jest celowo niedostarczalna;
 - dedykowany panel WPF konfiguracji `PersonIdentity`;
 - bezpieczny podgląd generatorów `Row`, także przypisanych bezpośrednio do jednej
-  kolumny, wykonywany w pamięci bez połączenia z bazą;
+  kolumny; generatory syntetyczne działają bez połączenia, a `JsonPathRedactor`
+  pobiera wyłącznie małą próbkę po ponownej walidacji klona;
 - podgląd bezpośrednio przypisanego `TextShuffler`: 2–50 wierszy odczytywanych
   tylko z ponownie zwalidowanego klona, po czym prawdziwa sesja generatora działa
   wyłącznie w pamięci; wartości są ograniczone do 32 768 znaków, a connection
   string pochodzi ze zmiennej środowiskowej;
+- podgląd `JsonPathRedactor` na kompletnych, nieobciętych wartościach z tej samej
+  bezpiecznej ścieżki próbkowania; dokumenty są zmieniane wyłącznie w pamięci;
 - niemodalne, tylko-odczytowe okna wartości `non-null` dla dowolnej kolumny z
   konfiguracji: limit 1–50, wiele okien naraz, kopiowanie i ponowna walidacja
   nazwy oraz markera klona przed każdym odczytem;

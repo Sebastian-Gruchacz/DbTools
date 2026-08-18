@@ -55,6 +55,31 @@ internal sealed class GeneratorPreviewService(GeneratorCatalog catalog)
                 var binding = new GeneratorBinding(
                     new GeneratorTableReference(table.SchemaName, table.TableName),
                     group.Bindings);
+                if (generator.Descriptor.RequiresExistingValue)
+                {
+                    if (group.Bindings.Count != 1 || generator.Descriptor.Outputs.Count != 1)
+                    {
+                        SetGroupMessage(samples, group, "existing-value preview supports one output");
+                        continue;
+                    }
+
+                    string columnName = group.Bindings.Values.Single();
+                    ColumnProcessingOptions column = table.Columns.Single(candidate =>
+                        candidate.ColumnName.Equals(columnName, StringComparison.OrdinalIgnoreCase));
+                    samples[columnName] = await GenerateExistingValuePreviewAsync(
+                        anonymizationConfiguration,
+                        table,
+                        column,
+                        generator,
+                        configuration,
+                        binding,
+                        generator.Descriptor.Outputs.Single(),
+                        connectionEnvironmentVariable,
+                        maximumRows,
+                        cancellationToken);
+                    continue;
+                }
+
                 await using IGeneratorSession session = await generator.PrepareAsync(
                     new GeneratorPreparationContext(binding, new RejectingDataReader()),
                     configuration,
@@ -132,6 +157,22 @@ internal sealed class GeneratorPreviewService(GeneratorCatalog catalog)
                     continue;
                 }
 
+                if (generator.Descriptor.RequiresExistingValue)
+                {
+                    samples[column.ColumnName] = await GenerateExistingValuePreviewAsync(
+                        anonymizationConfiguration,
+                        table,
+                        column,
+                        generator,
+                        configuration,
+                        binding,
+                        output,
+                        connectionEnvironmentVariable,
+                        maximumRows,
+                        cancellationToken);
+                    continue;
+                }
+
                 await using IGeneratorSession session = await generator.PrepareAsync(
                     new GeneratorPreparationContext(binding, new RejectingDataReader()),
                     configuration,
@@ -171,11 +212,64 @@ internal sealed class GeneratorPreviewService(GeneratorCatalog catalog)
 
         IEnumerable<string> profileIds = table.Columns
             .Where(column => string.IsNullOrWhiteSpace(column.GenerationGroupId))
-            .Select(column => column.Generator.ProfileId);
+            .Select(column => column.Generator.ProfileId)
+            .Concat(table.GenerationGroups.Select(group => group.ProfileId));
         return profileIds.Any(profileId =>
             profilesById.TryGetValue(profileId, out GeneratorProfileConfiguration? profile)
-            && catalog.Find(profile.GeneratorType, profile.GeneratorVersion)?.Descriptor.Scope
-                == GeneratorExecutionScope.Column);
+            && catalog.Find(profile.GeneratorType, profile.GeneratorVersion)?.Descriptor is { } descriptor
+            && (descriptor.Scope == GeneratorExecutionScope.Column || descriptor.RequiresExistingValue));
+    }
+
+    private static async Task<string> GenerateExistingValuePreviewAsync(
+        AnonymizationConfiguration anonymizationConfiguration,
+        TableProcessingOptions table,
+        ColumnProcessingOptions column,
+        IGenerator generator,
+        object generatorConfiguration,
+        GeneratorBinding binding,
+        GeneratorOutputDescriptor output,
+        string? connectionEnvironmentVariable,
+        int maximumRows,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(connectionEnvironmentVariable))
+        {
+            return "requires cloned data";
+        }
+
+        IReadOnlyList<ColumnSample> loaded = await new ColumnSampleReader().ReadAsync(
+            anonymizationConfiguration,
+            table,
+            column,
+            connectionEnvironmentVariable,
+            maximumRows,
+            cancellationToken);
+        ColumnSample[] complete = loaded.Where(sample => !sample.WasTruncated).ToArray();
+        if (complete.Length == 0)
+        {
+            return loaded.Count == 0 ? "no non-null rows in clone sample" : "clone sample values exceed preview limit";
+        }
+
+        await using IGeneratorSession session = await generator.PrepareAsync(
+            new GeneratorPreparationContext(binding, new RejectingDataReader()),
+            generatorConfiguration,
+            cancellationToken);
+        var generatedValues = new List<string>(complete.Length);
+        foreach (ColumnSample sample in complete)
+        {
+            var row = new PreviewRow();
+            row.SetValue(column.ColumnName, sample.Value);
+            await session.ApplyAsync(row, cancellationToken);
+            generatedValues.Add(FormatSample(row.GetBoundValue(column.ColumnName), output.Name));
+        }
+
+        string displayedValues = string.Join(" | ", generatedValues.Take(3));
+        if (generatedValues.Count > 3)
+        {
+            displayedValues += " | …";
+        }
+
+        return $"{displayedValues} [{generatedValues.Count}-row clone sample]";
     }
 
     private static async Task<string> GenerateColumnPreviewAsync(
