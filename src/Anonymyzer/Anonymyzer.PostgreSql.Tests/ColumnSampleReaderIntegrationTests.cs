@@ -1,5 +1,6 @@
 ﻿namespace Anonymyzer.PostgreSql.Tests;
 
+using Anonymyzer.Base.Generation;
 using Anonymyzer.Configuration;
 using Anonymyzer.DatabaseAccess;
 
@@ -68,6 +69,49 @@ public sealed class ColumnSampleReaderIntegrationTests
                 "UNUSED_CONNECTION",
                 maximumRows: 51,
                 TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public void RejectsGeneratorPreviewSizeAboveSafetyLimit()
+    {
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            new LimitedGeneratorPreviewDataReader(
+                new AnonymizationConfiguration(),
+                "UNUSED_CONNECTION",
+                maximumRows: LimitedGeneratorPreviewDataReader.MaximumPreviewRows + 1));
+    }
+
+    [Fact]
+    public async Task RejectsGeneratorPreviewColumnOutsideConfigurationBeforeConnecting()
+    {
+        var table = new TableProcessingOptions
+        {
+            SchemaName = "public",
+            TableName = "customer_data",
+            Columns =
+            {
+                new ColumnProcessingOptions { ColumnName = "display_name" }
+            }
+        };
+        var configuration = new AnonymizationConfiguration { Tables = { table } };
+        var reader = new LimitedGeneratorPreviewDataReader(configuration, "UNUSED_CONNECTION", maximumRows: 10);
+        var requirement = new GeneratorDataRequirement(
+            "source-column",
+            new GeneratorTableReference("public", "customer_data"),
+            ["secret_column"],
+            GeneratorValueSource.Original,
+            RequiresCompleteScan: true);
+
+        InvalidOperationException exception = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
+        {
+            await foreach (GeneratorDataRow _ in reader.ReadAsync(
+                               requirement,
+                               TestContext.Current.CancellationToken))
+            {
+            }
+        });
+
+        Assert.Contains("does not belong", exception.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

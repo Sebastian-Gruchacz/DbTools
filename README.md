@@ -171,6 +171,10 @@ językowe opisuje [docs/anonymyzer-design.md](docs/anonymyzer-design.md).
 - dedykowany panel WPF konfiguracji `PersonIdentity`;
 - bezpieczny podgląd generatorów `Row`, także przypisanych bezpośrednio do jednej
   kolumny, wykonywany w pamięci bez połączenia z bazą;
+- podgląd bezpośrednio przypisanego `TextShuffler`: 2–50 wierszy odczytywanych
+  tylko z ponownie zwalidowanego klona, po czym prawdziwa sesja generatora działa
+  wyłącznie w pamięci; wartości są ograniczone do 32 768 znaków, a connection
+  string pochodzi ze zmiennej środowiskowej;
 - niemodalne, tylko-odczytowe okna wartości `non-null` dla dowolnej kolumny z
   konfiguracji: limit 1–50, wiele okien naraz, kopiowanie i ponowna walidacja
   nazwy oraz markera klona przed każdym odczytem;
@@ -205,8 +209,8 @@ językowe opisuje [docs/anonymyzer-design.md](docs/anonymyzer-design.md).
 - wykonawcy planu, który dostarczy generatorom strumienie danych i zapisze wynik
   ich sesji do bazy;
 - pozostałych generatorów grupowych;
-- podglądu generatorów `Column` i `Relational`, które wymagają odczytu danych
-  z odłączonego klona;
+- podglądu generatorów `Relational` oraz przyszłych generatorów `Column`
+  wymagających wielu skanów lub przypisanych przez grupę;
 - pełnych, ważonych zbiorów danych regionalnych;
 - automatycznej analizy niestabilnych kolekcji, JSON, XML i tekstu swobodnego;
 - obsługi XML/JSON oraz zmian PK/FK;
@@ -327,16 +331,14 @@ skasowany po wypchnięciu lub zarchiwizowaniu nowego repozytorium.
 
 1. Dodać testy regresyjne `ScriptCut` dla wielu tabel, tabel bez
    `IDENTITY_INSERT`, pustego wejścia i znaków niedozwolonych w nazwie pliku.
-2. Podłączyć podgląd generatorów `Column` do bezpiecznego, tylko-odczytowego
-   źródła danych z odłączonego klona.
-3. Ujednolicić historyczne nazwy `Anonymyzer` / `Anonymization` bez zmiany
+2. Ujednolicić historyczne nazwy `Anonymyzer` / `Anonymization` bez zmiany
    zachowania.
-4. Zrealizować mały pionowy wycinek: jedna tabela, grupa `PersonIdentity`,
+3. Zrealizować mały pionowy wycinek: jedna tabela, grupa `PersonIdentity`,
    deterministyczny seed, batche, `dry-run` i test na lokalnej bazie.
-5. Rozszerzyć pakiety regionalne o ważone dane.
-6. Dopiero po pomiarach dodać planowanie zależności FK, mapowanie zmienianych
+4. Rozszerzyć pakiety regionalne o ważone dane.
+5. Dopiero po pomiarach dodać planowanie zależności FK, mapowanie zmienianych
    kluczy, indeksy, XML/JSON i generatory odwołujące się do innych wierszy.
 
-Najbardziej opłacalny następny krok to punkt 2, a potem pionowy wycinek z punktu
-4. Próba rozwiązania od razu zmian PK/FK i wszystkich wariantów indeksów
+Najbardziej opłacalny następny krok to pionowy wycinek z punktu 3. Próba
+rozwiązania od razu zmian PK/FK i wszystkich wariantów indeksów
 utrudniłaby zweryfikowanie podstawowego przepływu.

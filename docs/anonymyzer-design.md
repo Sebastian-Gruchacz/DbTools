@@ -149,9 +149,16 @@ Podgląd generatorów `Row` uruchamia ich rzeczywistą sesję w pamięci, bez do
 do bazy. Obejmuje grupy wielokolumnowe i generatory `Row` przypisane bezpośrednio
 do jednej kolumny; lokalne `Options` są nakładane na profil tak samo jak w
 plannerze. Dla pojedynczej kolumny operator może otworzyć kilka niemodalnych okien
-surowych wartości `non-null` z odłączonego klona. Jest to narzędzie inspekcyjne,
-nie podgląd wyniku generatora `Column`: UI nadal nie symuluje shuffle ani
-generatorów `Relational`. Podgląd nigdy nie może modyfikować bazy.
+surowych wartości `non-null` z odłączonego klona.
+
+Bezpośrednio przypisany `TextShuffler` ma ograniczony podgląd `Column`. Operator
+wskazuje zmienną środowiskową połączenia i limit 2–50 wierszy. Reader ponownie
+waliduje marker odłączonej kopii, pobiera próbkę razem z pozycjami `NULL`, a
+następnie prawdziwa sesja shuffle działa wyłącznie w pamięci. Wynik jest jawnie
+oznaczony jako próbka, a nie symulacja pełnego rozkładu kolumny; pojedyncza
+wartość jest ograniczona w zapytaniu do 32 768 znaków. Generatory
+`Relational`, wieloskanowe i `Column` użyte przez grupę nadal nie mają podglądu.
+Żaden wariant podglądu nie może modyfikować bazy.
 
 Grid pokazuje początkowo kandydatów oraz kolumny już skonfigurowane. `Add column`
 rozwija pozostałe kolumny zapisane podczas analizy i ujawnia wybraną bez dostępu

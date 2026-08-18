@@ -2,13 +2,17 @@
 
 using Anonymyzer.Base.Generation;
 using Anonymyzer.Configuration;
+using Anonymyzer.DatabaseAccess;
 using Newtonsoft.Json.Linq;
 
 internal sealed class GeneratorPreviewService(GeneratorCatalog catalog)
 {
     public async Task<IReadOnlyDictionary<string, string>> GenerateAsync(
+        AnonymizationConfiguration anonymizationConfiguration,
         TableProcessingOptions table,
         IReadOnlyList<GeneratorProfileConfiguration> profiles,
+        string? connectionEnvironmentVariable = null,
+        int maximumRows = 10,
         CancellationToken cancellationToken = default)
     {
         var samples = table.Columns.ToDictionary(column => column.ColumnName, _ => "—", StringComparer.OrdinalIgnoreCase);
@@ -84,13 +88,7 @@ internal sealed class GeneratorPreviewService(GeneratorCatalog catalog)
                 continue;
             }
 
-            if (generator.Descriptor.Scope == GeneratorExecutionScope.Column)
-            {
-                samples[column.ColumnName] = "requires cloned data";
-                continue;
-            }
-
-            if (generator.Descriptor.Scope != GeneratorExecutionScope.Row
+            if (generator.Descriptor.Scope == GeneratorExecutionScope.Relational
                 || generator.Descriptor.Outputs.Count != 1)
             {
                 samples[column.ColumnName] = "requires generation group";
@@ -119,6 +117,21 @@ internal sealed class GeneratorPreviewService(GeneratorCatalog catalog)
                     new Dictionary<string, string> { [output.Name] = column.ColumnName });
                 IReadOnlyList<GeneratorDataRequirement> requirements =
                     generator.GetDataRequirements(binding, configuration);
+                if (generator.Descriptor.Scope == GeneratorExecutionScope.Column)
+                {
+                    samples[column.ColumnName] = await GenerateColumnPreviewAsync(
+                        anonymizationConfiguration,
+                        generator,
+                        configuration,
+                        binding,
+                        requirements,
+                        output,
+                        connectionEnvironmentVariable,
+                        maximumRows,
+                        cancellationToken);
+                    continue;
+                }
+
                 await using IGeneratorSession session = await generator.PrepareAsync(
                     new GeneratorPreparationContext(binding, new RejectingDataReader()),
                     configuration,
@@ -145,6 +158,82 @@ internal sealed class GeneratorPreviewService(GeneratorCatalog catalog)
         }
 
         return samples;
+    }
+
+    public bool RequiresCloneData(
+        TableProcessingOptions table,
+        IReadOnlyList<GeneratorProfileConfiguration> profiles)
+    {
+        var profilesById = profiles
+            .Where(profile => !string.IsNullOrWhiteSpace(profile.Id))
+            .GroupBy(profile => profile.Id, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(group => group.Key, group => group.First(), StringComparer.OrdinalIgnoreCase);
+
+        IEnumerable<string> profileIds = table.Columns
+            .Where(column => string.IsNullOrWhiteSpace(column.GenerationGroupId))
+            .Select(column => column.Generator.ProfileId);
+        return profileIds.Any(profileId =>
+            profilesById.TryGetValue(profileId, out GeneratorProfileConfiguration? profile)
+            && catalog.Find(profile.GeneratorType, profile.GeneratorVersion)?.Descriptor.Scope
+                == GeneratorExecutionScope.Column);
+    }
+
+    private static async Task<string> GenerateColumnPreviewAsync(
+        AnonymizationConfiguration anonymizationConfiguration,
+        IGenerator generator,
+        object generatorConfiguration,
+        GeneratorBinding binding,
+        IReadOnlyList<GeneratorDataRequirement> requirements,
+        GeneratorOutputDescriptor output,
+        string? connectionEnvironmentVariable,
+        int maximumRows,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(connectionEnvironmentVariable))
+        {
+            return "requires cloned data";
+        }
+
+        if (requirements.Count != 1
+            || !requirements[0].RequiresCompleteScan)
+        {
+            return "column preview not supported";
+        }
+
+        var reader = new LimitedGeneratorPreviewDataReader(
+            anonymizationConfiguration,
+            connectionEnvironmentVariable,
+            maximumRows);
+        await using IGeneratorSession session = await generator.PrepareAsync(
+            new GeneratorPreparationContext(binding, reader),
+            generatorConfiguration,
+            cancellationToken);
+        if (reader.LoadedRows.Count == 0)
+        {
+            return "no rows in clone sample";
+        }
+
+        GeneratorDataRequirement requirement = requirements[0];
+        var generatedValues = new List<string>(reader.LoadedRows.Count);
+        foreach (GeneratorDataRow sourceRow in reader.LoadedRows)
+        {
+            var row = new PreviewRow();
+            foreach (string columnName in requirement.Columns)
+            {
+                row.SetValue(columnName, sourceRow.GetValue(columnName));
+            }
+
+            await session.ApplyAsync(row, cancellationToken);
+            generatedValues.Add(FormatSample(row.GetBoundValue(binding.GetRequiredOutput(output.Name)), output.Name));
+        }
+
+        string displayedValues = string.Join(" | ", generatedValues.Take(3));
+        if (generatedValues.Count > 3)
+        {
+            displayedValues += " | …";
+        }
+
+        return $"{displayedValues} [{generatedValues.Count}-row clone sample]";
     }
 
     private static string FormatSample(object? value, string output)

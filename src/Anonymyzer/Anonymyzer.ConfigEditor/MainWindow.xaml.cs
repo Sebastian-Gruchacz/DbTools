@@ -19,6 +19,8 @@ using Newtonsoft.Json.Linq;
 public partial class MainWindow : Window
 {
     private int _sampleWindowOffset;
+    private string _previewConnectionEnvironmentVariable = "ANONYMYZER_CONNECTION";
+    private int _previewMaximumRows = 10;
     private readonly ConfigurationFileService _fileService = new();
     private readonly EditorViewModel _viewModel = new();
     private readonly GeneratorCatalog _generatorCatalog = new();
@@ -167,10 +169,32 @@ public partial class MainWindow : Window
 
         try
         {
+            if (_previewService.RequiresCloneData(
+                    table.Model,
+                    _viewModel.Configuration.GeneratorProfiles))
+            {
+                var dialog = new ClonePreviewOptionsWindow(
+                    _previewConnectionEnvironmentVariable,
+                    _previewMaximumRows)
+                {
+                    Owner = this
+                };
+                if (dialog.ShowDialog() != true)
+                {
+                    return;
+                }
+
+                _previewConnectionEnvironmentVariable = dialog.ConnectionEnvironmentVariable;
+                _previewMaximumRows = dialog.MaximumRows;
+            }
+
             _viewModel.Status = "Generating preview...";
             IReadOnlyDictionary<string, string> samples = await _previewService.GenerateAsync(
+                _viewModel.Configuration,
                 table.Model,
-                _viewModel.Configuration.GeneratorProfiles);
+                _viewModel.Configuration.GeneratorProfiles,
+                _previewConnectionEnvironmentVariable,
+                _previewMaximumRows);
             table.ApplySamples(samples);
             _viewModel.Status = "Preview generated without modifying the database.";
         }
