@@ -101,7 +101,8 @@ językowe opisuje [docs/anonymyzer-design.md](docs/anonymyzer-design.md).
 - `Anonymyzer.PostgreSql.Tests` — testy buildera i opcjonalna integracja z bazą;
 - `Anonymyzer.Generators.Simple` — `TextShuffler`, `FixedText`, `SequentialText`,
   `EmailAddress`, `PhoneNumber`, `Uuid` i `TaxIdentifier`;
-- `Anonymyzer.Generators.Person` — generator spójnej tożsamości w jednym wierszu;
+- `Anonymyzer.Generators.Person` — generatory spójnej tożsamości oraz krajowego
+  identyfikatora osoby;
 - `Anonymyzer.ConfigEditor.Abstractions` — kontrakt opcjonalnych paneli WPF;
 - `Anonymyzer.Generators.Simple.Wpf` — panele konfiguracji generatorów prostych;
 - `Anonymyzer.Generators.Person.Wpf` — panel konfiguracji `PersonIdentity` 1.0.0;
@@ -143,6 +144,8 @@ językowe opisuje [docs/anonymyzer-design.md](docs/anonymyzer-design.md).
   generatora także w starszej konfiguracji;
 - `PersonIdentity` 1.0.0 w zakresie `Row`: spójne imię, nazwisko, rodzaj i e-mail
   na podstawie pakietu `pl-PL`, bez dodatkowego skanu bazy;
+- `NationalIdentifier` 1.0.0: polski PESEL z prawidłową datą, płcią i checksum,
+  konfigurowalnym zakresem dat oraz deterministycznym seedem;
 - dwa schematy e-mail: oparty na imieniu i nazwisku oraz opaque; domyślna domena
   `example.invalid` jest celowo niedostarczalna;
 - dedykowany panel WPF konfiguracji `PersonIdentity`;
@@ -184,7 +187,7 @@ językowe opisuje [docs/anonymyzer-design.md](docs/anonymyzer-design.md).
 - pozostałych generatorów grupowych i pełnego angielskiego pakietu danych osoby;
 - podglądu generatorów `Column` i `Relational`, które wymagają odczytu danych
   z odłączonego klona;
-- pełnych, ważonych zbiorów danych regionalnych oraz generatorów PESEL/REGON;
+- pełnych, ważonych zbiorów danych regionalnych oraz generatorów REGON/SSN;
 - automatycznej analizy niestabilnych kolekcji, JSON, XML i tekstu swobodnego;
 - obsługi XML/JSON oraz zmian PK/FK;
 - strategii wyłączania i odbudowy indeksów, constraintów i triggerów.
@@ -310,7 +313,7 @@ skasowany po wypchnięciu lub zarchiwizowaniu nowego repozytorium.
    zachowania.
 4. Zrealizować mały pionowy wycinek: jedna tabela, grupa `PersonIdentity`,
    deterministyczny seed, batche, `dry-run` i test na lokalnej bazie.
-5. Rozszerzyć pakiety regionalne o ważone dane oraz generatory PESEL/REGON/SSN.
+5. Rozszerzyć pakiety regionalne o ważone dane oraz generatory REGON/SSN.
 6. Dopiero po pomiarach dodać planowanie zależności FK, mapowanie zmienianych
    kluczy, indeksy, XML/JSON i generatory odwołujące się do innych wierszy.
 

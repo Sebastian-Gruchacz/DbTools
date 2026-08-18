@@ -299,6 +299,25 @@ nie dowodzi, że NIP jest nieprzydzielony; są to dane syntetyczne przeznaczone
 wyłącznie do odłączonej kopii bazy. Obecna wersja zapisuje tekst i nie obsługuje
 jeszcze liczbowych kolumn z NIP-em.
 
+### NationalIdentifier 1.0.0 i polski PESEL
+
+`NationalIdentifier` generuje pojedynczą wartość dla roli `Person.NationalId`.
+Profil określa locale, zakres dat urodzenia zapisany jako `yyyy-MM-dd`, płeć
+`Any`/`Female`/`Male`, seed i zachowanie `NULL`. Provider `pl-PL` obsługuje pełny
+zakres stuleci kodowanych przez PESEL, czyli lata 1800–2299.
+
+Pierwsze sześć cyfr koduje datę, cztery następne numer porządkowy i płeć, a
+ostatnia jest obliczana z wag `1, 3, 7, 9, 1, 3, 7, 9, 1, 3`. Reguły, parytet
+płci i przesunięcia miesiąca dla stuleci odpowiadają [opisowi gov.pl](https://www.gov.pl/web/gov/czym-jest-numer-pesel).
+Numer porządkowy jest mapowany bez powtórzeń; przy jednej dacie dostępne jest
+10 000 wartości dla `Any` albo 5 000 dla wskazanej płci.
+
+Poprawny strukturalnie PESEL może należeć do rzeczywistej osoby, dlatego wynik
+wolno stosować wyłącznie w odłączonej kopii i nie należy używać go do zapytań
+urzędowych. Wersja 1.0.0 dobiera datę oraz płeć wewnętrznie. Nie synchronizuje
+jeszcze osobnych kolumn `BirthDate` i `Gender`; taka zależność wymaga kolejnej
+wersji generatora i jawnych wymagań `Original`/`Generated`.
+
 ### Pierwszy generator Row: PersonIdentity 1.0.0
 
 `PersonIdentity` wykonuje jedno atomowe wywołanie dla wiersza i może wystawić

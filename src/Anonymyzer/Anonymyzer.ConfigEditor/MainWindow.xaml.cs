@@ -31,6 +31,7 @@ public partial class MainWindow : Window
         new PhoneNumberGeneratorEditorFactory(),
         new UuidGeneratorEditorFactory(),
         new TaxIdentifierGeneratorEditorFactory(),
+        new NationalIdentifierGeneratorEditorFactory(),
         new PersonIdentityGeneratorEditorFactory()
     };
 

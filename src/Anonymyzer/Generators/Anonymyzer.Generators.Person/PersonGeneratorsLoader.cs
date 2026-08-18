@@ -8,5 +8,6 @@ public sealed class PersonGeneratorsLoader : IGeneratorsLoader
     public void RegisterGenerators(IServiceCollection serviceCollection)
     {
         serviceCollection.AddTransient<IGenerator, PersonIdentityGenerator>();
+        serviceCollection.AddTransient<IGenerator, NationalIdentifierGenerator>();
     }
 }

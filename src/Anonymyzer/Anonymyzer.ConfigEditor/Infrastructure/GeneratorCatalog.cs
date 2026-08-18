@@ -22,6 +22,7 @@ internal sealed class GeneratorCatalog
         ]),
         new UuidGenerator(),
         new TaxIdentifierGenerator([new PolishTaxIdentifierLocaleDataProvider()]),
+        new NationalIdentifierGenerator([new PolishNationalIdentifierLocaleDataProvider()]),
         new PersonIdentityGenerator(new[] { new PolishPersonLocaleDataProvider() })
     };
 
@@ -51,7 +52,7 @@ internal sealed class GeneratorCatalog
         DisplayName = $"{generator.Descriptor.DisplayName} (Default)",
         GeneratorType = generator.Descriptor.Type,
         GeneratorVersion = generator.Descriptor.Version,
-        Locale = generator.Descriptor.Type is "PersonIdentity" or "PhoneNumber" or "TaxIdentifier"
+        Locale = generator.Descriptor.Type is "PersonIdentity" or "PhoneNumber" or "TaxIdentifier" or "NationalIdentifier"
             ? "pl-PL"
             : string.Empty,
         Options = generator.Configuration.Serialize(generator.Configuration.CreateDefault())
