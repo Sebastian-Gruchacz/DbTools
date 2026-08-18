@@ -23,6 +23,7 @@ internal sealed class GeneratorCatalog
         ]),
         new UuidGenerator(),
         new TaxIdentifierGenerator([new PolishTaxIdentifierLocaleDataProvider()]),
+        new BirthDateGenerator(),
         new NationalIdentifierGenerator(
         [
             new PolishNationalIdentifierLocaleDataProvider(),

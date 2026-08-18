@@ -148,6 +148,8 @@ językowe opisuje [docs/anonymyzer-design.md](docs/anonymyzer-design.md).
   generatora także w starszej konfiguracji;
 - `PersonIdentity` 1.0.0 w zakresie `Row`: spójne imię, nazwisko, rodzaj i e-mail
   na podstawie pakietu `pl-PL` albo `en-US`, bez dodatkowego skanu bazy;
+- `BirthDate` 1.0.0: deterministyczna data z konfigurowalnego zakresu dla kolumn
+  `Date` i `DateTime`, gotowa jako zależność `Generated` dla identyfikatora;
 - `NationalIdentifier` 1.0.0: polski PESEL z prawidłową datą, płcią i checksum
   albo bezpiecznie nieprzydzielony amerykański SSN z prefiksem `000`; generator
   obsługuje konfigurowalny zakres dat i seed oraz jawne zależności od kolumn daty

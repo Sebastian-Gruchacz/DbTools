@@ -118,6 +118,25 @@ public sealed class AnonymizationExecutionPlannerTests
         Assert.Contains("has no active generator step", exception.Message);
     }
 
+    [Fact]
+    public void AcceptsAnyDataTypeDeclaredByGeneratorAndRejectsOthers()
+    {
+        var birthDate = new BirthDateGenerator();
+        AnonymizationConfiguration configuration = new()
+        {
+            GeneratorProfiles = { CreateProfile("birth-date", birthDate) },
+            Tables = { CreateTable("people", "birth_date", "birth-date", birthDate) }
+        };
+        configuration.Tables[0].Columns[0].DataType = DbDataType.DateTime.ToString();
+        var planner = new AnonymizationExecutionPlanner([birthDate]);
+
+        Assert.Single(planner.Build(configuration).Steps);
+
+        configuration.Tables[0].Columns[0].DataType = DbDataType.Text.ToString();
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(() => planner.Build(configuration));
+        Assert.Contains("Date or DateTime", exception.Message);
+    }
+
     private static AnonymizationConfiguration CreateBuiltInConfiguration(
         PersonIdentityGenerator person,
         ShufflingTextGenerator shuffler)

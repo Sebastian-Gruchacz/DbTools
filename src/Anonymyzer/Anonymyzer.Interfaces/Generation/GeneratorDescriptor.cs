@@ -8,4 +8,6 @@ public sealed record GeneratorDescriptor(
     DbDataType SupportedDataType)
 {
     public IReadOnlyList<GeneratorOutputDescriptor> Outputs { get; init; } = Array.Empty<GeneratorOutputDescriptor>();
+
+    public IReadOnlyList<DbDataType> SupportedDataTypes { get; init; } = [SupportedDataType];
 }

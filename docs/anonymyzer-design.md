@@ -342,6 +342,19 @@ walidacji przez tworzenie numerów, które mogłyby należeć do rzeczywistych o
 Format 3-2-4 odpowiada opisowi SSA, a zasada nieprzydzielonego prefiksu `000`
 pochodzi z [instrukcji SSA](https://secure.ssa.gov/apps10/poms.nsf/links/0110201020).
 
+### BirthDate 1.0.0
+
+`BirthDate` jest jednowyjściowym generatorem `Row` dla roli `Person.BirthDate`.
+Profil określa minimalną i maksymalną datę w formacie `yyyy-MM-dd`, seed oraz
+zachowanie pozycji `NULL`. Wynik jest wartością `DateOnly`; descriptor dopuszcza
+kolumny `Date` i `DateTime`.
+
+Oddzielny generator zachowuje poprawne typowanie: `PersonIdentity` ma tekstowe
+wyjścia, natomiast data nie jest do niego dokładana jako wyjątek. Kolumna
+wygenerowana przez `BirthDate` może zostać wskazana w `NationalIdentifier` jako
+`BirthDateColumn` ze źródłem `Generated`, dzięki czemu planner ustawi kolejność,
+a PESEL zakoduje dokładnie tę samą datę.
+
 ### Pierwszy generator Row: PersonIdentity 1.0.0
 
 `PersonIdentity` wykonuje jedno atomowe wywołanie dla wiersza i może wystawić

@@ -9,5 +9,6 @@ public sealed class PersonGeneratorsLoader : IGeneratorsLoader
     {
         serviceCollection.AddTransient<IGenerator, PersonIdentityGenerator>();
         serviceCollection.AddTransient<IGenerator, NationalIdentifierGenerator>();
+        serviceCollection.AddTransient<IGenerator, BirthDateGenerator>();
     }
 }
