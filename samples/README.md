@@ -17,3 +17,10 @@ Plik można otworzyć bez połączenia z bazą w edytorze WPF:
 ```powershell
 dotnet run --project .\src\Anonymyzer\Anonymyzer.ConfigEditor\Anonymyzer.ConfigEditor.csproj
 ```
+
+## Publiczne bazy testowe
+
+Powtarzalny downloader Chinook, Northwind, AdventureWorksLT, Pagila i opcjonalnego
+WideWorldImporters opisuje [docs/sample-databases.md](../docs/sample-databases.md).
+Pobrane pliki trafiają do ignorowanego katalogu `artifacts/sample-databases` i nie
+są commitowane.
