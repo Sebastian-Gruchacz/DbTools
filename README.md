@@ -296,6 +296,14 @@ kopiować dane, ale sample nie trafiają do konfiguracji, logów ani plików. Je
 zapytanie trwa najwyżej 15 sekund, a pojedyncza wyświetlana wartość jest obcinana
 po 32 768 znakach i oznaczana jako skrócona.
 
+Po wczytaniu próbek zwijany panel profilu JSON pokazuje ścieżki, liczbę
+dokumentów zawierających daną ścieżkę, liczbę wartości oraz obserwowane typy.
+Niepełne próbki obcięte limitem są raportowane osobno, zamiast udawać uszkodzony
+JSON. Dla odporności na patologiczne dokumenty profil kończy analizę na 16
+poziomach, 200 różnych ścieżkach lub 10 000 wartościach na próbkę i jawnie
+sygnalizuje osiągnięcie limitu. Profil służy wyłącznie operatorowi i nie jest
+zapisywany w configu.
+
 `Add column` rozwija najpierw kolumny zapisane w konfiguracji podczas analizy,
 które nie są kandydatami ani nie zostały jeszcze skonfigurowane. Wybranie pozycji
 pokazuje ją w gridzie bez ponownego połączenia z bazą. Ostatnia pozycja menu używa
