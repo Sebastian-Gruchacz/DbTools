@@ -77,61 +77,121 @@ public sealed class ReferencePseudonymGenerator : GeneratorBase<ReferencePseudon
                 $"Environment variable '{configuration.KeyEnvironmentVariable}' must contain at least 32 characters.");
         }
 
-        GeneratorDataRequirement lookup = GetDataRequirements(context.Binding, configuration)[1];
-        var pseudonyms = new Dictionary<string, string>(StringComparer.Ordinal);
-        var generatedValues = new HashSet<string>(StringComparer.Ordinal);
+        byte[] hmacKey = Encoding.UTF8.GetBytes(key);
+        EncryptedExternalHashIndexBuilder? externalBuilder = null;
+        var hashes = new HashSet<string>(StringComparer.Ordinal);
+        var outputHashes = new HashSet<string>(StringComparer.Ordinal);
         long estimatedInMemoryBytes = 0;
-        await foreach (GeneratorDataRow row in context.DataReader.ReadAsync(lookup, cancellationToken)
-                           .WithCancellation(cancellationToken)
-                           .ConfigureAwait(false))
+        try
         {
-            object? value = row.GetValue(configuration.LookupKeyColumn);
-            if (value is null)
+            GeneratorDataRequirement lookup = GetDataRequirements(context.Binding, configuration)[1];
+            using var hmac = new HMACSHA256(hmacKey);
+            await foreach (GeneratorDataRow row in context.DataReader.ReadAsync(lookup, cancellationToken)
+                               .WithCancellation(cancellationToken)
+                               .ConfigureAwait(false))
             {
-                throw new InvalidOperationException("The lookup primary key contains a null value.");
+                object? value = row.GetValue(configuration.LookupKeyColumn);
+                if (value is null)
+                {
+                    throw new InvalidOperationException("The lookup primary key contains a null value.");
+                }
+
+                byte[] digest = ComputeHash(hmac, Canonicalize(value));
+                try
+                {
+                    if (externalBuilder is not null)
+                    {
+                        externalBuilder.Add(digest);
+                        continue;
+                    }
+
+                    string fullHash = Convert.ToHexString(digest);
+                    if (hashes.Contains(fullHash))
+                    {
+                        continue;
+                    }
+
+                    string outputHash = fullHash[..configuration.HashLength];
+                    long entryBytes = 160L + fullHash.Length * sizeof(char) + outputHash.Length * sizeof(char);
+                    if (entryBytes > configuration.MaximumInMemoryBytes - estimatedInMemoryBytes)
+                    {
+                        if (configuration.OverflowStrategy == RelationalLookupOverflowStrategy.Fail)
+                        {
+                            throw new InvalidOperationException(
+                                $"ReferencePseudonym exceeded its {configuration.MaximumInMemoryBytes:N0}-byte " +
+                                "lookup memory limit. Increase MaximumInMemoryBytes or select EncryptedTemporaryIndex.");
+                        }
+
+                        externalBuilder = new EncryptedExternalHashIndexBuilder(
+                            configuration.MaximumInMemoryBytes,
+                            configuration.HashLength);
+                        foreach (string bufferedHash in hashes)
+                        {
+                            byte[] bufferedDigest = Convert.FromHexString(bufferedHash);
+                            try
+                            {
+                                externalBuilder.Add(bufferedDigest);
+                            }
+                            finally
+                            {
+                                CryptographicOperations.ZeroMemory(bufferedDigest);
+                            }
+                        }
+
+                        hashes.Clear();
+                        outputHashes.Clear();
+                        externalBuilder.Add(digest);
+                        continue;
+                    }
+
+                    if (!outputHashes.Add(outputHash))
+                    {
+                        throw new InvalidOperationException(
+                            "ReferencePseudonym produced a collision. Increase HashLength and retry on a fresh clone.");
+                    }
+
+                    hashes.Add(fullHash);
+                    estimatedInMemoryBytes += entryBytes;
+                }
+                finally
+                {
+                    CryptographicOperations.ZeroMemory(digest);
+                }
             }
 
-            string canonicalKey = Canonicalize(value);
-            if (pseudonyms.ContainsKey(canonicalKey))
-            {
-                continue;
-            }
-
-            string pseudonym = CreatePseudonym(canonicalKey, configuration, key);
-            long entryBytes = 128L
-                              + Encoding.UTF8.GetByteCount(canonicalKey)
-                              + Encoding.UTF8.GetByteCount(pseudonym);
-            if (entryBytes > configuration.MaximumInMemoryBytes - estimatedInMemoryBytes)
-            {
-                throw new InvalidOperationException(
-                    $"ReferencePseudonym exceeded its {configuration.MaximumInMemoryBytes:N0}-byte lookup memory limit.");
-            }
-
-            if (!generatedValues.Add(pseudonym))
-            {
-                throw new InvalidOperationException(
-                    "ReferencePseudonym produced a collision. Increase HashLength and retry on a fresh clone.");
-            }
-
-            pseudonyms.Add(canonicalKey, pseudonym);
-            estimatedInMemoryBytes += entryBytes;
+            IReferenceHashIndex index = externalBuilder?.Complete()
+                ?? new InMemoryReferenceHashIndex(hashes);
+            return new Session(
+                context.Binding.GetRequiredOutput(ValueOutput),
+                configuration.ReferenceColumn,
+                configuration.Prefix,
+                configuration.HashLength,
+                configuration.PreserveNulls,
+                hmacKey,
+                index);
         }
-
-        return new Session(
-            context.Binding.GetRequiredOutput(ValueOutput),
-            configuration.ReferenceColumn,
-            configuration.PreserveNulls,
-            pseudonyms);
+        catch
+        {
+            CryptographicOperations.ZeroMemory(hmacKey);
+            throw;
+        }
+        finally
+        {
+            externalBuilder?.Dispose();
+        }
     }
 
-    private static string CreatePseudonym(
-        string canonicalKey,
-        ReferencePseudonymGeneratorConfiguration configuration,
-        string key)
+    private static byte[] ComputeHash(HMACSHA256 hmac, string canonicalKey)
     {
-        using var hmac = new HMACSHA256(Encoding.UTF8.GetBytes(key));
-        byte[] digest = hmac.ComputeHash(Encoding.UTF8.GetBytes(canonicalKey));
-        return configuration.Prefix + Convert.ToHexString(digest)[..configuration.HashLength].ToLowerInvariant();
+        byte[] canonicalBytes = Encoding.UTF8.GetBytes(canonicalKey);
+        try
+        {
+            return hmac.ComputeHash(canonicalBytes);
+        }
+        finally
+        {
+            CryptographicOperations.ZeroMemory(canonicalBytes);
+        }
     }
 
     private static string Canonicalize(object value) => value switch
@@ -147,9 +207,14 @@ public sealed class ReferencePseudonymGenerator : GeneratorBase<ReferencePseudon
     private sealed class Session(
         string outputColumn,
         string referenceColumn,
+        string prefix,
+        int hashLength,
         bool preserveNulls,
-        IReadOnlyDictionary<string, string> pseudonyms) : IGeneratorSession
+        byte[] hmacKey,
+        IReferenceHashIndex index) : IGeneratorSession
     {
+        private readonly HMACSHA256 _hmac = new(hmacKey);
+
         public ValueTask ApplyAsync(IGeneratorRow row, CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -160,16 +225,37 @@ public sealed class ReferencePseudonymGenerator : GeneratorBase<ReferencePseudon
                 return ValueTask.CompletedTask;
             }
 
-            if (reference is null || !pseudonyms.TryGetValue(Canonicalize(reference), out string? pseudonym))
+            if (reference is null)
             {
                 throw new InvalidOperationException(
                     "A target reference is absent from the configured lookup table. No key value was logged.");
             }
 
-            row.SetValue(outputColumn, pseudonym);
-            return ValueTask.CompletedTask;
+            byte[] digest = ComputeHash(_hmac, Canonicalize(reference));
+            try
+            {
+                if (!index.Contains(digest))
+                {
+                    throw new InvalidOperationException(
+                        "A target reference is absent from the configured lookup table. No key value was logged.");
+                }
+
+                row.SetValue(
+                    outputColumn,
+                    prefix + Convert.ToHexString(digest)[..hashLength].ToLowerInvariant());
+                return ValueTask.CompletedTask;
+            }
+            finally
+            {
+                CryptographicOperations.ZeroMemory(digest);
+            }
         }
 
-        public ValueTask DisposeAsync() => ValueTask.CompletedTask;
+        public async ValueTask DisposeAsync()
+        {
+            _hmac.Dispose();
+            CryptographicOperations.ZeroMemory(hmacKey);
+            await index.DisposeAsync();
+        }
     }
 }

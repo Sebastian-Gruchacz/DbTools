@@ -236,8 +236,10 @@ public sealed class AnonymizationExecutorIntegrationTests
             var generator = new ReferencePseudonymGenerator();
             AnonymizationConfiguration configuration = CreateReferencePseudonymConfiguration(
                 generator,
+                "PostgreSql",
                 connection.Database,
                 marker,
+                "public",
                 targetTable,
                 lookupTable,
                 keyEnvironmentVariable);
@@ -284,6 +286,63 @@ public sealed class AnonymizationExecutorIntegrationTests
         finally
         {
             ExecuteNonQuery(connection, $"DROP TABLE public.\"{targetTable}\"; DROP TABLE public.\"{lookupTable}\";");
+            Environment.SetEnvironmentVariable(keyEnvironmentVariable, null);
+        }
+    }
+
+    [Fact]
+    public async Task ExecutesReferencePseudonymAcrossSqlServerTablesWithoutChangingForeignKey()
+    {
+        string connectionString = RequireConnectionString("ANONYMYZER_SQLSERVER_CONNECTION", "SQL Server");
+        string suffix = Guid.NewGuid().ToString("N")[..12];
+        string lookupTable = "__AnonymyzerLookup_" + suffix;
+        string targetTable = "__AnonymyzerRelational_" + suffix;
+        string keyEnvironmentVariable = $"ANONYMYZER_TEST_PSEUDONYM_{Guid.NewGuid():N}";
+        Environment.SetEnvironmentVariable(keyEnvironmentVariable, "sql-server-key-with-more-than-thirty-two-characters");
+        using var connection = new SqlConnection(connectionString);
+        connection.Open();
+        DetachedCopyMarker marker = ValidateClone("SqlServer", connection);
+        ExecuteNonQuery(
+            connection,
+            $"CREATE TABLE [dbo].[{lookupTable}] ([Id] int PRIMARY KEY); " +
+            $"CREATE TABLE [dbo].[{targetTable}] ([Id] int PRIMARY KEY, " +
+            $"[DepartmentId] int REFERENCES [dbo].[{lookupTable}]([Id]), [Alias] nvarchar(100)); " +
+            $"INSERT INTO [dbo].[{lookupTable}] ([Id]) VALUES (10), (20); " +
+            $"INSERT INTO [dbo].[{targetTable}] ([Id], [DepartmentId]) VALUES (1, 10), (2, 20), (3, 10);");
+
+        try
+        {
+            var generator = new ReferencePseudonymGenerator();
+            AnonymizationConfiguration configuration = CreateReferencePseudonymConfiguration(
+                generator,
+                "SqlServer",
+                connection.Database,
+                marker,
+                "dbo",
+                targetTable,
+                lookupTable,
+                keyEnvironmentVariable);
+            long processed = await ExecutePlanAsync(
+                connection,
+                new SqlServerAnonymyzerEngine(connection),
+                "SqlServer",
+                configuration,
+                [generator]);
+
+            Assert.Equal(3, processed);
+            Assert.Equal(3, ExecuteScalar<int>(
+                connection,
+                $"SELECT COUNT(*) FROM [dbo].[{targetTable}] WHERE [DepartmentId] IN (10, 20);"));
+            Assert.Equal(1, ExecuteScalar<int>(
+                connection,
+                $"SELECT COUNT(DISTINCT [Alias]) FROM [dbo].[{targetTable}] WHERE [DepartmentId] = 10;"));
+            Assert.Equal(2, ExecuteScalar<int>(
+                connection,
+                $"SELECT COUNT(DISTINCT [Alias]) FROM [dbo].[{targetTable}];"));
+        }
+        finally
+        {
+            ExecuteNonQuery(connection, $"DROP TABLE [dbo].[{targetTable}]; DROP TABLE [dbo].[{lookupTable}];");
             Environment.SetEnvironmentVariable(keyEnvironmentVariable, null);
         }
     }
@@ -433,8 +492,10 @@ public sealed class AnonymizationExecutorIntegrationTests
 
     private static AnonymizationConfiguration CreateReferencePseudonymConfiguration(
         ReferencePseudonymGenerator generator,
+        string databaseEngine,
         string databaseName,
         DetachedCopyMarker marker,
+        string schemaName,
         string targetTable,
         string lookupTable,
         string keyEnvironmentVariable)
@@ -444,7 +505,7 @@ public sealed class AnonymizationExecutorIntegrationTests
         {
             Database = new DatabaseTargetConfiguration
             {
-                DatabaseEngine = "PostgreSql",
+                DatabaseEngine = databaseEngine,
                 DatabaseName = databaseName,
                 DetachedCopyMarkerId = marker.MarkerId.ToString("D")
             },
@@ -458,7 +519,7 @@ public sealed class AnonymizationExecutorIntegrationTests
                     Options = generator.Configuration.Serialize(new ReferencePseudonymGeneratorConfiguration
                     {
                         ReferenceColumn = "DepartmentId",
-                        LookupSchema = "public",
+                        LookupSchema = schemaName,
                         LookupTable = lookupTable,
                         LookupKeyColumn = "Id",
                         Prefix = "department-",
@@ -471,7 +532,7 @@ public sealed class AnonymizationExecutorIntegrationTests
             {
                 new TableProcessingOptions
                 {
-                    SchemaName = "public",
+                    SchemaName = schemaName,
                     TableName = targetTable,
                     Enabled = true,
                     Columns =
@@ -495,7 +556,7 @@ public sealed class AnonymizationExecutorIntegrationTests
                 },
                 new TableProcessingOptions
                 {
-                    SchemaName = "public",
+                    SchemaName = schemaName,
                     TableName = lookupTable,
                     Enabled = false,
                     PrimaryKeyColumns = { "Id" },

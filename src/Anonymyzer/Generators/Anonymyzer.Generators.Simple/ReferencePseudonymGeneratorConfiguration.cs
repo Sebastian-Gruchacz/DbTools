@@ -18,5 +18,13 @@ public sealed class ReferencePseudonymGeneratorConfiguration
 
     public long MaximumInMemoryBytes { get; set; } = 64L * 1024 * 1024;
 
+    public RelationalLookupOverflowStrategy OverflowStrategy { get; set; } = RelationalLookupOverflowStrategy.Fail;
+
     public bool PreserveNulls { get; set; } = true;
+}
+
+public enum RelationalLookupOverflowStrategy
+{
+    Fail,
+    EncryptedTemporaryIndex
 }

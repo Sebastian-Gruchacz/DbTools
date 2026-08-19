@@ -139,8 +139,9 @@ językowe opisuje [docs/anonymyzer-design.md](docs/anonymyzer-design.md).
   skanem tylko do odczytu ładuje klucze wskazanej tabeli lookup, sprawdza każdą
   referencję w tabeli docelowej i generuje spójny pseudonim HMAC. Klucz HMAC nie
   trafia do JSON-a — profil przechowuje wyłącznie nazwę zmiennej środowiskowej;
-  mapa lookup ma konfigurowalny limit pamięci i bezpiecznie odmawia pracy po jego
-  przekroczeniu;
+  mapa lookup ma konfigurowalny limit pamięci oraz strategię `Fail` albo
+  `EncryptedTemporaryIndex`; spill przechowuje wyłącznie zaszyfrowane skróty,
+  nigdy surowe klucze;
 - `FixedText` 1.0.0: stała wartość tekstowa z opcjonalnym zachowaniem `NULL`;
 - `JsonPathRedactor` 1.0.0: selektywna zamiana wartości pod ścieżkami JSON
   w kolumnach tekstowych oraz natywnych PostgreSQL `json/jsonb`, bez ujawniania
@@ -409,7 +410,8 @@ tylko czyta metadane odłączonej kopii i nie zapisuje connection stringa w JSON
 Testy executora są opt-in dla `ANONYMYZER_POSTGRES_CONNECTION` oraz
 `ANONYMYZER_SQLSERVER_CONNECTION`. Po walidacji markera tworzą tabele o unikalnych
 nazwach, uruchamiają `PersonIdentity`, a na PostgreSQL także pełny `TextShuffler`,
-i usuwają wyłącznie te tabele w `finally`; nie modyfikują istniejących tabel
+oraz na obu silnikach relacyjny `ReferencePseudonym`; usuwają wyłącznie te tabele
+w `finally` i nie modyfikują istniejących tabel
 klona. Connection string nie trafia do logu ani konfiguracji.
 
 Powtarzalne lokalne środowiska Chinook, Northwind, AdventureWorksLT i Pagila,
@@ -433,8 +435,8 @@ skasowany po wypchnięciu lub zarchiwizowaniu nowego repozytorium.
 
 ## Proponowana kolejka
 
-1. Rozszerzyć `ReferencePseudonym` o opcjonalny szyfrowany spill mapy lookup dla
-   baz przekraczających bezpieczny limit pamięci.
+1. Zapisać metadane FK podczas analizy, aby panel `ReferencePseudonym` mógł
+   zawężać podpowiedzi lookup do rzeczywistych relacji.
 2. Rozszerzać checkpoint tylko wraz z trwałym, odtwarzalnym stanem generatorów
    `Column`/`Relational`.
 3. Rozszerzyć pakiety regionalne o wersjonowane, ważone dane z opisanym źródłem.

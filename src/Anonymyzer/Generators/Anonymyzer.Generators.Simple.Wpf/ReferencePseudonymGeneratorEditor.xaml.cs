@@ -36,6 +36,8 @@ public partial class ReferencePseudonymGeneratorEditor : UserControl, IGenerator
         HashLengthTextBox.Text = configuration.HashLength.ToString(System.Globalization.CultureInfo.InvariantCulture);
         MaximumInMemoryBytesTextBox.Text = configuration.MaximumInMemoryBytes.ToString(
             System.Globalization.CultureInfo.InvariantCulture);
+        OverflowStrategyComboBox.ItemsSource = Enum.GetValues<RelationalLookupOverflowStrategy>();
+        OverflowStrategyComboBox.SelectedItem = configuration.OverflowStrategy;
         PreserveNullsCheckBox.IsChecked = configuration.PreserveNulls;
     }
 
@@ -95,6 +97,9 @@ public partial class ReferencePseudonymGeneratorEditor : UserControl, IGenerator
         configuration.KeyEnvironmentVariable = KeyEnvironmentVariableTextBox.Text.Trim();
         configuration.HashLength = hashLength;
         configuration.MaximumInMemoryBytes = maximumInMemoryBytes;
+        configuration.OverflowStrategy = OverflowStrategyComboBox.SelectedItem is RelationalLookupOverflowStrategy strategy
+            ? strategy
+            : RelationalLookupOverflowStrategy.Fail;
         configuration.PreserveNulls = PreserveNullsCheckBox.IsChecked == true;
         error = null;
         return true;

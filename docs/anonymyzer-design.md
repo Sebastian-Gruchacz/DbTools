@@ -94,7 +94,9 @@ Opcjonalne testy executora wymagają `ANONYMYZER_POSTGRES_CONNECTION` albo
 `ANONYMYZER_SQLSERVER_CONNECTION`. Po walidacji markera tworzą w jawnie wskazanym
 klonie tabele o losowych, jednoznacznych nazwach, wykonują na trzech wierszach
 grupę `PersonIdentity`, a na PostgreSQL także pełny `TextShuffler`, weryfikują
-wynik i usuwają dokładnie te tabele w `finally`. Istniejące tabele klona nie są
+wynik i usuwają dokładnie te tabele w `finally`. Osobny scenariusz na obu
+silnikach tworzy parę tabel połączonych FK, wykonuje `ReferencePseudonym` i
+potwierdza, że referencje pozostały bez zmian. Istniejące tabele klona nie są
 odczytywane ani modyfikowane przez ten scenariusz.
 
 ## Model generatorów i konfiguracji 0.4
@@ -284,8 +286,12 @@ Profil zawiera nazwę zmiennej środowiskowej, prefiks i długość skrótu, lec
 sam klucz HMAC; wartość klucza musi mieć co najmniej 32 znaki. Generator wykrywa
 kolizję w obrębie pełnego zbioru lookup przed pierwszym zapisem, nie loguje
 wartości brakującej referencji i odmawia nadpisania kolumny referencyjnej. Mapa
-ma domyślny limit 64 MiB; przekroczenie kończy przygotowanie przed zapisem zamiast
-ryzykować nieograniczone zużycie pamięci.
+ma domyślny limit 64 MiB. Strategia `Fail` kończy przygotowanie przed zapisem,
+a `EncryptedTemporaryIndex` sortuje pełne skróty HMAC porcjami ograniczonymi tym
+samym budżetem. Pliki przechowują stałej długości rekordy AES-GCM z losowym,
+efemerycznym kluczem; sesja sprawdza referencję wyszukiwaniem binarnym bez
+wczytywania indeksu do RAM. Scalanie usuwa duplikaty i nadal wykrywa kolizje
+skróconego pseudonimu przed pierwszym zapisem. Dispose usuwa plik i zeruje klucze.
 
 Reader przekazuje dane strumieniowo, natomiast generator decyduje, co buforuje.
 `TextShuffler` ma `MaximumInMemoryBytes` (domyślnie 64 MiB) oraz jawną strategię

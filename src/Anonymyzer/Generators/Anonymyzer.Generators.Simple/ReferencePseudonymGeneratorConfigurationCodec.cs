@@ -49,5 +49,10 @@ public sealed class ReferencePseudonymGeneratorConfigurationCodec
         {
             yield return "MaximumInMemoryBytes must be at least 1 MiB.";
         }
+
+        if (!Enum.IsDefined(configuration.OverflowStrategy))
+        {
+            yield return "OverflowStrategy is not supported.";
+        }
     }
 }

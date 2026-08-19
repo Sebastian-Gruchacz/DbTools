@@ -66,6 +66,49 @@ public sealed class ReferencePseudonymGeneratorTests
         Assert.Contains("cannot overwrite", exception.Message, StringComparison.OrdinalIgnoreCase);
     }
 
+    [Fact]
+    public async Task UsesEncryptedTemporaryIndexAfterMemoryLimitAndDeletesItOnDispose()
+    {
+        string keyEnvironmentVariable = $"ANONYMYZER_TEST_PSEUDONYM_{Guid.NewGuid():N}";
+        Environment.SetEnvironmentVariable(keyEnvironmentVariable, "spill-test-key-with-more-than-thirty-two-characters");
+        string temporaryDirectory = Path.Combine(Path.GetTempPath(), "Anonymyzer");
+        string[] filesBefore = Directory.Exists(temporaryDirectory)
+            ? Directory.GetFiles(temporaryDirectory, "reference-index-*.bin")
+            : Array.Empty<string>();
+        try
+        {
+            var generator = new ReferencePseudonymGenerator();
+            ReferencePseudonymGeneratorConfiguration configuration = CreateConfiguration();
+            configuration.KeyEnvironmentVariable = keyEnvironmentVariable;
+            configuration.MaximumInMemoryBytes = 1024 * 1024;
+            configuration.OverflowStrategy = RelationalLookupOverflowStrategy.EncryptedTemporaryIndex;
+            IGeneratorSession session = await generator.PrepareAsync(
+                new GeneratorPreparationContext(CreateBinding(), new LookupReader(Enumerable.Range(1, 5000).Cast<object>())),
+                configuration,
+                TestContext.Current.CancellationToken);
+            try
+            {
+                string[] filesDuringSession = Directory.GetFiles(temporaryDirectory, "reference-index-*.bin");
+                Assert.True(filesDuringSession.Except(filesBefore, StringComparer.OrdinalIgnoreCase).Any());
+
+                var row = new MutableRow(new Dictionary<string, object?> { ["DepartmentId"] = 4999 });
+                await session.ApplyAsync(row, TestContext.Current.CancellationToken);
+                Assert.StartsWith("anon-", row.GetValue("DepartmentAlias") as string);
+            }
+            finally
+            {
+                await session.DisposeAsync();
+            }
+
+            string[] filesAfter = Directory.GetFiles(temporaryDirectory, "reference-index-*.bin");
+            Assert.Empty(filesAfter.Except(filesBefore, StringComparer.OrdinalIgnoreCase));
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable(keyEnvironmentVariable, null);
+        }
+    }
+
     private static ReferencePseudonymGeneratorConfiguration CreateConfiguration() => new()
     {
         ReferenceColumn = "DepartmentId",
@@ -78,8 +121,19 @@ public sealed class ReferencePseudonymGeneratorTests
         new GeneratorTableReference("public", "employees"),
         new Dictionary<string, string> { [ReferencePseudonymGenerator.ValueOutput] = "DepartmentAlias" });
 
-    private sealed class LookupReader(object value) : IGeneratorDataReader
+    private sealed class LookupReader : IGeneratorDataReader
     {
+        private readonly IEnumerable<object> _values;
+
+        public LookupReader(object value) : this([value])
+        {
+        }
+
+        public LookupReader(IEnumerable<object> values)
+        {
+            _values = values;
+        }
+
         public async IAsyncEnumerable<GeneratorDataRow> ReadAsync(
             GeneratorDataRequirement requirement,
             [System.Runtime.CompilerServices.EnumeratorCancellation]
@@ -87,10 +141,14 @@ public sealed class ReferencePseudonymGeneratorTests
         {
             cancellationToken.ThrowIfCancellationRequested();
             await Task.Yield();
-            yield return new GeneratorDataRow(new Dictionary<string, object?>
+            foreach (object value in _values)
             {
-                [requirement.Columns.Single()] = value
-            });
+                cancellationToken.ThrowIfCancellationRequested();
+                yield return new GeneratorDataRow(new Dictionary<string, object?>
+                {
+                    [requirement.Columns.Single()] = value
+                });
+            }
         }
     }
 
@@ -102,5 +160,15 @@ public sealed class ReferencePseudonymGeneratorTests
         {
             throw new InvalidOperationException("The failing row must not be modified.");
         }
+    }
+
+    private sealed class MutableRow(IReadOnlyDictionary<string, object?> values) : IGeneratorRow
+    {
+        private readonly Dictionary<string, object?> _values = new(values, StringComparer.OrdinalIgnoreCase);
+
+        public object? GetValue(string columnName) =>
+            _values.TryGetValue(columnName, out object? value) ? value : null;
+
+        public void SetValue(string columnName, object? value) => _values[columnName] = value;
     }
 }
