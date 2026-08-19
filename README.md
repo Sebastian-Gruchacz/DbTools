@@ -108,7 +108,7 @@ językowe opisuje [docs/anonymyzer-design.md](docs/anonymyzer-design.md).
 - `Anonymyzer.Generators.Address` — grupowy generator spójnego adresu pocztowego;
 - `Anonymyzer.ConfigEditor.Abstractions` — kontrakt opcjonalnych paneli WPF;
 - `Anonymyzer.Generators.Simple.Wpf` — panele konfiguracji generatorów prostych;
-- `Anonymyzer.Generators.Person.Wpf` — panel konfiguracji `PersonIdentity` 1.1.0;
+- `Anonymyzer.Generators.Person.Wpf` — panel konfiguracji `PersonIdentity` 1.2.0;
 - `Anonymyzer.Generators.Address.Wpf` — panel konfiguracji `PostalAddress` 1.0.0;
 - `Anonymyzer.LanguagePack.Polish` — dane i reguły regionalne `pl-PL`;
 - `Anonymyzer.LanguagePack.English` — reguły `en-US` oraz bezpieczne numery
@@ -168,8 +168,9 @@ językowe opisuje [docs/anonymyzer-design.md](docs/anonymyzer-design.md).
   a kolumna `Origin` pokazuje ich pochodzenie;
 - rozwijane `Profiles → Add` tworzące kompletny profil domyślny wybranego
   generatora także w starszej konfiguracji;
-- `PersonIdentity` 1.1.0 w zakresie `Row`: spójne imię, nazwisko, rodzaj i e-mail
-  na podstawie pakietu `pl-PL` albo `en-US`, bez dodatkowego skanu bazy;
+- `PersonIdentity` 1.2.0 w zakresie `Row`: spójne imię, nazwisko, pełna nazwa,
+  rodzaj i e-mail na podstawie pakietu `pl-PL` albo `en-US`, bez dodatkowego
+  skanu bazy; pełna nazwa obsługuje kolejność imię–nazwisko lub nazwisko–imię;
 - `BirthDate` 1.0.0: deterministyczna data z konfigurowalnego zakresu dla kolumn
   `Date` i `DateTime`, gotowa jako zależność `Generated` dla identyfikatora;
 - `Gender` 1.0.0: konfigurowalne wartości żeńska/męska, proporcja i seed, gotowe

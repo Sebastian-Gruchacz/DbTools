@@ -523,15 +523,17 @@ bazy, np. `Female`/`Male`, `K`/`M` albo `F`/`M`.
 w kolejności data+płeć, a następnie zależny PESEL. Mapowania wartości pozostają
 w profilu identyfikatora, więc generator płci nie zależy od formatu PESEL.
 
-### Pierwszy generator Row: PersonIdentity 1.1.0
+### Pierwszy generator Row: PersonIdentity 1.2.0
 
 `PersonIdentity` wykonuje jedno atomowe wywołanie dla wiersza i może wystawić
-wyjścia `FirstName`, `LastName`, `Gender` oraz `Email`. Binding decyduje, które
-z nich trafią do kolumn. E-mail jest budowany z wartości wygenerowanych w tym
-samym wywołaniu, więc nie zależy od kolejności kolumn.
+wyjścia `FirstName`, `LastName`, `FullName`, `Gender` oraz `Email`. Binding
+decyduje, które z nich trafią do kolumn. Pełna nazwa i e-mail są budowane z
+wartości wygenerowanych w tym samym wywołaniu, więc nie zależą od kolejności
+kolumn.
 
-Konfiguracja należąca do generatora zawiera `Seed`, `Locale`, `EmailPattern` i
-`EmailDomain`. Dostępne są na razie schematy:
+Konfiguracja należąca do generatora zawiera `Seed`, `Locale`, `FullNamePattern`,
+`EmailPattern` i `EmailDomain`. `FullNamePattern` wybiera kolejność
+`FirstNameLastName` albo `LastNameFirstName`. Dostępne schematy e-mail to:
 
 - `NameBased`: znormalizowane imię, nazwisko i licznik zapewniający unikalność;
 - `Opaque`: sztuczny identyfikator bez imienia i nazwiska.

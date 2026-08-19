@@ -78,7 +78,7 @@ Zapobiega to niezależnemu losowaniu danych, które powinny być ze sobą zgodne
 
 Obecne generatory wielowyjściowe:
 
-- `PersonIdentity`: `FirstName`, `LastName`, `Gender`, `Email`;
+- `PersonIdentity`: `FirstName`, `LastName`, `FullName`, `Gender`, `Email`;
 - `PostalAddress`: `Country`, `Region`, `City`, `Street`, `PostalCode`.
 
 Sposób konfiguracji:

@@ -78,7 +78,7 @@ This prevents values that must agree from being generated independently.
 
 Current multi-output generators:
 
-- `PersonIdentity`: `FirstName`, `LastName`, `Gender`, `Email`;
+- `PersonIdentity`: `FirstName`, `LastName`, `FullName`, `Gender`, `Email`;
 - `PostalAddress`: `Country`, `Region`, `City`, `Street`, `PostalCode`.
 
 To configure a group:

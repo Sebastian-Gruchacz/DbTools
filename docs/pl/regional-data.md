@@ -1,8 +1,9 @@
 # Dane regionalne
 
-Pakiety `Polish` i `English` w wersji 1.1.0 używają ważonego losowania. Wagi są
-liczbami wystąpień z oficjalnych zestawień, a ten sam seed nadal daje ten sam
-ciąg wyników dla tej samej wersji pakietu.
+Pakiety `Polish` i `English` używają ważonego losowania od wersji 1.1.0. Bieżąca
+wersja 1.2.0 dodaje format pełnej nazwy, ale zachowuje te same tabele i wagi.
+Wagi są liczbami wystąpień z oficjalnych zestawień, a ten sam seed nadal daje
+ten sam ciąg imion i nazwisk.
 
 ## Polska (`pl-PL`)
 
@@ -39,5 +40,7 @@ ich udział po renormalizacji wag. Pakiety nadają się do realistycznie brzmią
 danych testowych, ale nie do analiz statystycznych ani symulacji demograficznych.
 
 Zmiana tabel lub wag wymaga podniesienia wersji pakietu, ponieważ wpływa na wynik
-dla istniejącego seeda. Dlatego ważone dane są związane z `PersonIdentity 1.1.0`;
-profil wskazujący wersję 1.0.0 trzeba jawnie zastąpić profilem 1.1.0.
+dla istniejącego seeda. Ważone dane wprowadzono w `PersonIdentity 1.1.0`, a profil
+1.2.0 zachowuje ich kolejność i dodaje opcjonalne wyjście `FullName`. Starszy
+profil trzeba jawnie zastąpić profilem odpowiadającym zainstalowanej wersji
+generatora.

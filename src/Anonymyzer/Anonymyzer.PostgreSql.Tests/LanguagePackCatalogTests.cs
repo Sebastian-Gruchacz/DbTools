@@ -57,14 +57,17 @@ public sealed class LanguagePackCatalogTests
         Assert.Equal(2, personProfiles.Select(profile => profile.Id).Distinct(StringComparer.OrdinalIgnoreCase).Count());
         Assert.Equal(["en-US", "pl-PL"], personProfiles.Select(profile => profile.Locale).OrderBy(value => value));
         Assert.All(personProfiles, profile => Assert.Equal(profile.Locale, profile.Options.Value<string>("Locale")));
+        Assert.All(personProfiles, profile => Assert.Equal("1.2.0", profile.GeneratorVersion));
+        Assert.All(personProfiles, profile =>
+            Assert.Equal("FirstNameLastName", profile.Options.Value<string>("FullNamePattern")));
     }
 
     [Fact]
-    public void EmbeddedPacksVersionTheirWeightedPersonData()
+    public void ExposesCurrentPersonIdentityAndWeightedDataVersions()
     {
-        Assert.Equal("1.1.0", new EnglishLanguagePack().Descriptor.Version);
-        Assert.Equal("1.1.0", new PolishLanguagePack().Descriptor.Version);
-        Assert.Equal("1.1.0", PersonIdentityGenerator.GeneratorVersion);
+        Assert.Equal("1.2.0", new EnglishLanguagePack().Descriptor.Version);
+        Assert.Equal("1.2.0", new PolishLanguagePack().Descriptor.Version);
+        Assert.Equal("1.2.0", PersonIdentityGenerator.GeneratorVersion);
         Assert.Equal("US-SSA-2020-2025", EnglishPersonLocaleDataProvider.GivenNameDataVersion);
         Assert.Equal("US-Census-2010", EnglishPersonLocaleDataProvider.SurnameDataVersion);
         Assert.Equal("PL-MC-2025", PolishPersonLocaleDataProvider.GivenNameDataVersion);

@@ -18,6 +18,7 @@ public class PersonIdentityGeneratorTests
             generator.Descriptor.Outputs,
             output => Assert.Equal((PersonIdentityGenerator.FirstNameOutput, "Person.FirstName"), (output.Name, output.SemanticRole)),
             output => Assert.Equal((PersonIdentityGenerator.LastNameOutput, "Person.LastName"), (output.Name, output.SemanticRole)),
+            output => Assert.Equal((PersonIdentityGenerator.FullNameOutput, "Person.FullName"), (output.Name, output.SemanticRole)),
             output => Assert.Equal((PersonIdentityGenerator.GenderOutput, "Person.Gender"), (output.Name, output.SemanticRole)),
             output => Assert.Equal((PersonIdentityGenerator.EmailOutput, "Contact.Email"), (output.Name, output.SemanticRole)));
     }
@@ -31,6 +32,7 @@ public class PersonIdentityGeneratorTests
         {
             Seed = 123,
             Locale = "pl-PL",
+            FullNamePattern = PersonFullNamePattern.LastNameFirstName,
             EmailPattern = PersonEmailPattern.NameBased,
             EmailDomain = "example.invalid"
         };
@@ -46,6 +48,7 @@ public class PersonIdentityGeneratorTests
 
         string firstName = Assert.IsType<string>(row.GetValue("first_name"));
         string lastName = Assert.IsType<string>(row.GetValue("last_name"));
+        Assert.Equal($"{lastName} {firstName}", row.GetValue("full_name"));
         string email = Assert.IsType<string>(row.GetValue("email"));
         Assert.Equal($"{localeProvider.NormalizeEmailToken(firstName)}.{localeProvider.NormalizeEmailToken(lastName)}.000001@example.invalid", email);
         Assert.Contains(Assert.IsType<string>(row.GetValue("gender")), new[] { "Female", "Male" });
@@ -79,6 +82,7 @@ public class PersonIdentityGeneratorTests
 
         string firstName = Assert.IsType<string>(row.GetValue("first_name"));
         string lastName = Assert.IsType<string>(row.GetValue("last_name"));
+        Assert.Equal($"{firstName} {lastName}", row.GetValue("full_name"));
         Assert.Equal(
             $"{localeProvider.NormalizeEmailToken(firstName)}.{localeProvider.NormalizeEmailToken(lastName)}.000001@example.invalid",
             row.GetValue("email"));
@@ -116,6 +120,7 @@ public class PersonIdentityGeneratorTests
         {
             Seed = 19,
             Locale = "pl-PL",
+            FullNamePattern = PersonFullNamePattern.LastNameFirstName,
             EmailPattern = PersonEmailPattern.Opaque,
             EmailDomain = "example.invalid"
         };
@@ -124,8 +129,15 @@ public class PersonIdentityGeneratorTests
         var restored = (PersonIdentityGeneratorConfiguration)codec.Deserialize(json);
 
         Assert.Equal("Opaque", json[nameof(configuration.EmailPattern)]?.Value<string>());
+        Assert.Equal("LastNameFirstName", json[nameof(configuration.FullNamePattern)]?.Value<string>());
         Assert.Equal(PersonEmailPattern.Opaque, restored.EmailPattern);
+        Assert.Equal(PersonFullNamePattern.LastNameFirstName, restored.FullNamePattern);
         Assert.Empty(codec.Validate(restored));
+
+        var legacyJson = (JObject)json.DeepClone();
+        legacyJson.Remove(nameof(configuration.FullNamePattern));
+        var restoredLegacy = (PersonIdentityGeneratorConfiguration)codec.Deserialize(legacyJson);
+        Assert.Equal(PersonFullNamePattern.FirstNameLastName, restoredLegacy.FullNamePattern);
     }
 
     [Fact]
@@ -157,6 +169,7 @@ public class PersonIdentityGeneratorTests
             {
                 [PersonIdentityGenerator.FirstNameOutput] = "first_name",
                 [PersonIdentityGenerator.LastNameOutput] = "last_name",
+                [PersonIdentityGenerator.FullNameOutput] = "full_name",
                 [PersonIdentityGenerator.GenderOutput] = "gender",
                 [PersonIdentityGenerator.EmailOutput] = "email"
             });

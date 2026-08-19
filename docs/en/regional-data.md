@@ -1,8 +1,9 @@
 # Regional data
 
-The `Polish` and `English` language packs version 1.1.0 use weighted selection.
-Weights are occurrence counts from official summaries, and the same seed still
-produces the same sequence for the same pack version.
+The `Polish` and `English` language packs have used weighted selection since
+version 1.1.0. Current version 1.2.0 adds full-name formatting while retaining
+the same tables and weights. Weights are occurrence counts from official
+summaries, and the same seed still produces the same name sequence.
 
 ## Poland (`pl-PL`)
 
@@ -39,6 +40,7 @@ top ranks inflates their normalized share. The packs are suitable for plausible
 test data, but not for statistical analysis or demographic simulation.
 
 Changing a table or its weights requires a language-pack version increase,
-because it changes the output produced by an existing seed. The weighted data is
-therefore bound to `PersonIdentity 1.1.0`; a profile targeting version 1.0.0 must
-be explicitly replaced with a 1.1.0 profile.
+because it changes the output produced by an existing seed. Weighted data was
+introduced by `PersonIdentity 1.1.0`; profile 1.2.0 retains its sequence and adds
+the optional `FullName` output. An older profile must be explicitly replaced by
+one matching the installed generator version.
