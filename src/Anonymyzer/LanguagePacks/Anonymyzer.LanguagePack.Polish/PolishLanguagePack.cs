@@ -11,7 +11,7 @@ public sealed class PolishLanguagePack : ILanguagePack
     public LanguagePackDescriptor Descriptor { get; } = new(
         "Polish",
         "Polish",
-        "1.0.0",
+        "1.1.0",
         ["pl-PL"]);
 
     public IReadOnlyList<Type> ProviderTypes { get; } =

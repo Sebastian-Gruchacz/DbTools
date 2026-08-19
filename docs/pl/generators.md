@@ -23,6 +23,8 @@ ten sam obiekt `Options`, którego używa CLI. Poniższe nazwy pól odpowiadają
 
 Generuje spójne imię, nazwisko, płeć i e-mail. Używaj przez grupę; można mapować
 dowolny niepusty podzbiór wyjść `FirstName`, `LastName`, `Gender`, `Email`.
+Pakiety regionalne 1.1.0 losują imiona i nazwiska z wagami; pochodzenie i
+ograniczenia zbiorów opisuje [dokumentacja danych regionalnych](regional-data.md).
 
 - `Locale`: `pl-PL` lub `en-US`.
 - `Seed`: deterministyczny wybór osoby.

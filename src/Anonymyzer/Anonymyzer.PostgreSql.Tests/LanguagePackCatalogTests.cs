@@ -60,6 +60,18 @@ public sealed class LanguagePackCatalogTests
     }
 
     [Fact]
+    public void EmbeddedPacksVersionTheirWeightedPersonData()
+    {
+        Assert.Equal("1.1.0", new EnglishLanguagePack().Descriptor.Version);
+        Assert.Equal("1.1.0", new PolishLanguagePack().Descriptor.Version);
+        Assert.Equal("1.1.0", PersonIdentityGenerator.GeneratorVersion);
+        Assert.Equal("US-SSA-2020-2025", EnglishPersonLocaleDataProvider.GivenNameDataVersion);
+        Assert.Equal("US-Census-2010", EnglishPersonLocaleDataProvider.SurnameDataVersion);
+        Assert.Equal("PL-MC-2025", PolishPersonLocaleDataProvider.GivenNameDataVersion);
+        Assert.Equal("PL-PESEL-2022-published-ranking", PolishPersonLocaleDataProvider.SurnameDataVersion);
+    }
+
+    [Fact]
     public void InstallsAndPersistsDisabledState()
     {
         string directory = Path.Combine(Path.GetTempPath(), "anonymyzer-language-pack-tests", Guid.NewGuid().ToString("N"));

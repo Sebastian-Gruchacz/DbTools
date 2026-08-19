@@ -23,6 +23,8 @@ writes the same `Options` object consumed by the CLI. Field names below match JS
 
 Creates a coherent first name, last name, gender, and email. Use it through a
 group and map any non-empty subset of `FirstName`, `LastName`, `Gender`, `Email`.
+Language packs 1.1.0 select names and surnames with weights; see the
+[regional-data documentation](regional-data.md) for provenance and limitations.
 
 - `Locale`: `pl-PL` or `en-US`.
 - `Seed`: deterministic person selection.

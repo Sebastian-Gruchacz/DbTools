@@ -1,37 +1,42 @@
 ﻿namespace Anonymyzer.LanguagePack.Polish;
 
 using System.Text;
+using Anonymyzer.Base.Generation;
 using Anonymyzer.Generators.Person;
 
 public sealed class PolishPersonLocaleDataProvider : IPersonLocaleDataProvider
 {
-    private static readonly string[] FemaleNames =
-    {
-        "Anna", "Katarzyna", "Maria", "Małgorzata", "Agnieszka", "Barbara", "Ewa", "Magdalena",
-        "Joanna", "Aleksandra", "Monika", "Zofia", "Natalia", "Julia", "Karolina", "Marta"
-    };
+    public const string GivenNameDataVersion = "PL-MC-2025";
+    public const string SurnameDataVersion = "PL-PESEL-2022-published-ranking";
 
-    private static readonly string[] MaleNames =
-    {
-        "Piotr", "Krzysztof", "Andrzej", "Tomasz", "Paweł", "Jan", "Michał", "Marcin",
-        "Jakub", "Adam", "Łukasz", "Mateusz", "Wojciech", "Kamil", "Marek", "Grzegorz"
-    };
+    private static readonly WeightedRandomTable<string> FemaleNames = new(
+    [
+        new("Zofia", 4_415), new("Zuzanna", 3_881), new("Maja", 3_873), new("Laura", 3_821),
+        new("Hanna", 3_452), new("Julia", 3_207), new("Oliwia", 3_067), new("Pola", 2_812),
+        new("Alicja", 2_788), new("Emilia", 2_556)
+    ]);
 
-    private static readonly SurnamePair[] Surnames =
-    {
-        new("Nowak", "Nowak"),
-        new("Kowalski", "Kowalska"),
-        new("Wiśniewski", "Wiśniewska"),
-        new("Wójcik", "Wójcik"),
-        new("Kowalczyk", "Kowalczyk"),
-        new("Kamiński", "Kamińska"),
-        new("Lewandowski", "Lewandowska"),
-        new("Zieliński", "Zielińska"),
-        new("Szymański", "Szymańska"),
-        new("Woźniak", "Woźniak"),
-        new("Dąbrowski", "Dąbrowska"),
-        new("Kozłowski", "Kozłowska")
-    };
+    private static readonly WeightedRandomTable<string> MaleNames = new(
+    [
+        new("Nikodem", 5_772), new("Antoni", 5_253), new("Leon", 5_079), new("Jan", 5_054),
+        new("Aleksander", 4_687), new("Franciszek", 4_548), new("Ignacy", 4_222),
+        new("Stanisław", 3_554), new("Jakub", 3_386), new("Mikołaj", 3_215)
+    ]);
+
+    private static readonly WeightedRandomTable<SurnamePair> Surnames = new(
+    [
+        Pair("Nowak", "Nowak", 202_132),
+        Pair("Kowalski", "Kowalska", 136_545),
+        Pair("Wiśniewski", "Wiśniewska", 108_977),
+        Pair("Wójcik", "Wójcik", 98_128),
+        Pair("Kowalczyk", "Kowalczyk", 96_814),
+        Pair("Kamiński", "Kamińska", 93_961),
+        Pair("Lewandowski", "Lewandowska", 92_142),
+        Pair("Zieliński", "Zielińska", 88_839),
+        Pair("Szymański", "Szymańska", 87_507),
+        Pair("Woźniak", "Woźniak", 87_173),
+        Pair("Dąbrowski", "Dąbrowska", 86_274)
+    ]);
 
     public string Locale => "pl-PL";
 
@@ -41,9 +46,9 @@ public sealed class PolishPersonLocaleDataProvider : IPersonLocaleDataProvider
 
         PersonGender gender = random.Next(2) == 0 ? PersonGender.Female : PersonGender.Male;
         string firstName = gender == PersonGender.Female
-            ? FemaleNames[random.Next(FemaleNames.Length)]
-            : MaleNames[random.Next(MaleNames.Length)];
-        SurnamePair surname = Surnames[random.Next(Surnames.Length)];
+            ? FemaleNames.Select(random)
+            : MaleNames.Select(random);
+        SurnamePair surname = Surnames.Select(random);
         string lastName = gender == PersonGender.Female ? surname.Female : surname.Male;
         return new GeneratedPersonName(firstName, lastName, gender);
     }
@@ -78,6 +83,9 @@ public sealed class PolishPersonLocaleDataProvider : IPersonLocaleDataProvider
             ? result.ToString()
             : throw new InvalidOperationException($"Value '{value}' cannot be normalized to an e-mail token.");
     }
+
+    private static WeightedValue<SurnamePair> Pair(string male, string female, long weight) =>
+        new(new SurnamePair(male, female), weight);
 
     private sealed record SurnamePair(string Male, string Female);
 }

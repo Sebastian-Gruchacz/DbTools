@@ -108,7 +108,7 @@ językowe opisuje [docs/anonymyzer-design.md](docs/anonymyzer-design.md).
 - `Anonymyzer.Generators.Address` — grupowy generator spójnego adresu pocztowego;
 - `Anonymyzer.ConfigEditor.Abstractions` — kontrakt opcjonalnych paneli WPF;
 - `Anonymyzer.Generators.Simple.Wpf` — panele konfiguracji generatorów prostych;
-- `Anonymyzer.Generators.Person.Wpf` — panel konfiguracji `PersonIdentity` 1.0.0;
+- `Anonymyzer.Generators.Person.Wpf` — panel konfiguracji `PersonIdentity` 1.1.0;
 - `Anonymyzer.Generators.Address.Wpf` — panel konfiguracji `PostalAddress` 1.0.0;
 - `Anonymyzer.LanguagePack.Polish` — dane i reguły regionalne `pl-PL`;
 - `Anonymyzer.LanguagePack.English` — reguły `en-US` oraz bezpieczne numery
@@ -168,7 +168,7 @@ językowe opisuje [docs/anonymyzer-design.md](docs/anonymyzer-design.md).
   a kolumna `Origin` pokazuje ich pochodzenie;
 - rozwijane `Profiles → Add` tworzące kompletny profil domyślny wybranego
   generatora także w starszej konfiguracji;
-- `PersonIdentity` 1.0.0 w zakresie `Row`: spójne imię, nazwisko, rodzaj i e-mail
+- `PersonIdentity` 1.1.0 w zakresie `Row`: spójne imię, nazwisko, rodzaj i e-mail
   na podstawie pakietu `pl-PL` albo `en-US`, bez dodatkowego skanu bazy;
 - `BirthDate` 1.0.0: deterministyczna data z konfigurowalnego zakresu dla kolumn
   `Date` i `DateTime`, gotowa jako zależność `Generated` dla identyfikatora;
@@ -442,7 +442,8 @@ skasowany po wypchnięciu lub zarchiwizowaniu nowego repozytorium.
 
 1. Rozszerzać checkpoint tylko wraz z trwałym, odtwarzalnym stanem generatorów
    `Column`/`Relational`.
-2. Rozszerzyć pakiety regionalne o wersjonowane, ważone dane z opisanym źródłem.
+2. Rozszerzać startowe, ważone wycinki danych regionalnych bez utraty jawnej
+   wersji, źródła i ograniczeń każdego zbioru.
 3. Dopiero po pomiarach dodać mapowanie zmienianych kluczy, obsługę XML oraz
    strategię indeksów, constraintów i triggerów.
 4. Ujednolicić historyczne nazwy `Anonymyzer` / `Anonymization` bez zmiany

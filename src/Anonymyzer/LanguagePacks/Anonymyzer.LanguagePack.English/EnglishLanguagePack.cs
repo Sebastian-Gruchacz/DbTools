@@ -11,7 +11,7 @@ public sealed class EnglishLanguagePack : ILanguagePack
     public LanguagePackDescriptor Descriptor { get; } = new(
         "English",
         "English",
-        "1.0.0",
+        "1.1.0",
         ["en-US"]);
 
     public IReadOnlyList<Type> ProviderTypes { get; } =

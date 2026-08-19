@@ -6,7 +6,7 @@ using Anonymyzer.Base.Generation;
 public sealed class PersonIdentityGenerator : GeneratorBase<PersonIdentityGeneratorConfiguration>
 {
     public const string GeneratorType = "PersonIdentity";
-    public const string GeneratorVersion = "1.0.0";
+    public const string GeneratorVersion = "1.1.0";
     public const string FirstNameOutput = "FirstName";
     public const string LastNameOutput = "LastName";
     public const string GenderOutput = "Gender";

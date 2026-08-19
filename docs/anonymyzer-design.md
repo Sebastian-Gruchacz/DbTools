@@ -519,7 +519,7 @@ bazy, np. `Female`/`Male`, `K`/`M` albo `F`/`M`.
 w kolejności data+płeć, a następnie zależny PESEL. Mapowania wartości pozostają
 w profilu identyfikatora, więc generator płci nie zależy od formatu PESEL.
 
-### Pierwszy generator Row: PersonIdentity 1.0.0
+### Pierwszy generator Row: PersonIdentity 1.1.0
 
 `PersonIdentity` wykonuje jedno atomowe wywołanie dla wiersza i może wystawić
 wyjścia `FirstName`, `LastName`, `Gender` oraz `Email`. Binding decyduje, które
@@ -541,10 +541,12 @@ listę nazwisk. Normalizacja local-part usuwa znaki diakrytyczne i interpunkcję
 więc np. `José O'Connor` staje się `joseoconnor`. Oba pakiety są wybierane przez
 to samo pole `Locale` bez rozgałęzień regionalnych w samym generatorze.
 
-Aktualne pakiety zawierają małe, równomiernie losowane zestawy startowe. Nie należy
-traktować ich jako modeli rozkładu populacji. Docelowy pakiet danych
-powinien zawierać wersjonowane częstotliwości wraz z pochodzeniem danych i
-testami jakości. Generator nie tworzy jeszcze PESEL ani NIP.
+Pakiety regionalne 1.1.0 losują imiona i nazwiska według częstotliwości z małych,
+wersjonowanych wycinków oficjalnych zbiorów. Są to nadal listy czołowych pozycji,
+więc celowo nadreprezentują popularne wartości; polskie i amerykańskie imiona
+opisują też inne okresy i populacje. Wersje, ograniczenia i źródła są podane w
+[dokumentacji danych regionalnych](pl/regional-data.md). Generator nie tworzy
+jeszcze PESEL ani NIP.
 
 ### PostalAddress 1.0.0
 
