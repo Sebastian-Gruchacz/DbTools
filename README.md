@@ -376,9 +376,10 @@ wraz z komendami pobrania, inicjalizacji i generowania configów, opisuje
 
 | Gałąź | Zawartość | Ocena |
 | --- | --- | --- |
-| `master` | historyczna wersja `ScriptCut` | punkt bazowy, zastąpiony przez nowsze prace |
-| `some_changes` | obsługa triggerów i BAT w `ScriptCut` | w całości jest przodkiem `anonymyzator`; można później usunąć ref |
-| `anonymyzator` | `ScriptCut` oraz szkic anonimizatora | właściwa gałąź do dalszej pracy |
+| `master` | `ScriptCut` i pierwszy scalony pion anonimizatora (PR #1) | wspólna baza; bieżące prace nie są jeszcze scalone |
+| `anon-generators` | generatory, bezpieczny executor, SQL Server/PostgreSQL, WPF, rescan i pakiety językowe | aktywna gałąź rozwojowa |
+| `anonymyzator` | historyczna gałąź pierwszego pionu | scalona do `master`; ref można zarchiwizować |
+| `some_changes` | historyczne zmiany `ScriptCut` | scalona pośrednio; ref można zarchiwizować |
 | `gateway` | historyczne źródło `TimeGateService` | wydzielone do osobnego repozytorium `J:\GIT\Gateway`; nie scalać do `main` |
 
 Gateway został wydzielony do `J:\GIT\Gateway` wraz z dwoma historycznymi
@@ -388,16 +389,19 @@ skasowany po wypchnięciu lub zarchiwizowaniu nowego repozytorium.
 
 ## Proponowana kolejka
 
-1. Dodać testy regresyjne `ScriptCut` dla wielu tabel, tabel bez
-   `IDENTITY_INSERT`, pustego wejścia i znaków niedozwolonych w nazwie pliku.
-2. Ujednolicić historyczne nazwy `Anonymyzer` / `Anonymization` bez zmiany
-   zachowania.
-3. Zrealizować mały pionowy wycinek: jedna tabela, grupa `PersonIdentity`,
-   deterministyczny seed, batche, `dry-run` i test na lokalnej bazie.
-4. Rozszerzyć pakiety regionalne o ważone dane.
-5. Dopiero po pomiarach dodać planowanie zależności FK, mapowanie zmienianych
-   kluczy, indeksy, XML/JSON i generatory odwołujące się do innych wierszy.
+1. Dodać raport walidacji po zapisie oraz checkpoint/wznowienie wykonania, zanim
+   executor zostanie rozszerzony poza jedną tabelę.
+2. Dodać limit pamięci i strategię spill/alternatywnego losowania dla dużych
+   kolumn `TextShuffler`.
+3. Zaprojektować pierwszy generator `Relational` oraz planowanie zależności
+   między tabelami bez zmiany PK/FK.
+4. Rozszerzyć pakiety regionalne o wersjonowane, ważone dane z opisanym źródłem.
+5. Dopiero po pomiarach dodać mapowanie zmienianych kluczy, obsługę XML oraz
+   strategię indeksów, constraintów i triggerów.
+6. Ujednolicić historyczne nazwy `Anonymyzer` / `Anonymization` bez zmiany
+   zachowania i usunąć nieaktualne refy dopiero po upewnieniu się, że są na GH.
 
-Najbardziej opłacalny następny krok to pionowy wycinek z punktu 3. Próba
-rozwiązania od razu zmian PK/FK i wszystkich wariantów indeksów
-utrudniłaby zweryfikowanie podstawowego przepływu.
+Najbardziej opłacalny następny krok to raport po wykonaniu i checkpoint. Obecny
+executor bezpiecznie obsługuje pojedynczą tabelę, ale awaria między batchami nie
+ma jeszcze trwałego śladu pozwalającego operatorowi jednoznacznie ocenić zakres
+wykonanych zmian lub wznowić pracę.
