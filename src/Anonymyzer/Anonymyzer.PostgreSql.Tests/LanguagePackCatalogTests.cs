@@ -39,6 +39,33 @@ public sealed class LanguagePackCatalogTests
         Assert.Contains("Duplicate language pack id 'English'", exception.Message);
     }
 
+    [Fact]
+    public void InstallsAndPersistsDisabledState()
+    {
+        string directory = Path.Combine(Path.GetTempPath(), "anonymyzer-language-pack-tests", Guid.NewGuid().ToString("N"));
+        try
+        {
+            var service = new LanguagePackInstallationService([], directory);
+
+            LanguagePackInstallation installed = service.Install(typeof(EnglishLanguagePack).Assembly.Location);
+            bool changed = service.SetEnabled(installed.Pack.Descriptor.Id, enabled: false);
+            var reloaded = new LanguagePackInstallationService([], directory);
+
+            Assert.True(changed);
+            Assert.Single(reloaded.Installations);
+            Assert.False(reloaded.Installations[0].IsEnabled);
+            Assert.Empty(reloaded.ActivePacks);
+            Assert.Empty(reloaded.LoadWarnings);
+        }
+        finally
+        {
+            if (Directory.Exists(directory))
+            {
+                Directory.Delete(directory, recursive: true);
+            }
+        }
+    }
+
     private sealed class DuplicateEnglishPack : ILanguagePack
     {
         public LanguagePackDescriptor Descriptor { get; } = new("English", "Duplicate", "1.0.0", ["en"]);

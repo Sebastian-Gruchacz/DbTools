@@ -52,7 +52,9 @@ public sealed class LanguagePackCatalog
                 ?? throw new InvalidOperationException("A language pack descriptor is required.");
             if (string.IsNullOrWhiteSpace(descriptor.Id)
                 || string.IsNullOrWhiteSpace(descriptor.DisplayName)
-                || string.IsNullOrWhiteSpace(descriptor.Version))
+                || string.IsNullOrWhiteSpace(descriptor.Version)
+                || descriptor.Locales is null
+                || pack.ProviderTypes is null)
             {
                 throw new InvalidOperationException("Language pack id, display name and version are required.");
             }

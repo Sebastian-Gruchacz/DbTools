@@ -532,6 +532,16 @@ konkretną klasą z bezparametrowym konstruktorem. Ładowanie obcej biblioteki j
 wykonaniem jej kodu, dlatego instalacja musi pozostać jawną operacją operatora i
 nie może automatycznie pobierać DLL z sieci.
 
+Edytor udostępnia `Generators -> Language packs`. Instalacja kopiuje wybraną,
+lokalną DLL do `%LocalAppData%\Anonymyzer\LanguagePacks`; katalog nie pobiera
+pakietów ani zależności z sieci. Stan enabled/disabled jest ustawieniem aplikacji,
+nie dokumentu anonimizacji. Zmiana wymaga restartu, ponieważ sesje generatorów i
+detektor kandydatów dostają niezmienny zestaw providerów przy uruchomieniu.
+Wyłączenie pakietu nie usuwa profili ani ręcznych ustawień z otwartego JSON-a;
+użycie profilu wymagającego nieaktywnego locale zakończy się błędem walidacji.
+Zewnętrzna biblioteka powinna być samowystarczalna poza kontraktami dostarczanymi
+razem z aplikacją.
+
 Słownik służy do wykrywania kandydatów, a nie do automatycznego włączania
 anonimizacji. Wynik powinien zawierać kategorię semantyczną, język, dopasowaną
 regułę, proponowany generator i score. Konfiguracja wynikowa nadal ma

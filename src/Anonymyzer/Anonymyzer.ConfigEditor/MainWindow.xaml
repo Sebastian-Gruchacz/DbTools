@@ -21,6 +21,7 @@
             </MenuItem>
             <MenuItem Header="_Generators">
                 <MenuItem Header="_Profiles..." Click="Profiles_Click" />
+                <MenuItem Header="_Language packs..." Click="LanguagePacks_Click" />
             </MenuItem>
             <MenuItem Header="_Help">
                 <MenuItem Header="Table marking _legend" Click="TableLegend_Click" />

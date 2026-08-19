@@ -29,6 +29,7 @@ public partial class MainWindow : Window
     private readonly ConfigurationFileService _fileService = new();
     private readonly EditorViewModel _viewModel = new();
     private readonly LanguagePackCatalog _languagePacks;
+    private readonly LanguagePackInstallationService _languagePackInstallations;
     private readonly GeneratorCatalog _generatorCatalog;
     private readonly DatabaseRescanService _rescanService;
     private readonly GeneratorPreviewService _previewService;
@@ -54,11 +55,12 @@ public partial class MainWindow : Window
 
     public MainWindow()
     {
-        _languagePacks = new LanguagePackCatalog(
+        _languagePackInstallations = new LanguagePackInstallationService(
         [
             new EnglishLanguagePack(),
             new PolishLanguagePack()
         ]);
+        _languagePacks = new LanguagePackCatalog(_languagePackInstallations.ActivePacks);
         _generatorCatalog = new GeneratorCatalog(_languagePacks);
         _rescanService = new DatabaseRescanService(_languagePacks);
         _previewService = new GeneratorPreviewService(_generatorCatalog);
@@ -189,6 +191,21 @@ public partial class MainWindow : Window
                 _viewModel.MarkDirty();
                 _viewModel.Status = "Generator profiles updated. Save the configuration to persist changes.";
             }
+        }
+    }
+
+    private void LanguagePacks_Click(object sender, RoutedEventArgs e)
+    {
+        var dialog = new LanguagePacksWindow(_languagePackInstallations) { Owner = this };
+        if (dialog.ShowDialog() == true && dialog.RestartRequired)
+        {
+            MessageBox.Show(
+                this,
+                "Language-pack changes were saved and will take effect after restarting Anonymyzer. " +
+                "Existing document settings are not removed.",
+                "Restart required",
+                MessageBoxButton.OK,
+                MessageBoxImage.Information);
         }
     }
 
