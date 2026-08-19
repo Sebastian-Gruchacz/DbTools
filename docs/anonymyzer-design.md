@@ -216,8 +216,10 @@ zmienić należący do generatora obiekt `Options` jako surowy JSON.
 - `Row` korzysta wyłącznie z bieżącego wiersza. Tak mogą działać generatory
   imienia/nazwiska i e-maila, jeśli wszystkie zależności są w tej samej tabeli.
 - `Column` deklaruje pełny skan kolumny i przygotowuje stan przed zapisem.
-  `TextShuffler` 1.0.0 buforuje wartości i wykonuje deterministyczny Fisher-Yates,
-  zachowując dokładny multizbiór zamiast jedynie przybliżać rozkład losowaniem.
+  `TextShuffler` 1.0.0 do limitu profilu buforuje wartości i wykonuje
+  deterministyczny Fisher-Yates. Po przekroczeniu limitu profil jawnie odmawia
+  pracy albo przechodzi na szyfrowane sortowanie zewnętrzne, nadal zachowując
+  dokładny multizbiór zamiast jedynie przybliżać rozkład losowaniem.
 - `Relational` deklaruje kolumny z innych tabel oraz czy potrzebuje ich wartości
   oryginalnych czy już wygenerowanych. Planner `dry-run` buduje z deklaracji
   `Generated` graf zależności, wykrywa brakujących producentów, podwójne zapisy
@@ -259,10 +261,14 @@ lub `RequiresExistingValue` blokują checkpoint, ponieważ częściowo zmieniona
 nie zawiera już danych wystarczających do bezpiecznego odtworzenia.
 
 Reader przekazuje dane strumieniowo, natomiast generator decyduje, co buforuje.
-Dokładny shuffle ma koszt pamięci `O(n)` i nie nadaje się bezpośrednio do każdej
-wielkiej tabeli. Kolejne strategie powinny obejmować limit pamięci, spill do
-pliku tymczasowego lub bazowej tabeli roboczej oraz opcjonalne losowanie ważone,
-które zachowuje rozkład tylko statystycznie. Wybór musi być jawny w profilu.
+`TextShuffler` ma `MaximumInMemoryBytes` (domyślnie 64 MiB) oraz jawną strategię
+`Fail` lub `EncryptedTemporaryFiles`. Spill przypisuje wartościom deterministyczne
+klucze sortowania, sortuje porcje ograniczone tym samym budżetem i scala je
+strumieniowo. Same wartości w każdym pliku są szyfrowane AES-GCM losowym kluczem
+istniejącym wyłącznie w pamięci procesu. Pliki są usuwane po zwolnieniu sesji;
+pozostałość po awarii nie zawiera klucza deszyfrującego. Metadane sortowania i
+liczba rekordów nie są tajne. Strategia nadal wymaga wolnego miejsca na dysku i
+nie umożliwia wznowienia częściowo wykonanego pełnego skanu.
 
 Samo przestawienie wartości nie usuwa rzadkich danych z całej kopii, dlatego
 `TextShuffler` nie jest właściwym generatorem dla silnie identyfikujących pól.

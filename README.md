@@ -133,7 +133,8 @@ językowe opisuje [docs/anonymyzer-design.md](docs/anonymyzer-design.md).
 - wersjonowany kontrakt generatora: własny codec JSON, walidacja, deklaracja
   wymagań danych, przygotowanie stanu i sesja wykonawcza;
 - `TextShuffler` 1.0.0: deterministyczna permutacja całej kolumny zachowująca
-  dokładny multizbiór wartości oraz opcjonalnie pozycje `NULL`;
+  dokładny multizbiór wartości oraz opcjonalnie pozycje `NULL`; profil określa
+  limit pamięci i zachowanie `Fail` albo `EncryptedTemporaryFiles`;
 - `FixedText` 1.0.0: stała wartość tekstowa z opcjonalnym zachowaniem `NULL`;
 - `JsonPathRedactor` 1.0.0: selektywna zamiana wartości pod ścieżkami JSON
   w kolumnach tekstowych oraz natywnych PostgreSQL `json/jsonb`, bez ujawniania
@@ -410,17 +411,15 @@ skasowany po wypchnięciu lub zarchiwizowaniu nowego repozytorium.
 
 1. Dodać walidację po zapisie i rozszerzać checkpoint tylko wraz z trwałym,
    odtwarzalnym stanem generatorów `Column`/`Relational`.
-2. Dodać limit pamięci i strategię spill/alternatywnego losowania dla dużych
-   kolumn `TextShuffler`.
-3. Zaprojektować pierwszy generator `Relational` oraz planowanie zależności
+2. Zaprojektować pierwszy generator `Relational` oraz planowanie zależności
    między tabelami bez zmiany PK/FK.
-4. Rozszerzyć pakiety regionalne o wersjonowane, ważone dane z opisanym źródłem.
-5. Dopiero po pomiarach dodać mapowanie zmienianych kluczy, obsługę XML oraz
+3. Rozszerzyć pakiety regionalne o wersjonowane, ważone dane z opisanym źródłem.
+4. Dopiero po pomiarach dodać mapowanie zmienianych kluczy, obsługę XML oraz
    strategię indeksów, constraintów i triggerów.
-6. Ujednolicić historyczne nazwy `Anonymyzer` / `Anonymization` bez zmiany
+5. Ujednolicić historyczne nazwy `Anonymyzer` / `Anonymization` bez zmiany
    zachowania i usunąć nieaktualne refy dopiero po upewnieniu się, że są na GH.
 
-Raport i checkpoint dla bezpiecznych planów `Row` są już dostępne. Następny
-opłacalny krok to limit pamięci i strategia spill dla `TextShuffler`; jego pełny
-skan pozostaje celowo wyłączony ze wznowienia, dopóki populacja oraz stan
-generatora nie będą utrwalane bez korzystania z częściowo zmienionych danych.
+Raport, checkpoint dla bezpiecznych planów `Row` oraz ograniczony pamięciowo
+`TextShuffler` są już dostępne. Następny opłacalny krok to walidacja po zapisie.
+Pełny skan shufflera pozostaje celowo wyłączony ze wznowienia, dopóki populacja
+oraz stan generatora nie będą utrwalane między procesami.
