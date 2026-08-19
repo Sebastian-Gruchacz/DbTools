@@ -9,6 +9,7 @@ public partial class ReferencePseudonymGeneratorEditor : UserControl, IGenerator
 {
     private readonly ReferencePseudonymGeneratorConfigurationCodec _codec = new();
     private readonly GeneratorConfigurationEditorContext _context;
+    private bool _isLoading = true;
 
     public ReferencePseudonymGeneratorEditor(
         JObject options,
@@ -22,13 +23,8 @@ public partial class ReferencePseudonymGeneratorEditor : UserControl, IGenerator
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .Order(StringComparer.OrdinalIgnoreCase)
             .ToArray();
-        LookupSchemaComboBox.ItemsSource = _context.Tables
-            .Select(table => table.SchemaName)
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .Order(StringComparer.OrdinalIgnoreCase)
-            .ToArray();
         ReferenceColumnComboBox.Text = configuration.ReferenceColumn;
-        LookupSchemaComboBox.Text = configuration.LookupSchema;
+        RefreshLookupSchemas(configuration.LookupSchema);
         RefreshLookupTables(configuration.LookupTable);
         RefreshLookupColumns(configuration.LookupKeyColumn);
         PrefixTextBox.Text = configuration.Prefix;
@@ -39,9 +35,40 @@ public partial class ReferencePseudonymGeneratorEditor : UserControl, IGenerator
         OverflowStrategyComboBox.ItemsSource = Enum.GetValues<RelationalLookupOverflowStrategy>();
         OverflowStrategyComboBox.SelectedItem = configuration.OverflowStrategy;
         PreserveNullsCheckBox.IsChecked = configuration.PreserveNulls;
+        _isLoading = false;
     }
 
     public FrameworkElement View => this;
+
+    private void ReferenceColumn_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (_isLoading)
+        {
+            return;
+        }
+
+        string selectedSchema = CurrentText(LookupSchemaComboBox);
+        string selectedTable = CurrentText(LookupTableComboBox);
+        string selectedColumn = CurrentText(LookupKeyColumnComboBox);
+        GeneratorConfigurationForeignKeyOption[] matches = MatchingForeignKeys()
+            .Where(foreignKey => foreignKey.ReferencedColumns.Count == 1)
+            .GroupBy(
+                foreignKey => $"{foreignKey.ReferencedSchemaName}\u001f" +
+                              $"{foreignKey.ReferencedTableName}\u001f{foreignKey.ReferencedColumns[0]}",
+                StringComparer.OrdinalIgnoreCase)
+            .Select(group => group.First())
+            .ToArray();
+        if (matches.Length == 1)
+        {
+            selectedSchema = matches[0].ReferencedSchemaName;
+            selectedTable = matches[0].ReferencedTableName;
+            selectedColumn = matches[0].ReferencedColumns[0];
+        }
+
+        RefreshLookupSchemas(selectedSchema);
+        RefreshLookupTables(selectedTable);
+        RefreshLookupColumns(selectedColumn);
+    }
 
     private void LookupSchema_SelectionChanged(object sender, SelectionChangedEventArgs e) =>
         RefreshLookupTables(string.Empty);
@@ -108,12 +135,13 @@ public partial class ReferencePseudonymGeneratorEditor : UserControl, IGenerator
     private void RefreshLookupTables(string selectedTable)
     {
         string schema = CurrentText(LookupSchemaComboBox);
-        LookupTableComboBox.ItemsSource = _context.Tables
-            .Where(table => table.SchemaName.Equals(schema, StringComparison.OrdinalIgnoreCase))
-            .Select(table => table.TableName)
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .Order(StringComparer.OrdinalIgnoreCase)
+        string[] relatedTables = MatchingForeignKeys()
+            .Where(foreignKey => foreignKey.ReferencedSchemaName.Equals(schema, StringComparison.OrdinalIgnoreCase))
+            .Select(foreignKey => foreignKey.ReferencedTableName)
             .ToArray();
+        LookupTableComboBox.ItemsSource = Prioritize(relatedTables, _context.Tables
+            .Where(table => table.SchemaName.Equals(schema, StringComparison.OrdinalIgnoreCase))
+            .Select(table => table.TableName));
         LookupTableComboBox.Text = selectedTable;
     }
 
@@ -121,18 +149,48 @@ public partial class ReferencePseudonymGeneratorEditor : UserControl, IGenerator
     {
         string schema = CurrentText(LookupSchemaComboBox);
         string tableName = CurrentText(LookupTableComboBox);
-        LookupKeyColumnComboBox.ItemsSource = _context.Tables
+        string[] relatedColumns = MatchingForeignKeys()
+            .Where(foreignKey => foreignKey.ReferencedSchemaName.Equals(schema, StringComparison.OrdinalIgnoreCase)
+                                 && foreignKey.ReferencedTableName.Equals(tableName, StringComparison.OrdinalIgnoreCase)
+                                 && foreignKey.Columns.Count == 1
+                                 && foreignKey.ReferencedColumns.Count == 1)
+            .SelectMany(foreignKey => foreignKey.ReferencedColumns)
+            .ToArray();
+        LookupKeyColumnComboBox.ItemsSource = Prioritize(relatedColumns, _context.Tables
             .Where(table => table.SchemaName.Equals(schema, StringComparison.OrdinalIgnoreCase)
                             && table.TableName.Equals(tableName, StringComparison.OrdinalIgnoreCase))
             .SelectMany(table => table.PrimaryKeyColumns
                 .OrderBy(column => column, StringComparer.OrdinalIgnoreCase)
                 .Concat(table.Columns
                     .Where(column => !table.PrimaryKeyColumns.Contains(column, StringComparer.OrdinalIgnoreCase))
-                    .OrderBy(column => column, StringComparer.OrdinalIgnoreCase)))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToArray();
+                    .OrderBy(column => column, StringComparer.OrdinalIgnoreCase))));
         LookupKeyColumnComboBox.Text = selectedColumn;
     }
+
+    private void RefreshLookupSchemas(string selectedSchema)
+    {
+        LookupSchemaComboBox.ItemsSource = Prioritize(
+            MatchingForeignKeys().Select(foreignKey => foreignKey.ReferencedSchemaName),
+            _context.Tables.Select(table => table.SchemaName));
+        LookupSchemaComboBox.Text = selectedSchema;
+    }
+
+    private IEnumerable<GeneratorConfigurationForeignKeyOption> MatchingForeignKeys()
+    {
+        string referenceColumn = CurrentText(ReferenceColumnComboBox);
+        return _context.Tables
+            .SelectMany(table => table.ForeignKeys)
+            .Where(foreignKey => foreignKey.Columns.Count == 1
+                                 && foreignKey.Columns[0].Equals(
+                                     referenceColumn,
+                                     StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static string[] Prioritize(IEnumerable<string> preferred, IEnumerable<string> all) => preferred
+        .Concat(all.Order(StringComparer.OrdinalIgnoreCase))
+        .Where(value => !string.IsNullOrWhiteSpace(value))
+        .Distinct(StringComparer.OrdinalIgnoreCase)
+        .ToArray();
 
     private static string CurrentText(ComboBox comboBox) =>
         (comboBox.SelectedItem as string ?? comboBox.Text).Trim();

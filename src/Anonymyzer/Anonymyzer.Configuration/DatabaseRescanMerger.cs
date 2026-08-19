@@ -37,6 +37,9 @@ public sealed class DatabaseRescanMerger
 
             existingTable.SchemaStatus = "Current";
             existingTable.PrimaryKeyColumns = freshTable.PrimaryKeyColumns.ToList();
+            existingTable.ForeignKeys = freshTable.ForeignKeys
+                .Select(CloneForeignKey)
+                .ToList();
             foreach (ColumnProcessingOptions freshColumn in freshTable.Columns)
             {
                 ColumnProcessingOptions? existingColumn = existingTable.Columns.FirstOrDefault(column =>
@@ -98,6 +101,15 @@ public sealed class DatabaseRescanMerger
         || !string.IsNullOrWhiteSpace(column.GenerationGroupId);
 
     private static string TableKey(TableProcessingOptions table) => $"{table.SchemaName}\u001f{table.TableName}";
+
+    private static ForeignKeyConfiguration CloneForeignKey(ForeignKeyConfiguration foreignKey) => new()
+    {
+        Name = foreignKey.Name,
+        Columns = foreignKey.Columns.ToList(),
+        ReferencedSchemaName = foreignKey.ReferencedSchemaName,
+        ReferencedTableName = foreignKey.ReferencedTableName,
+        ReferencedColumns = foreignKey.ReferencedColumns.ToList()
+    };
 }
 
 public sealed record DatabaseRescanMergeResult(

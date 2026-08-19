@@ -88,6 +88,87 @@ public sealed class PostgreSqlAnonymyzerEngine : IAnonymyzerEngine
         }
     }
 
+    public IEnumerable<ForeignKeyInfo> ListForeignKeys(ITableInfo tableInfo)
+    {
+        ArgumentNullException.ThrowIfNull(tableInfo);
+
+        using var command = _connection.CreateCommand();
+        command.CommandText = """
+            SELECT
+                constraint_info.conname,
+                source_column.attname,
+                referenced_namespace.nspname,
+                referenced_table.relname,
+                referenced_column.attname
+            FROM pg_catalog.pg_constraint AS constraint_info
+            JOIN pg_catalog.pg_class AS source_table
+              ON source_table.oid = constraint_info.conrelid
+            JOIN pg_catalog.pg_namespace AS source_namespace
+              ON source_namespace.oid = source_table.relnamespace
+            JOIN pg_catalog.pg_class AS referenced_table
+              ON referenced_table.oid = constraint_info.confrelid
+            JOIN pg_catalog.pg_namespace AS referenced_namespace
+              ON referenced_namespace.oid = referenced_table.relnamespace
+            JOIN LATERAL unnest(constraint_info.conkey, constraint_info.confkey)
+              WITH ORDINALITY AS key_info(source_attnum, referenced_attnum, position) ON TRUE
+            JOIN pg_catalog.pg_attribute AS source_column
+              ON source_column.attrelid = source_table.oid
+             AND source_column.attnum = key_info.source_attnum
+            JOIN pg_catalog.pg_attribute AS referenced_column
+              ON referenced_column.attrelid = referenced_table.oid
+             AND referenced_column.attnum = key_info.referenced_attnum
+            WHERE constraint_info.contype = 'f'
+              AND source_namespace.nspname = @schema_name
+              AND source_table.relname = @table_name
+            ORDER BY constraint_info.conname, key_info.position;
+            """;
+        command.Parameters.AddWithValue("schema_name", tableInfo.SchemaName);
+        command.Parameters.AddWithValue("table_name", tableInfo.Name);
+
+        using var reader = command.ExecuteReader();
+        return ReadForeignKeys(reader).ToArray();
+    }
+
+    private static IEnumerable<ForeignKeyInfo> ReadForeignKeys(NpgsqlDataReader reader)
+    {
+        string? currentName = null;
+        string referencedSchema = string.Empty;
+        string referencedTable = string.Empty;
+        var columns = new List<string>();
+        var referencedColumns = new List<string>();
+        while (reader.Read())
+        {
+            string name = reader.GetString(0);
+            if (currentName is not null && !name.Equals(currentName, StringComparison.Ordinal))
+            {
+                yield return new ForeignKeyInfo(
+                    currentName,
+                    columns.ToArray(),
+                    referencedSchema,
+                    referencedTable,
+                    referencedColumns.ToArray());
+                columns.Clear();
+                referencedColumns.Clear();
+            }
+
+            currentName = name;
+            columns.Add(reader.GetString(1));
+            referencedSchema = reader.GetString(2);
+            referencedTable = reader.GetString(3);
+            referencedColumns.Add(reader.GetString(4));
+        }
+
+        if (currentName is not null)
+        {
+            yield return new ForeignKeyInfo(
+                currentName,
+                columns.ToArray(),
+                referencedSchema,
+                referencedTable,
+                referencedColumns.ToArray());
+        }
+    }
+
     private static DbDataType Classify(string dataType, string udtName)
     {
         return dataType.ToLowerInvariant() switch

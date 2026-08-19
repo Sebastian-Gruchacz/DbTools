@@ -5,4 +5,6 @@ public interface IAnonymyzerEngine
     IEnumerable<ITableInfo> ListTables(bool listSystemTables = false);
 
     IEnumerable<IColumnInfo> ListColumns(ITableInfo tableInfo);
+
+    IEnumerable<ForeignKeyInfo> ListForeignKeys(ITableInfo tableInfo);
 }

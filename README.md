@@ -123,8 +123,8 @@ językowe opisuje [docs/anonymyzer-design.md](docs/anonymyzer-design.md).
 - generowanie pliku JSON z domyślnie wyłączonymi tabelami i kolumnami;
 - rejestracja generatorów i eksport ich domyślnej konfiguracji;
 - model konfiguracji `0.4.0`: marker odłączonej kopii, role semantyczne,
-  wykryci kandydaci, profile
-  generatorów, niesekretne nazwy kolumn PK oraz grupy wiążące kilka kolumn;
+  wykryci kandydaci, profile generatorów, niesekretne nazwy kolumn PK/FK oraz
+  grupy wiążące kilka kolumn;
 - edytor WPF: New/Open/Save/Save As, wybór tabeli, grid kolumn, dwupoziomowe
   menu ról semantycznych, edycja profili oraz grup wielokolumnowych z mapowaniem
   wyjść generatora na kolumny;
@@ -195,7 +195,8 @@ językowe opisuje [docs/anonymyzer-design.md](docs/anonymyzer-design.md).
   kluczy z tabeli lookup jest odczytywanych z ponownie zwalidowanego klona, a
   panel pokazuje wyłącznie wygenerowane pseudonimy; lista konfiguracji profilu
   podpowiada schematy, tabele, kolumny oraz klucze główne zapisane w otwartym
-  dokumencie;
+  dokumencie, a rzeczywiste jednokolumnowe relacje FK umieszcza przed pozostałymi
+  możliwościami i wybiera automatycznie, gdy dopasowanie jest jednoznaczne;
 - podgląd `JsonPathRedactor` na kompletnych, nieobciętych wartościach z tej samej
   bezpiecznej ścieżki próbkowania; dokumenty są zmieniane wyłącznie w pamięci;
 - niemodalne, tylko-odczytowe okna wartości `non-null` dla dowolnej kolumny z
@@ -220,7 +221,7 @@ językowe opisuje [docs/anonymyzer-design.md](docs/anonymyzer-design.md).
   i marker klona, odświeża metadane oraz detekcję, dodaje nowe obiekty i zachowuje
   decyzje operatora; niewidoczne już tabele i kolumny pozostają w pliku z czerwonym
   oznaczeniem `⚠` do ręcznego przeglądu; rescan uzupełnia też `PrimaryKeyColumns`
-  w konfiguracjach utworzonych przez starszą wersję;
+  i `ForeignKeys` w konfiguracjach utworzonych przez starszą wersję;
 - klasyfikacja typów SQL Server/PostgreSQL oraz kandydaci wykrywani po nazwie
   także dla pól liczbowych, np. PESEL, NIP i telefonów;
 - zgodność roli z typem oraz negatywne tokeny odrzucające m.in. booleanowe
@@ -435,14 +436,12 @@ skasowany po wypchnięciu lub zarchiwizowaniu nowego repozytorium.
 
 ## Proponowana kolejka
 
-1. Zapisać metadane FK podczas analizy, aby panel `ReferencePseudonym` mógł
-   zawężać podpowiedzi lookup do rzeczywistych relacji.
-2. Rozszerzać checkpoint tylko wraz z trwałym, odtwarzalnym stanem generatorów
+1. Rozszerzać checkpoint tylko wraz z trwałym, odtwarzalnym stanem generatorów
    `Column`/`Relational`.
-3. Rozszerzyć pakiety regionalne o wersjonowane, ważone dane z opisanym źródłem.
-4. Dopiero po pomiarach dodać mapowanie zmienianych kluczy, obsługę XML oraz
+2. Rozszerzyć pakiety regionalne o wersjonowane, ważone dane z opisanym źródłem.
+3. Dopiero po pomiarach dodać mapowanie zmienianych kluczy, obsługę XML oraz
    strategię indeksów, constraintów i triggerów.
-5. Ujednolicić historyczne nazwy `Anonymyzer` / `Anonymization` bez zmiany
+4. Ujednolicić historyczne nazwy `Anonymyzer` / `Anonymization` bez zmiany
    zachowania i usunąć nieaktualne refy dopiero po upewnieniu się, że są na GH.
 
 Raport z walidacją, checkpoint dla bezpiecznych planów `Row`, ograniczony

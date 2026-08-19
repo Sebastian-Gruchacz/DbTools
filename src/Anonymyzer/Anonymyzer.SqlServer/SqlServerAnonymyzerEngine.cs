@@ -96,6 +96,86 @@ public class SqlServerAnonymyzerEngine : IAnonymyzerEngine
         }
     }
 
+    public IEnumerable<ForeignKeyInfo> ListForeignKeys(ITableInfo tableInfo)
+    {
+        ArgumentNullException.ThrowIfNull(tableInfo);
+
+        using var command = _connection.CreateCommand();
+        command.CommandText = """
+            SELECT
+                foreign_key.name,
+                source_column.name,
+                referenced_schema.name,
+                referenced_table.name,
+                referenced_column.name
+            FROM sys.foreign_keys AS foreign_key
+            JOIN sys.foreign_key_columns AS key_column
+              ON key_column.constraint_object_id = foreign_key.object_id
+            JOIN sys.tables AS source_table
+              ON source_table.object_id = foreign_key.parent_object_id
+            JOIN sys.schemas AS source_schema
+              ON source_schema.schema_id = source_table.schema_id
+            JOIN sys.columns AS source_column
+              ON source_column.object_id = source_table.object_id
+             AND source_column.column_id = key_column.parent_column_id
+            JOIN sys.tables AS referenced_table
+              ON referenced_table.object_id = foreign_key.referenced_object_id
+            JOIN sys.schemas AS referenced_schema
+              ON referenced_schema.schema_id = referenced_table.schema_id
+            JOIN sys.columns AS referenced_column
+              ON referenced_column.object_id = referenced_table.object_id
+             AND referenced_column.column_id = key_column.referenced_column_id
+            WHERE source_schema.name = @schema_name
+              AND source_table.name = @table_name
+            ORDER BY foreign_key.name, key_column.constraint_column_id;
+            """;
+        command.Parameters.Add(new SqlParameter("schema_name", SqlDbType.NVarChar, 128) { Value = tableInfo.SchemaName });
+        command.Parameters.Add(new SqlParameter("table_name", SqlDbType.NVarChar, 128) { Value = tableInfo.Name });
+
+        using var reader = command.ExecuteReader();
+        return ReadForeignKeys(reader).ToArray();
+    }
+
+    private static IEnumerable<ForeignKeyInfo> ReadForeignKeys(SqlDataReader reader)
+    {
+        string? currentName = null;
+        string referencedSchema = string.Empty;
+        string referencedTable = string.Empty;
+        var columns = new List<string>();
+        var referencedColumns = new List<string>();
+        while (reader.Read())
+        {
+            string name = reader.GetString(0);
+            if (currentName is not null && !name.Equals(currentName, StringComparison.Ordinal))
+            {
+                yield return new ForeignKeyInfo(
+                    currentName,
+                    columns.ToArray(),
+                    referencedSchema,
+                    referencedTable,
+                    referencedColumns.ToArray());
+                columns.Clear();
+                referencedColumns.Clear();
+            }
+
+            currentName = name;
+            columns.Add(reader.GetString(1));
+            referencedSchema = reader.GetString(2);
+            referencedTable = reader.GetString(3);
+            referencedColumns.Add(reader.GetString(4));
+        }
+
+        if (currentName is not null)
+        {
+            yield return new ForeignKeyInfo(
+                currentName,
+                columns.ToArray(),
+                referencedSchema,
+                referencedTable,
+                referencedColumns.ToArray());
+        }
+    }
+
     private static DbDataType Classify(string typeName)
     {
         return typeName.ToLowerInvariant() switch

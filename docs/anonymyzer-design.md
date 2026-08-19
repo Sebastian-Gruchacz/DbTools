@@ -168,9 +168,11 @@ nowym schemacie. Takie elementy dostają `SchemaStatus = Missing` i czerwone `�
 Ustawienia z flagami `OperatorOverrides` są zachowywane; konfiguracje starszego
 formatu są chronione konserwatywnie, jeśli zawierają aktywne ustawienia bez flag.
 Rescan zmienia wyłącznie dokument w pamięci i ustawia flagę dirty — zapis nadal
-wymaga jawnej decyzji operatora. Zapisane w tabeli `PrimaryKeyColumns` są
-metadanymi pomocniczymi dla edytorów generatorów relacyjnych; starszy dokument
-może mieć pustą listę, którą następny rescan uzupełni niedestruktywnie.
+wymaga jawnej decyzji operatora. Zapisane w tabeli `PrimaryKeyColumns` i
+`ForeignKeys` są metadanymi pomocniczymi dla edytorów generatorów relacyjnych;
+starszy dokument może mieć puste listy, które następny rescan uzupełni
+niedestruktywnie. Metadane FK zachowują nazwy oraz kolejność par kolumn także dla
+kluczy złożonych.
 
 Podgląd generatorów `Row` uruchamia ich rzeczywistą sesję w pamięci. Generatory
 syntetyczne nie wymagają dostępu do bazy. Generator z flagą
@@ -218,9 +220,10 @@ adapter `IGeneratorConfigurationEditorFactory`. Adapter otwiera dedykowany panel
 ale zapisuje ustawienia przez ten sam codec. Gdy panelu nie ma, edytor pozwala
 zmienić należący do generatora obiekt `Options` jako surowy JSON.
 Opcjonalny `GeneratorConfigurationEditorContext` przekazuje panelowi wyłącznie
-niesekretne nazwy schematów, tabel, kolumn i PK z otwartego dokumentu. Panel
-`ReferencePseudonym` wykorzystuje je jako podpowiedzi w edytowalnych listach,
-umieszczając kolumny PK na początku listy kluczy lookup;
+niesekretne nazwy schematów, tabel, kolumn, PK i relacji FK z otwartego dokumentu.
+Panel `ReferencePseudonym` wykorzystuje je jako podpowiedzi w edytowalnych
+listach: rzeczywiste jednokolumnowe relacje są pierwsze i jednoznaczna relacja
+jest wybierana automatycznie, a pozostałe kolumny PK nadal są przed zwykłymi;
 nie otrzymuje połączenia ani dostępu do bazy.
 
 ### Zakresy wykonania

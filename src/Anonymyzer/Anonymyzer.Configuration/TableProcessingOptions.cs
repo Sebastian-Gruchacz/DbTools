@@ -16,6 +16,8 @@ public sealed class TableProcessingOptions
 
     public List<string> PrimaryKeyColumns { get; set; } = new();
 
+    public List<ForeignKeyConfiguration> ForeignKeys { get; set; } = new();
+
     public List<GenerationGroupConfiguration> GenerationGroups { get; set; } = new();
 
     [JsonIgnore]

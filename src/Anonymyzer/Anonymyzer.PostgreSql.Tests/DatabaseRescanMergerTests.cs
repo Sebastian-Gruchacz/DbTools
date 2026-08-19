@@ -29,6 +29,17 @@ public sealed class DatabaseRescanMergerTests
             Generator = new ColumnGeneratorConfiguration { GeneratorType = "TextShuffler", ProfileId = "default" }
         });
         fresh.PrimaryKeyColumns = ["tenant_id", "id"];
+        fresh.ForeignKeys =
+        [
+            new ForeignKeyConfiguration
+            {
+                Name = "FK_people_tenant",
+                Columns = ["tenant_id"],
+                ReferencedSchemaName = "public",
+                ReferencedTableName = "tenants",
+                ReferencedColumns = ["id"]
+            }
+        ];
 
         DatabaseRescanMergeResult result = new DatabaseRescanMerger().Merge(configuration, [fresh]);
 
@@ -40,6 +51,10 @@ public sealed class DatabaseRescanMergerTests
         Assert.Equal("Custom.Email", configuredColumn.SemanticRole);
         Assert.Equal("FixedText", configuredColumn.Generator.GeneratorType);
         Assert.Equal(["tenant_id", "id"], configuration.Tables.Single().PrimaryKeyColumns);
+        ForeignKeyConfiguration foreignKey = Assert.Single(configuration.Tables.Single().ForeignKeys);
+        Assert.Equal("FK_people_tenant", foreignKey.Name);
+        Assert.Equal(["tenant_id"], foreignKey.Columns);
+        Assert.Equal("tenants", foreignKey.ReferencedTableName);
     }
 
     [Fact]

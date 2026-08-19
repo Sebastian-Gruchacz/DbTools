@@ -188,7 +188,15 @@ public partial class MainWindow : Window
                     table.TableName,
                     table.Columns.OrderBy(column => column.Ordinal).Select(column => column.ColumnName).ToArray())
                     {
-                        PrimaryKeyColumns = table.PrimaryKeyColumns.ToArray()
+                        PrimaryKeyColumns = table.PrimaryKeyColumns.ToArray(),
+                        ForeignKeys = table.ForeignKeys.Select(foreignKey =>
+                            new GeneratorConfigurationForeignKeyOption(
+                                foreignKey.Name,
+                                foreignKey.Columns.ToArray(),
+                                foreignKey.ReferencedSchemaName,
+                                foreignKey.ReferencedTableName,
+                                foreignKey.ReferencedColumns.ToArray()))
+                            .ToArray()
                     })
                     .ToArray()))
         {

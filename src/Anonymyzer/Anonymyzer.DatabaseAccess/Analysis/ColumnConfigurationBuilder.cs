@@ -16,6 +16,16 @@ public sealed class ColumnConfigurationBuilder(ColumnCandidateDetector candidate
             .OrderBy(column => column.Ordinal)
             .Select(column => column.Name)
             .ToList();
+        config.ForeignKeys = engine.ListForeignKeys(tableInfo)
+            .Select(foreignKey => new ForeignKeyConfiguration
+            {
+                Name = foreignKey.Name,
+                Columns = foreignKey.Columns.ToList(),
+                ReferencedSchemaName = foreignKey.ReferencedSchemaName,
+                ReferencedTableName = foreignKey.ReferencedTableName,
+                ReferencedColumns = foreignKey.ReferencedColumns.ToList()
+            })
+            .ToList();
         foreach (IColumnInfo column in columns.Where(column => !column.IsPartOfThePrimaryKey))
         {
             config.Columns.Add(new ColumnProcessingOptions

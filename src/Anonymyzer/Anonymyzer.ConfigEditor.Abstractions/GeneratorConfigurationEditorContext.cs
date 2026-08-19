@@ -13,4 +13,14 @@ public sealed record GeneratorConfigurationTableOption(
     IReadOnlyList<string> Columns)
 {
     public IReadOnlyList<string> PrimaryKeyColumns { get; init; } = Array.Empty<string>();
+
+    public IReadOnlyList<GeneratorConfigurationForeignKeyOption> ForeignKeys { get; init; } =
+        Array.Empty<GeneratorConfigurationForeignKeyOption>();
 }
+
+public sealed record GeneratorConfigurationForeignKeyOption(
+    string Name,
+    IReadOnlyList<string> Columns,
+    string ReferencedSchemaName,
+    string ReferencedTableName,
+    IReadOnlyList<string> ReferencedColumns);

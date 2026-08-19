@@ -25,7 +25,8 @@
                        Text="Creates the same deterministic text for every row with the same reference key. The lookup table is read only and its key is verified before the target table is changed." />
             <TextBlock Grid.Row="1" VerticalAlignment="Center" Text="Reference column:" />
             <ComboBox x:Name="ReferenceColumnComboBox" Grid.Row="1" Grid.Column="1" Margin="0,2"
-                      IsEditable="True" IsTextSearchEnabled="True" />
+                      IsEditable="True" IsTextSearchEnabled="True"
+                      SelectionChanged="ReferenceColumn_SelectionChanged" />
             <TextBlock Grid.Row="2" VerticalAlignment="Center" Text="Lookup schema:" />
             <ComboBox x:Name="LookupSchemaComboBox" Grid.Row="2" Grid.Column="1" Margin="0,2"
                       IsEditable="True" IsTextSearchEnabled="True" SelectionChanged="LookupSchema_SelectionChanged" />
