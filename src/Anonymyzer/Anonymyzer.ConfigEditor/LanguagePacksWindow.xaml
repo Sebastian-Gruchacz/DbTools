@@ -14,6 +14,7 @@
 
         <StackPanel DockPanel.Dock="Bottom" Margin="0,12,0,0" Orientation="Horizontal" HorizontalAlignment="Right">
             <Button Width="100" Margin="0,0,8,0" Content="Install DLL..." Click="Install_Click" />
+            <Button Width="105" Margin="0,0,18,0" Content="Remove..." Click="Remove_Click" />
             <Button Width="90" Margin="0,0,8,0" IsDefault="True" Content="Apply" Click="Apply_Click" />
             <Button Width="90" IsCancel="True" Content="Cancel" />
         </StackPanel>
@@ -23,7 +24,8 @@
                 <RowDefinition Height="*" />
                 <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
-            <DataGrid ItemsSource="{Binding Packs}"
+            <DataGrid x:Name="PacksGrid"
+                      ItemsSource="{Binding Packs}"
                       AutoGenerateColumns="False"
                       CanUserAddRows="False"
                       HeadersVisibility="Column">
@@ -32,6 +34,7 @@
                     <DataGridTextColumn Header="Name" Binding="{Binding DisplayName}" IsReadOnly="True" Width="1.5*" />
                     <DataGridTextColumn Header="Version" Binding="{Binding Version}" IsReadOnly="True" Width="80" />
                     <DataGridTextColumn Header="Locales" Binding="{Binding Locales}" IsReadOnly="True" Width="1.1*" />
+                    <DataGridTextColumn Header="Profiles" Binding="{Binding ProfileCount}" IsReadOnly="True" Width="65" />
                     <DataGridTextColumn Header="Origin" Binding="{Binding Origin}" IsReadOnly="True" Width="95" />
                 </DataGrid.Columns>
             </DataGrid>

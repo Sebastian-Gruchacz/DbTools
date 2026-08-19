@@ -6,6 +6,7 @@ using Newtonsoft.Json;
 public sealed class LanguagePackInstallationService
 {
     private const string SettingsFileName = "language-packs.json";
+    private const string PendingRemovalsFileName = "language-pack-removals.json";
     private readonly string _installationDirectory;
     private readonly IReadOnlyList<ILanguagePack> _builtInPacks;
     private readonly HashSet<string> _disabledIds;
@@ -22,6 +23,7 @@ public sealed class LanguagePackInstallationService
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
             "Anonymyzer",
             "LanguagePacks");
+        ApplyPendingRemovals();
         _disabledIds = LoadDisabledIds();
         _installations = Discover();
     }
@@ -90,6 +92,26 @@ public sealed class LanguagePackInstallationService
         return true;
     }
 
+    public bool ScheduleUninstall(string packId)
+    {
+        LanguagePackInstallation installation = _installations.Single(item =>
+            item.Pack.Descriptor.Id.Equals(packId, StringComparison.OrdinalIgnoreCase));
+        if (!installation.Origin.Equals("Installed", StringComparison.OrdinalIgnoreCase)
+            || string.IsNullOrWhiteSpace(installation.AssemblyPath))
+        {
+            return false;
+        }
+
+        string fileName = Path.GetFileName(installation.AssemblyPath);
+        HashSet<string> pending = LoadPendingRemovalFileNames();
+        pending.Add(fileName);
+        SavePendingRemovalFileNames(pending);
+        _installations = _installations.Where(item => !ReferenceEquals(item, installation)).ToList();
+        _disabledIds.Remove(packId);
+        SaveDisabledIds();
+        return true;
+    }
+
     private List<LanguagePackInstallation> Discover()
     {
         var warnings = new List<string>();
@@ -146,9 +168,99 @@ public sealed class LanguagePackInstallationService
         }
         catch (Exception exception)
         {
-            _settingsWarning = $"Cannot read language-pack settings '{path}': {exception.Message}";
+            AppendSettingsWarning($"Cannot read language-pack settings '{path}': {exception.Message}");
             return new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         }
+    }
+
+    private void ApplyPendingRemovals()
+    {
+        HashSet<string> pending = LoadPendingRemovalFileNames();
+        if (pending.Count == 0)
+        {
+            return;
+        }
+
+        var remaining = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (string fileName in pending)
+        {
+            try
+            {
+                string path = ResolveInstalledFileName(fileName);
+                if (File.Exists(path))
+                {
+                    File.Delete(path);
+                }
+            }
+            catch (Exception exception)
+            {
+                remaining.Add(fileName);
+                AppendSettingsWarning($"Cannot remove language pack '{fileName}': {exception.Message}");
+            }
+        }
+
+        SavePendingRemovalFileNames(remaining);
+    }
+
+    private HashSet<string> LoadPendingRemovalFileNames()
+    {
+        string path = Path.Combine(_installationDirectory, PendingRemovalsFileName);
+        if (!File.Exists(path))
+        {
+            return new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        }
+
+        try
+        {
+            string[] values = JsonConvert.DeserializeObject<string[]>(File.ReadAllText(path)) ?? [];
+            return new HashSet<string>(values.Select(value => Path.GetFileName(value)), StringComparer.OrdinalIgnoreCase);
+        }
+        catch (Exception exception)
+        {
+            AppendSettingsWarning($"Cannot read pending language-pack removals '{path}': {exception.Message}");
+            return new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        }
+    }
+
+    private void SavePendingRemovalFileNames(IReadOnlyCollection<string> fileNames)
+    {
+        Directory.CreateDirectory(_installationDirectory);
+        string path = Path.Combine(_installationDirectory, PendingRemovalsFileName);
+        if (fileNames.Count == 0)
+        {
+            if (File.Exists(path))
+            {
+                File.Delete(path);
+            }
+
+            return;
+        }
+
+        File.WriteAllText(path, JsonConvert.SerializeObject(fileNames.OrderBy(value => value), Formatting.Indented));
+    }
+
+    private string ResolveInstalledFileName(string fileName)
+    {
+        if (!Path.GetFileName(fileName).Equals(fileName, StringComparison.Ordinal))
+        {
+            throw new InvalidOperationException("Pending removal contains an invalid file name.");
+        }
+
+        string root = Path.GetFullPath(_installationDirectory) + Path.DirectorySeparatorChar;
+        string path = Path.GetFullPath(Path.Combine(_installationDirectory, fileName));
+        if (!path.StartsWith(root, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException("Pending removal points outside the language-pack directory.");
+        }
+
+        return path;
+    }
+
+    private void AppendSettingsWarning(string warning)
+    {
+        _settingsWarning = string.IsNullOrWhiteSpace(_settingsWarning)
+            ? warning
+            : $"{_settingsWarning} | {warning}";
     }
 
     private void SaveDisabledIds()

@@ -76,6 +76,12 @@ public sealed class LanguagePackCatalogTests
             Assert.False(reloaded.Installations[0].IsEnabled);
             Assert.Empty(reloaded.ActivePacks);
             Assert.Empty(reloaded.LoadWarnings);
+
+            Assert.True(reloaded.ScheduleUninstall("English"));
+            Assert.Empty(reloaded.Installations);
+            var afterRestart = new LanguagePackInstallationService([], directory);
+            Assert.Empty(afterRestart.Installations);
+            Assert.Empty(Directory.EnumerateFiles(directory, "*.dll"));
         }
         finally
         {

@@ -199,6 +199,8 @@ językowe opisuje [docs/anonymyzer-design.md](docs/anonymyzer-design.md).
 - `Generators -> Language packs` instaluje zaufaną lokalną DLL oraz pozwala
   włączać i wyłączać także wbudowane pakiety EN/PL; biblioteki trafiają do
   `%LocalAppData%\Anonymyzer\LanguagePacks`, a zmiany obowiązują po restarcie;
+- zainstalowany pakiet można zaplanować do bezpiecznego usunięcia przy następnym
+  starcie; wbudowane pakiety można wyłączyć, ale nie można ich skasować;
 - profile regionalne mają widoczne pochodzenie pakietu; edytor ostrzega przy
   otwarciu lub edycji konfiguracji, jeśli profil wymaga wyłączonego locale;
 - niedestruktywny `File -> Rescan detached clone`, który ponownie waliduje nazwę

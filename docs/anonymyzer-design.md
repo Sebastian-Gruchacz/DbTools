@@ -543,6 +543,13 @@ użycie profilu wymagającego nieaktywnego locale zakończy się błędem walida
 Zewnętrzna biblioteka powinna być samowystarczalna poza kontraktami dostarczanymi
 razem z aplikacją.
 
+Zainstalowaną bibliotekę można oznaczyć do usunięcia. Edytor natychmiast usuwa ją
+z listy przyszłych aktywnych pakietów, ale sam plik kasuje dopiero na początku
+następnego procesu, zanim DLL zostanie załadowana. Pozwala to bezpiecznie wykonać
+upgrade: oznaczyć starą wersję do usunięcia, zainstalować DLL z nowym numerem
+wersji i zrestartować aplikację. Wbudowane pakiety nie mają pliku instalacyjnego,
+więc można je tylko wyłączyć.
+
 Profile `pl-PL` zachowują historyczne identyfikatory `GeneratorType:Default`.
 Profile `en-US` używają `GeneratorType:en-US:Default`, dzięki czemu oba zestawy
 mogą współistnieć. Pochodzenie ma postać `Language pack: Nazwa Wersja`. Merge
