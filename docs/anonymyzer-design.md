@@ -157,6 +157,16 @@ operatora chronioną przed przyszłym rescanem. Tabela pokazuje `◆`, jeśli za
 choć jedną taką kolumnę. Starsze pliki bez flag pozostają poprawne; niedestruktywny
 merge skanu musi dodatkowo zachowywać ich istniejące ustawienia konserwatywnie.
 
+`File -> Rescan detached clone` uruchamia aktualną analizę na bazie wskazanej przez
+zmienną środowiskową. Przed odczytem ponownie sprawdzane są oczekiwana nazwa bazy
+i marker odłączonej kopii. Merge aktualizuje typ, długość, kolejność i wynik
+detektora, dodaje nowe tabele i kolumny, ale nie usuwa elementów nieobecnych w
+nowym schemacie. Takie elementy dostają `SchemaStatus = Missing` i czerwone `⚠`.
+Ustawienia z flagami `OperatorOverrides` są zachowywane; konfiguracje starszego
+formatu są chronione konserwatywnie, jeśli zawierają aktywne ustawienia bez flag.
+Rescan zmienia wyłącznie dokument w pamięci i ustawia flagę dirty — zapis nadal
+wymaga jawnej decyzji operatora.
+
 Podgląd generatorów `Row` uruchamia ich rzeczywistą sesję w pamięci. Generatory
 syntetyczne nie wymagają dostępu do bazy. Generator z flagą
 `RequiresExistingValue`, obecnie `JsonPathRedactor`, pobiera małą próbkę po

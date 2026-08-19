@@ -3,7 +3,7 @@
 using Anonymyzer.Base;
 using Anonymyzer.Configuration;
 
-internal sealed class ColumnConfigurationBuilder(ColumnCandidateDetector candidateDetector)
+public sealed class ColumnConfigurationBuilder(ColumnCandidateDetector candidateDetector)
 {
     private const string DefaultProfile = "Default";
 

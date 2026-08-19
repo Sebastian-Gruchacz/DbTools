@@ -36,6 +36,12 @@ internal sealed class ColumnViewModel : INotifyPropertyChanged
         ? $"{_model.Detection.SuggestedRole} ({_model.Detection.Confidence:P0}, {_model.Detection.MatchedRule})"
         : "No automatic candidate match.";
     public string ManualMark => Overrides.HasAny ? "◆" : string.Empty;
+    public string SchemaWarningMark => string.Equals(_model.SchemaStatus, "Missing", StringComparison.OrdinalIgnoreCase)
+        ? "⚠"
+        : string.Empty;
+    public string SchemaWarningDetails => string.IsNullOrEmpty(SchemaWarningMark)
+        ? "Present in the latest database scan."
+        : "Not found during the latest database rescan. The saved configuration was retained and must be reviewed.";
     public string ManualDetails
     {
         get

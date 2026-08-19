@@ -6,7 +6,7 @@ using Anonymyzer.Base;
 using Anonymyzer.Base.Detection;
 using Anonymyzer.Configuration;
 
-internal sealed class ColumnCandidateDetector
+public sealed class ColumnCandidateDetector
 {
     private static readonly HashSet<string> NonValueTokens = new(StringComparer.Ordinal)
     {
@@ -133,7 +133,7 @@ internal sealed class ColumnCandidateDetector
         return null;
     }
 
-    internal static IReadOnlyList<string> Tokenize(string name)
+    public static IReadOnlyList<string> Tokenize(string name)
     {
         if (string.IsNullOrWhiteSpace(name))
         {

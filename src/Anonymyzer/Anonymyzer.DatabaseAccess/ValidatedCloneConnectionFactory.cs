@@ -7,7 +7,7 @@ using Anonymyzer.Configuration.Safety;
 using Anonymyzer.PostgreSql;
 using Anonymyzer.SqlServer;
 
-internal sealed class ValidatedCloneConnectionFactory
+public sealed class ValidatedCloneConnectionFactory
 {
     private readonly IReadOnlyList<IDbConnectionBuilder> _connectionBuilders = new IDbConnectionBuilder[]
     {

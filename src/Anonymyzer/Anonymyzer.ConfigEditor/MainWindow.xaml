@@ -12,6 +12,7 @@
             <MenuItem Header="_File">
                 <MenuItem Header="_New" Click="New_Click" InputGestureText="Ctrl+N" />
                 <MenuItem Header="_Open..." Click="Open_Click" InputGestureText="Ctrl+O" />
+                <MenuItem Header="_Rescan detached clone..." Click="Rescan_Click" />
                 <Separator />
                 <MenuItem Header="_Save" Click="Save_Click" InputGestureText="Ctrl+S" />
                 <MenuItem Header="Save _As..." Click="SaveAs_Click" />
@@ -64,6 +65,7 @@
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="18" />
                                     <ColumnDefinition Width="18" />
+                                    <ColumnDefinition Width="20" />
                                     <ColumnDefinition Width="34" />
                                     <ColumnDefinition Width="*" />
                                 </Grid.ColumnDefinitions>
@@ -76,12 +78,17 @@
                                            Text="{Binding ManualMark}"
                                            ToolTip="{Binding ManualDetails}" />
                                 <TextBlock Grid.Column="2"
+                                           HorizontalAlignment="Center"
+                                           Foreground="Firebrick"
+                                           Text="{Binding SchemaWarningMark}"
+                                           ToolTip="{Binding SchemaWarningDetails}" />
+                                <TextBlock Grid.Column="3"
                                            Margin="0,0,8,0"
                                            HorizontalAlignment="Right"
                                            Foreground="DarkOrange"
                                            FontWeight="SemiBold"
                                            Text="{Binding CandidateCountText}" />
-                                <TextBlock Grid.Column="3"
+                                <TextBlock Grid.Column="4"
                                            Text="{Binding QualifiedName}"
                                            TextTrimming="CharacterEllipsis" />
                             </Grid>
@@ -111,7 +118,7 @@
                     <Button Width="120" Margin="0,0,14,0" Content="Refresh sample" Click="RefreshSample_Click" />
                     <TextBlock VerticalAlignment="Center"
                                Foreground="DimGray"
-                               Text="● + count = automatic candidates; ◆ = operator choices; every table remains available" />
+                               Text="● + count = automatic candidates; ◆ = operator choices; ⚠ = absent in latest rescan" />
                 </StackPanel>
             </Grid>
 
@@ -124,7 +131,7 @@
                       IsReadOnly="False"
                       SelectionUnit="FullRow">
                 <DataGrid.Columns>
-                    <DataGridTemplateColumn Header="" IsReadOnly="True" Width="48">
+                    <DataGridTemplateColumn Header="" IsReadOnly="True" Width="68">
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
                                 <StackPanel HorizontalAlignment="Center" Orientation="Horizontal">
@@ -135,6 +142,10 @@
                                                Foreground="SteelBlue"
                                                Text="{Binding ManualMark}"
                                                ToolTip="{Binding ManualDetails}" />
+                                    <TextBlock Margin="4,0,0,0"
+                                               Foreground="Firebrick"
+                                               Text="{Binding SchemaWarningMark}"
+                                               ToolTip="{Binding SchemaWarningDetails}" />
                                 </StackPanel>
                             </DataTemplate>
                         </DataGridTemplateColumn.CellTemplate>

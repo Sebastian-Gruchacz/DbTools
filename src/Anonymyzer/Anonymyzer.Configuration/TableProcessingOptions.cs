@@ -10,6 +10,8 @@ public sealed class TableProcessingOptions
 
     public bool Enabled { get; set; }
 
+    public string SchemaStatus { get; set; } = "Current";
+
     public List<ColumnProcessingOptions> Columns { get; set; } = new();
 
     public List<GenerationGroupConfiguration> GenerationGroups { get; set; } = new();

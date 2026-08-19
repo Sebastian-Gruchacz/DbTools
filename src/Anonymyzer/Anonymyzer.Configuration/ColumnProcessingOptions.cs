@@ -12,6 +12,8 @@ public sealed class ColumnProcessingOptions
 
     public bool Unicode { get; set; }
 
+    public string SchemaStatus { get; set; } = "Current";
+
     public bool Enabled { get; set; }
 
     public string SemanticRole { get; set; } = string.Empty;

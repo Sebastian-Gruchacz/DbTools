@@ -48,6 +48,17 @@ internal sealed class TableViewModel : INotifyPropertyChanged
     public string ManualDetails => ManualOverrideCount > 0
         ? $"Columns with operator choices: {ManualOverrideCount}."
         : "No explicit operator choices.";
+    public int MissingColumnCount => Model.Columns.Count(column =>
+        string.Equals(column.SchemaStatus, "Missing", StringComparison.OrdinalIgnoreCase));
+    public string SchemaWarningMark => string.Equals(Model.SchemaStatus, "Missing", StringComparison.OrdinalIgnoreCase)
+                                       || MissingColumnCount > 0
+        ? "⚠"
+        : string.Empty;
+    public string SchemaWarningDetails => string.Equals(Model.SchemaStatus, "Missing", StringComparison.OrdinalIgnoreCase)
+        ? "Table was not found during the latest database rescan; its saved configuration was retained."
+        : MissingColumnCount > 0
+            ? $"Columns retained but missing from the latest database rescan: {MissingColumnCount}."
+            : "Table and configured columns are present in the latest database scan.";
     public string CandidateDetails => CandidateCount > 0
         ? $"Automatic candidates: {CandidateCount}."
         : "No automatic candidates.";
@@ -104,7 +115,8 @@ internal sealed class TableViewModel : INotifyPropertyChanged
     }
 
     private static bool ShouldShowInitially(ColumnProcessingOptions column) =>
-        column.Detection.IsCandidate
+        string.Equals(column.SchemaStatus, "Missing", StringComparison.OrdinalIgnoreCase)
+        || column.Detection.IsCandidate
         || column.Enabled
         || !string.IsNullOrWhiteSpace(column.SemanticRole)
         || !string.IsNullOrWhiteSpace(column.GenerationGroupId);

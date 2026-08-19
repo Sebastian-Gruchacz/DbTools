@@ -192,6 +192,10 @@ językowe opisuje [docs/anonymyzer-design.md](docs/anonymyzer-design.md).
   pokazującym wersję, autora i odnośniki do projektu oraz zgłoszeń;
 - trwałe flagi `OperatorOverrides` dla ręcznej zmiany włączenia kolumny, roli,
   generatora/profilu i grupy; niebieski `◆` wyróżnia takie kolumny oraz tabele;
+- niedestruktywny `File -> Rescan detached clone`, który ponownie waliduje nazwę
+  i marker klona, odświeża metadane oraz detekcję, dodaje nowe obiekty i zachowuje
+  decyzje operatora; niewidoczne już tabele i kolumny pozostają w pliku z czerwonym
+  oznaczeniem `⚠` do ręcznego przeglądu;
 - klasyfikacja typów SQL Server/PostgreSQL oraz kandydaci wykrywani po nazwie
   także dla pól liczbowych, np. PESEL, NIP i telefonów;
 - zgodność roli z typem oraz negatywne tokeny odrzucające m.in. booleanowe

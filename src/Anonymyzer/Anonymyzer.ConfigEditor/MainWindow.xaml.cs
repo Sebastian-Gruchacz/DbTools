@@ -21,10 +21,12 @@ public partial class MainWindow : Window
 {
     private int _sampleWindowOffset;
     private string _previewConnectionEnvironmentVariable = "ANONYMYZER_CONNECTION";
+    private string _rescanConnectionEnvironmentVariable = "ANONYMYZER_CONNECTION";
     private int _previewMaximumRows = 10;
     private readonly ConfigurationFileService _fileService = new();
     private readonly EditorViewModel _viewModel = new();
     private readonly GeneratorCatalog _generatorCatalog = new();
+    private readonly DatabaseRescanService _rescanService = new();
     private readonly GeneratorPreviewService _previewService;
     private readonly IGeneratorConfigurationEditorFactory[] _generatorEditors =
     {
@@ -101,6 +103,40 @@ public partial class MainWindow : Window
     private void Save_Click(object sender, RoutedEventArgs e)
     {
         TrySaveDocument();
+    }
+
+    private async void Rescan_Click(object sender, RoutedEventArgs e)
+    {
+        CommitPendingGridEdits();
+        var dialog = new RescanOptionsWindow(_rescanConnectionEnvironmentVariable) { Owner = this };
+        if (dialog.ShowDialog() != true)
+        {
+            return;
+        }
+
+        _rescanConnectionEnvironmentVariable = dialog.ConnectionEnvironmentVariable;
+        try
+        {
+            _viewModel.Status = "Rescanning detached clone...";
+            IReadOnlyList<TableProcessingOptions> freshTables = await _rescanService.ScanAsync(
+                _viewModel.Configuration,
+                _rescanConnectionEnvironmentVariable);
+            DatabaseRescanMergeResult result = new DatabaseRescanMerger().Merge(
+                _viewModel.Configuration,
+                freshTables);
+            _viewModel.RefreshTables();
+            _viewModel.MarkDirty();
+            string summary = $"Rescan complete: {result.AddedTables} table(s) and {result.AddedColumns} column(s) added; " +
+                             $"{result.RefreshedColumns} column(s) refreshed; {result.PreservedSelections} selection(s) preserved; " +
+                             $"{result.MissingTables} table(s) and {result.MissingColumns} column(s) retained as missing.";
+            _viewModel.Status = summary;
+            MessageBox.Show(this, summary, "Database rescan", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        catch (Exception exception)
+        {
+            _viewModel.Status = exception.Message;
+            MessageBox.Show(this, exception.Message, "Rescan error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
     }
 
     private void SaveAs_Click(object sender, RoutedEventArgs e)
@@ -367,7 +403,9 @@ public partial class MainWindow : Window
             "The same ● in the column grid marks an automatically detected candidate; hover it to see the suggested " +
             "semantic role, confidence and matched rule. Markers are suggestions only and never enable anonymization.\n\n" +
             "A blue ◆ marks a table or column containing explicit operator choices. Hover it to see which settings " +
-            "are protected from a future database rescan.",
+            "are protected from a future database rescan.\n\n" +
+            "A red ⚠ means that a saved table or column was not found during the latest rescan. Its configuration " +
+            "is retained for review and is never silently deleted.",
             "Table and column markings",
             MessageBoxButton.OK,
             MessageBoxImage.Information);
