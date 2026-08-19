@@ -102,7 +102,7 @@ językowe opisuje [docs/anonymyzer-design.md](docs/anonymyzer-design.md).
 - `Anonymyzer.PostgreSql.Tests` — testy buildera i opcjonalna integracja z bazą;
 - `Anonymyzer.Generators.Simple` — `TextShuffler`, `FixedText`, `SequentialText`,
   `EmailAddress`, `AccountLogin`, `PhoneNumber`, `Uuid`, `CompanyName`,
-  `TaxIdentifier` i `BankAccount`;
+  `TaxIdentifier`, `BankAccount` i `ReferencePseudonym`;
 - `Anonymyzer.Generators.Person` — generatory spójnej tożsamości oraz krajowego
   identyfikatora osoby;
 - `Anonymyzer.Generators.Address` — grupowy generator spójnego adresu pocztowego;
@@ -135,6 +135,12 @@ językowe opisuje [docs/anonymyzer-design.md](docs/anonymyzer-design.md).
 - `TextShuffler` 1.0.0: deterministyczna permutacja całej kolumny zachowująca
   dokładny multizbiór wartości oraz opcjonalnie pozycje `NULL`; profil określa
   limit pamięci i zachowanie `Fail` albo `EncryptedTemporaryFiles`;
+- `ReferencePseudonym` 1.0.0: pierwszy wykonywalny generator `Relational`; pełnym
+  skanem tylko do odczytu ładuje klucze wskazanej tabeli lookup, sprawdza każdą
+  referencję w tabeli docelowej i generuje spójny pseudonim HMAC. Klucz HMAC nie
+  trafia do JSON-a — profil przechowuje wyłącznie nazwę zmiennej środowiskowej;
+  mapa lookup ma konfigurowalny limit pamięci i bezpiecznie odmawia pracy po jego
+  przekroczeniu;
 - `FixedText` 1.0.0: stała wartość tekstowa z opcjonalnym zachowaniem `NULL`;
 - `JsonPathRedactor` 1.0.0: selektywna zamiana wartości pod ścieżkami JSON
   w kolumnach tekstowych oraz natywnych PostgreSQL `json/jsonb`, bez ujawniania
@@ -223,8 +229,8 @@ językowe opisuje [docs/anonymyzer-design.md](docs/anonymyzer-design.md).
   zakresy generatorów, mapowania wyjść, wymagane skany i batch po 1000 wierszy;
 - porównanie aktywnego planu z bieżącym schematem klona przed wykonaniem,
   wraz z estymacją liczby wierszy i górnego zużycia pamięci pełnych skanów;
-- ocena gotowości pierwszego wycinka zapisu: dokładnie jedna tabela, kroki
-  `Row`/`Column`, jeden niezmieniany PK oraz brak skanów międzytabelowych;
+- ocena gotowości wycinka zapisu: dokładnie jedna tabela docelowa, jeden
+  niezmieniany PK oraz kontrolowane skany międzytabelowe tylko do odczytu;
 - deterministyczny detektor kandydatów EN/PL: `snake_case`, `camelCase`,
   prefiksy techniczne, polskie znaki, score i negatywne flagi; propozycje nigdy
   nie ustawiają `Enabled`;
@@ -235,8 +241,9 @@ językowe opisuje [docs/anonymyzer-design.md](docs/anonymyzer-design.md).
 
 ### Czego jeszcze nie ma
 
-- wykonania planów wielotabelowych i `Relational`; `--execute` obsługuje obecnie
-  jedną tabelę, kroki `Row`/`Column` i pojedynczy niezmieniany PK;
+- zapisu do wielu tabel w jednym planie i relacyjnego mapowania zmienianych
+  PK/FK; `--execute` obsługuje jedną tabelę docelową oraz zewnętrzne pełne skany
+  oryginalnych wartości z tabel o pojedynczym PK;
 - checkpointów dla `Column`, generatorów zależnych od nadpisywanej wartości oraz
   planów wielotabelowych; bezpieczne plany wyłącznie `Row` można już wznawiać;
 - pełnej walidacji indeksów, triggerów i constraintów spoza aktywnej tabeli;
@@ -419,8 +426,8 @@ skasowany po wypchnięciu lub zarchiwizowaniu nowego repozytorium.
 
 ## Proponowana kolejka
 
-1. Zaprojektować pierwszy generator `Relational` oraz planowanie zależności
-   między tabelami bez zmiany PK/FK.
+1. Dodać ograniczony podgląd `ReferencePseudonym` na małej próbce zwalidowanego
+   klona i czytelny wybór tabeli/kolumny lookup w edytorze.
 2. Rozszerzać checkpoint tylko wraz z trwałym, odtwarzalnym stanem generatorów
    `Column`/`Relational`.
 3. Rozszerzyć pakiety regionalne o wersjonowane, ważone dane z opisanym źródłem.
@@ -429,7 +436,6 @@ skasowany po wypchnięciu lub zarchiwizowaniu nowego repozytorium.
 5. Ujednolicić historyczne nazwy `Anonymyzer` / `Anonymization` bez zmiany
    zachowania i usunąć nieaktualne refy dopiero po upewnieniu się, że są na GH.
 
-Raport z walidacją, checkpoint dla bezpiecznych planów `Row` oraz ograniczony
-pamięciowo `TextShuffler` są już dostępne. Następny opłacalny krok to pierwszy
-generator `Relational` i planowanie jego zależności między tabelami. Pełny skan
-shufflera pozostaje celowo wyłączony ze wznowienia.
+Raport z walidacją, checkpoint dla bezpiecznych planów `Row`, ograniczony
+pamięciowo `TextShuffler` i pierwszy kontrolowany generator `Relational` są już
+dostępne. Pełne skany pozostają celowo wyłączone ze wznowienia.

@@ -45,15 +45,33 @@ public sealed class ExecutionWriteSliceValidatorTests
     }
 
     [Fact]
-    public void RejectsRelationalScope()
+    public void AcceptsRelationalScopeWithValidatedCompleteLookupScan()
     {
-        GeneratorExecutionPlanStep step = CreateStep(GeneratorExecutionScope.Relational, "notes");
+        var lookup = new GeneratorDataRequirement(
+            "lookup",
+            new GeneratorTableReference("public", "departments"),
+            ["id"],
+            GeneratorValueSource.Original,
+            RequiresCompleteScan: true);
+        GeneratorExecutionPlanStep step = CreateStep(GeneratorExecutionScope.Relational, "notes", [lookup]);
+        var inspection = new ExecutionPlanDatabaseInspection(
+            new Dictionary<string, GeneratorStepDatabaseInspection>
+            {
+                [step.Id] = new(
+                    25,
+                    ["id"],
+                    new Dictionary<string, DataRequirementEstimate>
+                    {
+                        ["lookup"] = new(3, 120) { PrimaryKeyColumns = ["id"] }
+                    })
+            });
 
         ExecutionWriteSliceAssessment assessment = new ExecutionWriteSliceValidator()
-            .Assess(CreatePlan(step), CreateInspection(step, "id"));
+            .Assess(CreatePlan(step), inspection);
 
-        Assert.False(assessment.IsSupported);
-        Assert.Contains("unsupported scope Relational", assessment.Message, StringComparison.Ordinal);
+        Assert.True(assessment.IsSupported);
+        Assert.Contains("relational", assessment.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal("id", assessment.ReadPrimaryKeys["public\u001fdepartments"]);
     }
 
     [Fact]
@@ -86,7 +104,7 @@ public sealed class ExecutionWriteSliceValidatorTests
     }
 
     [Fact]
-    public void RejectsCrossTableRequirement()
+    public void RejectsCrossTableRequirementWithoutCompleteOriginalScan()
     {
         var requirement = new GeneratorDataRequirement(
             "lookup",
@@ -103,7 +121,7 @@ public sealed class ExecutionWriteSliceValidatorTests
             .Assess(CreatePlan(step), CreateInspection(step, "id"));
 
         Assert.False(assessment.IsSupported);
-        Assert.Contains("reads another table", assessment.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("complete scan of original", assessment.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

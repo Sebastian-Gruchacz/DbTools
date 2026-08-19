@@ -37,7 +37,14 @@ internal sealed class ExecutionPlanDatabaseInspector
                     : null;
                 if (!requirementEstimates.TryAdd(
                         requirement.Alias,
-                        new DataRequirementEstimate(source.Table.EstimatedRowCount, memory)))
+                        new DataRequirementEstimate(source.Table.EstimatedRowCount, memory)
+                        {
+                            PrimaryKeyColumns = source.Columns.Values
+                                .Where(column => column.IsPartOfThePrimaryKey)
+                                .OrderBy(column => column.Ordinal)
+                                .Select(column => column.Name)
+                                .ToArray()
+                        }))
                 {
                     throw new InvalidOperationException(
                         $"Generator step '{step.Id}' contains duplicate data requirement alias '{requirement.Alias}'.");

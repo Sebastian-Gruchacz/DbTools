@@ -173,7 +173,8 @@ internal class GenerateAnonymyzerConfigurationCommand// : ICommand<GenerateAnony
             .Select(item => item.Profile.GeneratorType)
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
         IEnumerable<GeneratorProfileConfiguration> generatorProfiles = _generatorsProvider.GetAllGenerators()
-            .Where(generator => !localizedGeneratorTypes.Contains(generator.Descriptor.Type))
+            .Where(generator => !localizedGeneratorTypes.Contains(generator.Descriptor.Type)
+                                && generator.Descriptor.Scope != GeneratorExecutionScope.Relational)
             .Select(generator => new GeneratorProfileConfiguration
             {
                 Id = $"{generator.Descriptor.Type}:{DEFAULT}",

@@ -37,6 +37,7 @@ public partial class MainWindow : Window
     {
         new ShufflingTextGeneratorEditorFactory(),
         new FixedTextGeneratorEditorFactory(),
+        new ReferencePseudonymGeneratorEditorFactory(),
         new JsonPathRedactorGeneratorEditorFactory(),
         new SequentialTextGeneratorEditorFactory(),
         new EmailAddressGeneratorEditorFactory(),
@@ -180,7 +181,7 @@ public partial class MainWindow : Window
         var dialog = new GeneratorProfilesWindow(
             _viewModel.Configuration.GeneratorProfiles,
             _generatorEditors,
-            _generatorCatalog.CreateDefaultProfiles())
+            _generatorCatalog.CreateProfileTemplates())
         {
             Owner = this
         };

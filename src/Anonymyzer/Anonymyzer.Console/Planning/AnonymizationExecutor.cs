@@ -91,7 +91,12 @@ internal sealed class AnonymizationExecutor(IEnumerable<IGenerator> generators)
                 .ToArray();
             string[] sourceColumns = outputColumns
                 .Select(column => column.Name)
-                .Concat(plan.Steps.SelectMany(step => step.DataRequirements).SelectMany(requirement => requirement.Columns))
+                .Concat(plan.Steps
+                    .SelectMany(step => step.DataRequirements)
+                    .Where(requirement => TableKey(requirement.Table).Equals(
+                        TableKey(writeSlice.TargetTable),
+                        StringComparison.OrdinalIgnoreCase))
+                    .SelectMany(requirement => requirement.Columns))
                 .Distinct(StringComparer.OrdinalIgnoreCase)
                 .ToArray();
             object? afterPrimaryKey = resumeState is null
@@ -254,6 +259,7 @@ internal sealed class AnonymizationExecutor(IEnumerable<IGenerator> generators)
             store,
             writeSlice.TargetTable!,
             writeSlice.PrimaryKeyColumn!,
+            writeSlice.ReadPrimaryKeys,
             plan.BatchSize);
         try
         {
@@ -286,10 +292,14 @@ internal sealed class AnonymizationExecutor(IEnumerable<IGenerator> generators)
 
     private static string GeneratorKey(string type, string version) => $"{type}\u001f{version}";
 
+    private static string TableKey(GeneratorTableReference table) =>
+        $"{table.SchemaName}\u001f{table.TableName}";
+
     private sealed class StoreGeneratorDataReader(
         IExecutionRowStore store,
         GeneratorTableReference targetTable,
         string primaryKeyColumn,
+        IReadOnlyDictionary<string, string> readPrimaryKeys,
         int batchSize) : IGeneratorDataReader
     {
         public async IAsyncEnumerable<GeneratorDataRow> ReadAsync(
@@ -297,18 +307,24 @@ internal sealed class AnonymizationExecutor(IEnumerable<IGenerator> generators)
             [System.Runtime.CompilerServices.EnumeratorCancellation]
             CancellationToken cancellationToken = default)
         {
-            if (!TableKey(requirement.Table).Equals(TableKey(targetTable), StringComparison.OrdinalIgnoreCase))
+            string tableKey = TableKey(requirement.Table);
+            string readPrimaryKey;
+            if (tableKey.Equals(TableKey(targetTable), StringComparison.OrdinalIgnoreCase))
+            {
+                readPrimaryKey = primaryKeyColumn;
+            }
+            else if (!readPrimaryKeys.TryGetValue(tableKey, out readPrimaryKey!))
             {
                 throw new InvalidOperationException(
-                    $"Generator data requirement '{requirement.Alias}' reads outside the validated target table.");
+                    $"Generator data requirement '{requirement.Alias}' reads an unvalidated table.");
             }
 
             object? afterPrimaryKey = null;
             while (true)
             {
                 IReadOnlyList<ExecutionSourceRow> rows = await store.ReadNextBatchAsync(
-                    targetTable,
-                    primaryKeyColumn,
+                    requirement.Table,
+                    readPrimaryKey,
                     requirement.Columns,
                     afterPrimaryKey,
                     batchSize,
@@ -328,8 +344,6 @@ internal sealed class AnonymizationExecutor(IEnumerable<IGenerator> generators)
             }
         }
 
-        private static string TableKey(GeneratorTableReference table) =>
-            $"{table.SchemaName}\u001f{table.TableName}";
     }
 
     private sealed class MutableExecutionRow(ExecutionSourceRow sourceRow)

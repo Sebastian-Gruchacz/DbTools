@@ -10,4 +10,7 @@ internal sealed record GeneratorStepDatabaseInspection(
 
 internal sealed record DataRequirementEstimate(
     long EstimatedRows,
-    long? EstimatedMaximumMemoryBytes);
+    long? EstimatedMaximumMemoryBytes)
+{
+    public IReadOnlyList<string> PrimaryKeyColumns { get; init; } = Array.Empty<string>();
+}

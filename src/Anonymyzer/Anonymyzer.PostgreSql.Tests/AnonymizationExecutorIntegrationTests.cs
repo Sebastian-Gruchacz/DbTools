@@ -211,6 +211,61 @@ public sealed class AnonymizationExecutorIntegrationTests
     }
 
     [Fact]
+    public async Task ExecutesReferencePseudonymAcrossPostgreSqlTablesWithoutChangingForeignKey()
+    {
+        string connectionString = RequireConnectionString("ANONYMYZER_POSTGRES_CONNECTION", "PostgreSQL");
+        string suffix = Guid.NewGuid().ToString("N")[..12];
+        string lookupTable = "__anonymyzer_lookup_" + suffix;
+        string targetTable = "__anonymyzer_relational_" + suffix;
+        string keyEnvironmentVariable = $"ANONYMYZER_TEST_PSEUDONYM_{Guid.NewGuid():N}";
+        Environment.SetEnvironmentVariable(keyEnvironmentVariable, "integration-key-with-more-than-thirty-two-characters");
+        using var connection = new NpgsqlConnection(connectionString);
+        connection.Open();
+        DetachedCopyMarker marker = ValidateClone("PostgreSql", connection);
+        ExecuteNonQuery(
+            connection,
+            $"CREATE TABLE public.\"{lookupTable}\" (\"Id\" integer PRIMARY KEY); " +
+            $"CREATE TABLE public.\"{targetTable}\" (\"Id\" integer PRIMARY KEY, " +
+            $"\"DepartmentId\" integer REFERENCES public.\"{lookupTable}\"(\"Id\"), \"Alias\" varchar(100)); " +
+            $"INSERT INTO public.\"{lookupTable}\" (\"Id\") VALUES (10), (20); " +
+            $"INSERT INTO public.\"{targetTable}\" (\"Id\", \"DepartmentId\") VALUES (1, 10), (2, 20), (3, 10);");
+
+        try
+        {
+            var generator = new ReferencePseudonymGenerator();
+            AnonymizationConfiguration configuration = CreateReferencePseudonymConfiguration(
+                generator,
+                connection.Database,
+                marker,
+                targetTable,
+                lookupTable,
+                keyEnvironmentVariable);
+            long processed = await ExecutePlanAsync(
+                connection,
+                new PostgreSqlAnonymyzerEngine(connection),
+                "PostgreSql",
+                configuration,
+                [generator]);
+
+            Assert.Equal(3, processed);
+            Assert.Equal(3, ExecuteScalar<int>(
+                connection,
+                $"SELECT COUNT(*) FROM public.\"{targetTable}\" WHERE \"DepartmentId\" IN (10, 20);"));
+            Assert.Equal(1, ExecuteScalar<int>(
+                connection,
+                $"SELECT COUNT(DISTINCT \"Alias\") FROM public.\"{targetTable}\" WHERE \"DepartmentId\" = 10;"));
+            Assert.Equal(2, ExecuteScalar<int>(
+                connection,
+                $"SELECT COUNT(DISTINCT \"Alias\") FROM public.\"{targetTable}\";"));
+        }
+        finally
+        {
+            ExecuteNonQuery(connection, $"DROP TABLE public.\"{targetTable}\"; DROP TABLE public.\"{lookupTable}\";");
+            Environment.SetEnvironmentVariable(keyEnvironmentVariable, null);
+        }
+    }
+
+    [Fact]
     public async Task ExecutesJsonPathRedactorOnPostgreSqlJsonAndJsonbColumns()
     {
         string connectionString = RequireConnectionString("ANONYMYZER_POSTGRES_CONNECTION", "PostgreSQL");
@@ -336,6 +391,72 @@ public sealed class AnonymizationExecutorIntegrationTests
                         {
                             Ordinal = 2,
                             ColumnName = "Name",
+                            DataType = DbDataType.Text.ToString(),
+                            MaxLength = 100,
+                            Unicode = true,
+                            Enabled = true,
+                            Generator = new ColumnGeneratorConfiguration
+                            {
+                                GeneratorType = generator.Descriptor.Type,
+                                GeneratorVersion = generator.Descriptor.Version,
+                                ProfileId = profileId
+                            }
+                        }
+                    }
+                }
+            }
+        };
+    }
+
+    private static AnonymizationConfiguration CreateReferencePseudonymConfiguration(
+        ReferencePseudonymGenerator generator,
+        string databaseName,
+        DetachedCopyMarker marker,
+        string targetTable,
+        string lookupTable,
+        string keyEnvironmentVariable)
+    {
+        const string profileId = "reference-pseudonym-fixture";
+        return new AnonymizationConfiguration
+        {
+            Database = new DatabaseTargetConfiguration
+            {
+                DatabaseEngine = "PostgreSql",
+                DatabaseName = databaseName,
+                DetachedCopyMarkerId = marker.MarkerId.ToString("D")
+            },
+            GeneratorProfiles =
+            {
+                new GeneratorProfileConfiguration
+                {
+                    Id = profileId,
+                    GeneratorType = generator.Descriptor.Type,
+                    GeneratorVersion = generator.Descriptor.Version,
+                    Options = generator.Configuration.Serialize(new ReferencePseudonymGeneratorConfiguration
+                    {
+                        ReferenceColumn = "DepartmentId",
+                        LookupSchema = "public",
+                        LookupTable = lookupTable,
+                        LookupKeyColumn = "Id",
+                        Prefix = "department-",
+                        KeyEnvironmentVariable = keyEnvironmentVariable,
+                        HashLength = 16
+                    })
+                }
+            },
+            Tables =
+            {
+                new TableProcessingOptions
+                {
+                    SchemaName = "public",
+                    TableName = targetTable,
+                    Enabled = true,
+                    Columns =
+                    {
+                        new ColumnProcessingOptions
+                        {
+                            Ordinal = 3,
+                            ColumnName = "Alias",
                             DataType = DbDataType.Text.ToString(),
                             MaxLength = 100,
                             Unicode = true,

@@ -34,6 +34,7 @@ internal sealed class GeneratorCatalog
         [
         new ShufflingTextGenerator(),
         new FixedTextGenerator(),
+        new ReferencePseudonymGenerator(),
         new JsonPathRedactorGenerator(),
         new SequentialTextGenerator(),
         new EmailAddressGenerator(),
@@ -65,9 +66,17 @@ internal sealed class GeneratorCatalog
 
     public IReadOnlyList<GeneratorProfileConfiguration> CreateDefaultProfiles() =>
         _generators
-            .Where(generator => !LocalizedGeneratorTypes.Contains(generator.Descriptor.Type))
+            .Where(generator => !LocalizedGeneratorTypes.Contains(generator.Descriptor.Type)
+                                && generator.Descriptor.Scope != GeneratorExecutionScope.Relational)
             .Select(CreateDefaultProfile)
             .Concat(_languagePackProfiles.Select(CloneProfile))
+            .ToArray();
+
+    public IReadOnlyList<GeneratorProfileConfiguration> CreateProfileTemplates() =>
+        CreateDefaultProfiles()
+            .Concat(_generators
+                .Where(generator => generator.Descriptor.Scope == GeneratorExecutionScope.Relational)
+                .Select(CreateDefaultProfile))
             .ToArray();
 
     public AnonymizationConfiguration CreateNewConfiguration()

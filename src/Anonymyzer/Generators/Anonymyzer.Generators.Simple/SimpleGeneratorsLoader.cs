@@ -19,6 +19,7 @@
             serviceCollection.AddTransient<IGenerator, CompanyNameGenerator>();
             serviceCollection.AddTransient<IGenerator, AccountLoginGenerator>();
             serviceCollection.AddTransient<IGenerator, BankAccountGenerator>();
+            serviceCollection.AddTransient<IGenerator, ReferencePseudonymGenerator>();
         }
     }
 }

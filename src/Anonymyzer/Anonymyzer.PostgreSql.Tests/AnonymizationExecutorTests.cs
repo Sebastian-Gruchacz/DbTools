@@ -262,6 +262,87 @@ public sealed class AnonymizationExecutorTests
         Assert.Equal(6, store.ReadColumnSets.Count);
     }
 
+    [Fact]
+    public async Task AppliesConsistentPseudonymsFromValidatedLookupTable()
+    {
+        var generator = new ReferencePseudonymGenerator();
+        var target = new GeneratorTableReference("public", "employees");
+        var lookup = new GeneratorTableReference("public", "departments");
+        string keyEnvironmentVariable = $"ANONYMYZER_TEST_PSEUDONYM_{Guid.NewGuid():N}";
+        Environment.SetEnvironmentVariable(keyEnvironmentVariable, "test-key-with-more-than-thirty-two-characters");
+        var configuration = new ReferencePseudonymGeneratorConfiguration
+        {
+            ReferenceColumn = "department_id",
+            LookupSchema = lookup.SchemaName,
+            LookupTable = lookup.TableName,
+            LookupKeyColumn = "id",
+            Prefix = "department-",
+            KeyEnvironmentVariable = keyEnvironmentVariable,
+            HashLength = 16
+        };
+        var binding = new GeneratorBinding(
+            target,
+            new Dictionary<string, string> { [ReferencePseudonymGenerator.ValueOutput] = "department_alias" });
+        var step = new GeneratorExecutionPlanStep(
+            "public.employees/column:department_alias",
+            target,
+            generator.Descriptor,
+            binding,
+            configuration,
+            generator.GetDataRequirements(binding, configuration),
+            2);
+        var store = new RelationalFakeExecutionRowStore(
+            target,
+            lookup,
+            [
+                new ExecutionSourceRow(1, new Dictionary<string, object?>
+                {
+                    ["department_id"] = 10,
+                    ["department_alias"] = null
+                }),
+                new ExecutionSourceRow(2, new Dictionary<string, object?>
+                {
+                    ["department_id"] = 20,
+                    ["department_alias"] = null
+                }),
+                new ExecutionSourceRow(3, new Dictionary<string, object?>
+                {
+                    ["department_id"] = 10,
+                    ["department_alias"] = null
+                })
+            ],
+            [
+                new ExecutionSourceRow(10, new Dictionary<string, object?> { ["id"] = 10 }),
+                new ExecutionSourceRow(20, new Dictionary<string, object?> { ["id"] = 20 })
+            ]);
+        var writeSlice = new ExecutionWriteSliceAssessment(true, "ready", target, "id")
+        {
+            ReadPrimaryKeys = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["public\u001fdepartments"] = "id"
+            }
+        };
+
+        try
+        {
+            long processed = await new AnonymizationExecutor([generator]).ExecuteAsync(
+                new AnonymizationExecutionPlan(2, [step]),
+                writeSlice,
+                store,
+                TestContext.Current.CancellationToken);
+
+            Assert.Equal(3, processed);
+            Assert.Equal(store.TargetRows[0].Values["department_alias"], store.TargetRows[2].Values["department_alias"]);
+            Assert.NotEqual(store.TargetRows[0].Values["department_alias"], store.TargetRows[1].Values["department_alias"]);
+            Assert.All(store.TargetRows, row => Assert.StartsWith("department-", row.Values["department_alias"] as string));
+            Assert.Contains(store.ReadTables, table => table.TableName == "departments");
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable(keyEnvironmentVariable, null);
+        }
+    }
+
     private sealed class FakeExecutionRowStore(IEnumerable<ExecutionSourceRow> rows) : IExecutionRowStore
     {
         private readonly List<ExecutionSourceRow> _rows = rows.ToList();
@@ -319,4 +400,71 @@ public sealed class AnonymizationExecutorTests
     }
 
     private sealed class SimulatedInterruptionException : Exception;
+
+    private sealed class RelationalFakeExecutionRowStore(
+        GeneratorTableReference targetTable,
+        GeneratorTableReference lookupTable,
+        IEnumerable<ExecutionSourceRow> targetRows,
+        IEnumerable<ExecutionSourceRow> lookupRows) : IExecutionRowStore
+    {
+        private readonly List<ExecutionSourceRow> _targetRows = targetRows.ToList();
+        private readonly List<ExecutionSourceRow> _lookupRows = lookupRows.ToList();
+
+        public IReadOnlyList<ExecutionSourceRow> TargetRows => _targetRows;
+
+        public List<GeneratorTableReference> ReadTables { get; } = new();
+
+        public Task<IReadOnlyList<ExecutionSourceRow>> ReadNextBatchAsync(
+            GeneratorTableReference table,
+            string primaryKeyColumn,
+            IReadOnlyList<string> columns,
+            object? afterPrimaryKey,
+            int batchSize,
+            CancellationToken cancellationToken)
+        {
+            ReadTables.Add(table);
+            List<ExecutionSourceRow> source = TableKey(table) switch
+            {
+                var key when key == TableKey(targetTable) => _targetRows,
+                var key when key == TableKey(lookupTable) => _lookupRows,
+                _ => throw new InvalidOperationException("Unexpected table read in relational executor test.")
+            };
+            int after = afterPrimaryKey is null ? int.MinValue : Convert.ToInt32(afterPrimaryKey);
+            IReadOnlyList<ExecutionSourceRow> result = source
+                .Where(row => Convert.ToInt32(row.PrimaryKey) > after)
+                .OrderBy(row => Convert.ToInt32(row.PrimaryKey))
+                .Take(batchSize)
+                .Select(row => new ExecutionSourceRow(
+                    row.PrimaryKey,
+                    new Dictionary<string, object?>(row.Values, StringComparer.OrdinalIgnoreCase)))
+                .ToArray();
+            return Task.FromResult(result);
+        }
+
+        public Task WriteBatchAsync(
+            GeneratorTableReference table,
+            string primaryKeyColumn,
+            IReadOnlyList<ExecutionOutputColumn> outputColumns,
+            IReadOnlyList<ExecutionUpdatedRow> rows,
+            CancellationToken cancellationToken)
+        {
+            Assert.Equal(TableKey(targetTable), TableKey(table));
+            foreach (ExecutionUpdatedRow updated in rows)
+            {
+                int index = _targetRows.FindIndex(row => Equals(row.PrimaryKey, updated.PrimaryKey));
+                var values = new Dictionary<string, object?>(_targetRows[index].Values, StringComparer.OrdinalIgnoreCase);
+                foreach (ExecutionOutputColumn output in outputColumns)
+                {
+                    values[output.Name] = updated.Values[output.Name];
+                }
+
+                _targetRows[index] = new ExecutionSourceRow(updated.PrimaryKey, values);
+            }
+
+            return Task.CompletedTask;
+        }
+
+        private static string TableKey(GeneratorTableReference table) =>
+            $"{table.SchemaName}\u001f{table.TableName}";
+    }
 }

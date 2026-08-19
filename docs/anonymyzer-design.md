@@ -223,7 +223,9 @@ zmienić należący do generatora obiekt `Options` jako surowy JSON.
 - `Relational` deklaruje kolumny z innych tabel oraz czy potrzebuje ich wartości
   oryginalnych czy już wygenerowanych. Planner `dry-run` buduje z deklaracji
   `Generated` graf zależności, wykrywa brakujących producentów, podwójne zapisy
-  i cykle oraz ustala deterministyczną kolejność wykonania.
+  i cykle oraz ustala deterministyczną kolejność wykonania. Pierwszy wykonywalny
+  przypadek, `ReferencePseudonym` 1.0.0, skanuje oryginalne klucze tabeli lookup,
+  a zapisuje wyłącznie tekstową kolumnę jednej tabeli docelowej. Nie zmienia PK/FK.
 
 Plan obejmuje wyłącznie włączone tabele i kolumny. Dla każdego kroku podaje
 docelową tabelę, dokładny typ i wersję generatora, zakres `Row`/`Column`/
@@ -234,12 +236,12 @@ Planner nadal nie odczytuje liczby wierszy ani nie wykonuje sesji generatorów.
 Liczbę wierszy i koszt pamięci uzupełnia osobny inspektor bieżącego schematu,
 uruchamiany przez `run --dry-run` po zbudowaniu planu.
 
-Ten sam inspektor zapisuje rzeczywiste kolumny PK. Walidator pierwszego wycinka
-zapisu dopuszcza dokładnie jedną tabelę, kroki `Row`/`Column`, jeden niezmieniany
-klucz główny i wymagania danych z tej samej tabeli. Scope `Relational`, pełny skan
-wartości `Generated`, brak lub złożony PK, zmiana PK albo odczyt innej tabeli daje
-w `dry-run` jawny status `not ready`. `--execute` działa wyłącznie dla statusu
-`ready`: przed pierwszym
+Ten sam inspektor zapisuje rzeczywiste kolumny PK. Walidator wycinka zapisu
+dopuszcza dokładnie jedną tabelę docelową i jeden niezmieniany klucz główny.
+Zewnętrzne wymaganie danych musi być pełnym skanem wartości `Original`, a jego
+tabela musi mieć pojedynczy PK używany do bezpiecznego pageingu. Pełny skan
+wartości `Generated`, brak lub złożony PK albo zmiana PK daje w `dry-run` jawny
+status `not ready`. `--execute` działa wyłącznie dla statusu `ready`: przed pierwszym
 zapisem przygotowuje sesje `Column` z pełnego, oryginalnego skanu keyset, potem
 czyta kolejne batche tym samym pagingiem, utrzymuje sesje generatorów między
 batchami i zapisuje batch w jednej transakcji. Aktualizacja innej liczby wierszy
@@ -266,6 +268,14 @@ Hash ostatniego odtworzonego PK wykrywa przesunięcie granicy po zmianie zbioru
 wierszy. Scope `Column`, pełny skan, zależność od nadpisanej wartości oryginalnej
 lub `RequiresExistingValue` blokują checkpoint, ponieważ częściowo zmieniona baza
 nie zawiera już danych wystarczających do bezpiecznego odtworzenia.
+
+`ReferencePseudonym` kanonizuje klucz referencji i liczy skrócony HMAC-SHA-256.
+Profil zawiera nazwę zmiennej środowiskowej, prefiks i długość skrótu, lecz nigdy
+sam klucz HMAC; wartość klucza musi mieć co najmniej 32 znaki. Generator wykrywa
+kolizję w obrębie pełnego zbioru lookup przed pierwszym zapisem, nie loguje
+wartości brakującej referencji i odmawia nadpisania kolumny referencyjnej. Mapa
+ma domyślny limit 64 MiB; przekroczenie kończy przygotowanie przed zapisem zamiast
+ryzykować nieograniczone zużycie pamięci.
 
 Reader przekazuje dane strumieniowo, natomiast generator decyduje, co buforuje.
 `TextShuffler` ma `MaximumInMemoryBytes` (domyślnie 64 MiB) oraz jawną strategię

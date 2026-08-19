@@ -25,22 +25,33 @@ internal sealed class ExecutionWriteSliceValidator
         }
 
         GeneratorTableReference targetTable = targetTables[0];
-        GeneratorExecutionPlanStep? unsupportedScope = plan.Steps.FirstOrDefault(step =>
-            step.Generator.Scope == GeneratorExecutionScope.Relational);
-        if (unsupportedScope is not null)
+        var readPrimaryKeys = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (GeneratorExecutionPlanStep step in plan.Steps)
         {
-            return Unsupported(
-                $"step '{unsupportedScope.Id}' has unsupported scope {unsupportedScope.Generator.Scope}");
-        }
+            foreach (GeneratorDataRequirement requirement in step.DataRequirements.Where(requirement =>
+                         !TableKey(requirement.Table).Equals(TableKey(targetTable), StringComparison.OrdinalIgnoreCase)))
+            {
+                if (!requirement.RequiresCompleteScan || requirement.ValueSource != GeneratorValueSource.Original)
+                {
+                    return Unsupported(
+                        $"external data requirement '{requirement.Alias}' must be a complete scan of original values");
+                }
 
-        GeneratorDataRequirement? externalRequirement = plan.Steps
-            .SelectMany(step => step.DataRequirements)
-            .FirstOrDefault(requirement => !TableKey(requirement.Table).Equals(
-                TableKey(targetTable),
-                StringComparison.OrdinalIgnoreCase));
-        if (externalRequirement is not null)
-        {
-            return Unsupported($"data requirement '{externalRequirement.Alias}' reads another table");
+                if (!inspection.Steps[step.Id].DataRequirements.TryGetValue(
+                        requirement.Alias,
+                        out DataRequirementEstimate? estimate))
+                {
+                    return Unsupported($"external data requirement '{requirement.Alias}' was not inspected");
+                }
+
+                if (estimate.PrimaryKeyColumns.Count != 1)
+                {
+                    return Unsupported(
+                        $"external data requirement '{requirement.Alias}' requires a table with a single-column primary key");
+                }
+
+                readPrimaryKeys[TableKey(requirement.Table)] = estimate.PrimaryKeyColumns[0];
+            }
         }
 
         GeneratorDataRequirement? generatedCompleteScan = plan.Steps
@@ -76,9 +87,14 @@ internal sealed class ExecutionWriteSliceValidator
 
         return new ExecutionWriteSliceAssessment(
             true,
-            "ready for the single-table Row/Column write slice",
+            readPrimaryKeys.Count == 0
+                ? "ready for the single-table Row/Column write slice"
+                : "ready for the single-target relational write slice",
             targetTable,
-            primaryKeyColumn);
+            primaryKeyColumn)
+        {
+            ReadPrimaryKeys = readPrimaryKeys
+        };
     }
 
     private static ExecutionWriteSliceAssessment Unsupported(string reason) =>
@@ -92,4 +108,8 @@ internal sealed record ExecutionWriteSliceAssessment(
     bool IsSupported,
     string Message,
     GeneratorTableReference? TargetTable,
-    string? PrimaryKeyColumn);
+    string? PrimaryKeyColumn)
+{
+    public IReadOnlyDictionary<string, string> ReadPrimaryKeys { get; init; } =
+        new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+}
