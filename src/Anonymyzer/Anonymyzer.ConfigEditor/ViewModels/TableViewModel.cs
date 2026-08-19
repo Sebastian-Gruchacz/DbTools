@@ -44,8 +44,10 @@ internal sealed class TableViewModel : INotifyPropertyChanged
     public string CandidateMark => CandidateCount > 0 ? "●" : string.Empty;
     public string CandidateCountText => CandidateCount > 0 ? CandidateCount.ToString() : string.Empty;
     public int ManualOverrideCount => Model.Columns.Count(column => column.OperatorOverrides?.HasAny == true);
-    public string ManualMark => ManualOverrideCount > 0 ? "◆" : string.Empty;
-    public string ManualDetails => ManualOverrideCount > 0
+    public string ManualMark => Enabled || ManualOverrideCount > 0 ? "◆" : string.Empty;
+    public string ManualDetails => Enabled
+        ? $"Table enabled by the operator; columns with additional choices: {ManualOverrideCount}."
+        : ManualOverrideCount > 0
         ? $"Columns with operator choices: {ManualOverrideCount}."
         : "No explicit operator choices.";
     public int MissingColumnCount => Model.Columns.Count(column =>
@@ -63,6 +65,24 @@ internal sealed class TableViewModel : INotifyPropertyChanged
         ? $"Automatic candidates: {CandidateCount}."
         : "No automatic candidates.";
     public string QualifiedName => $"{Model.SchemaName}.{Model.TableName}";
+
+    public bool Enabled
+    {
+        get => Model.Enabled;
+        set
+        {
+            if (Model.Enabled == value)
+            {
+                return;
+            }
+
+            Model.Enabled = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(ManualMark));
+            OnPropertyChanged(nameof(ManualDetails));
+            OnConfigurationChanged();
+        }
+    }
 
     public void RevealColumn(ColumnViewModel column)
     {

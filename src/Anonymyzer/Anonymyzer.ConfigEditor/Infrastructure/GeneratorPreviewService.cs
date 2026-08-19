@@ -44,7 +44,8 @@ internal sealed class GeneratorPreviewService(GeneratorCatalog catalog)
 
             try
             {
-                object configuration = generator.Configuration.Deserialize(profile.Options);
+                object configuration = generator.Configuration.Deserialize(
+                    GeneratorOptionsResolver.ResolveGroupOptions(profile, group));
                 IReadOnlyList<string> errors = generator.Configuration.Validate(configuration);
                 if (errors.Count > 0)
                 {

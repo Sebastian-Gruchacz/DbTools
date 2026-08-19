@@ -43,7 +43,8 @@
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
                                 <ComboBox ItemsSource="{Binding DataContext.ProfileIds, RelativeSource={RelativeSource AncestorType=Window}}"
-                                          SelectedItem="{Binding ProfileId, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                          SelectedItem="{Binding ProfileId, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                          SelectionChanged="Profile_SelectionChanged" />
                             </DataTemplate>
                         </DataGridTemplateColumn.CellTemplate>
                     </DataGridTemplateColumn>
@@ -68,7 +69,7 @@
                     <DataGridTemplateColumn Header="Generator output" Width="1.2*">
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
-                                <ComboBox ItemsSource="{Binding DataContext.OutputNames, RelativeSource={RelativeSource AncestorType=Window}}"
+                                <ComboBox ItemsSource="{Binding DataContext.SelectedOutputNames, RelativeSource={RelativeSource AncestorType=Window}}"
                                           SelectedItem="{Binding Output, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                             </DataTemplate>
                         </DataGridTemplateColumn.CellTemplate>

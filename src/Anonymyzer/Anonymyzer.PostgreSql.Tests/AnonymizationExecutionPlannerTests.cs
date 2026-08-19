@@ -48,6 +48,23 @@ public sealed class AnonymizationExecutionPlannerTests
     }
 
     [Fact]
+    public void AppliesGroupLocaleOverrideToGeneratorConfiguration()
+    {
+        var person = new PersonIdentityGenerator(new[] { new PolishPersonLocaleDataProvider() });
+        var shuffler = new ShufflingTextGenerator();
+        AnonymizationConfiguration configuration = CreateBuiltInConfiguration(person, shuffler);
+        configuration.Tables[0].GenerationGroups[0].Locale = "en-US";
+        var planner = new AnonymizationExecutionPlanner(new IGenerator[] { person, shuffler });
+
+        AnonymizationExecutionPlan plan = planner.Build(configuration);
+
+        PersonIdentityGeneratorConfiguration groupConfiguration =
+            Assert.IsType<PersonIdentityGeneratorConfiguration>(plan.Steps[0].Configuration);
+        Assert.Equal("en-US", groupConfiguration.Locale);
+        Assert.Equal("pl-PL", configuration.GeneratorProfiles[0].Options[nameof(groupConfiguration.Locale)]?.Value<string>());
+    }
+
+    [Fact]
     public void OrdersGeneratedValueProducerBeforeConsumerAcrossTables()
     {
         var producer = new TestGenerator("Producer", "public", "source", null);

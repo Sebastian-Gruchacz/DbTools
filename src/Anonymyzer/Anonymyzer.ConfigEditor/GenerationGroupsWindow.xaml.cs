@@ -11,6 +11,7 @@ public partial class GenerationGroupsWindow : Window, INotifyPropertyChanged
 {
     private readonly TableProcessingOptions _table;
     private readonly IReadOnlyList<GeneratorProfileConfiguration> _profiles;
+    private readonly IReadOnlyList<GeneratorProfileConfiguration> _multiOutputProfiles;
     private readonly IReadOnlyList<GeneratorDescriptor> _descriptors;
     private GroupRow? _selectedGroup;
 
@@ -23,10 +24,17 @@ public partial class GenerationGroupsWindow : Window, INotifyPropertyChanged
         _table = table;
         _profiles = profiles;
         _descriptors = descriptors;
+        _multiOutputProfiles = profiles
+            .Where(profile => GetDescriptor(profile)?.Outputs.Count > 1)
+            .ToArray();
         Groups = new ObservableCollection<GroupRow>(table.GenerationGroups.Select(GroupRow.FromModel));
-        ProfileIds = profiles.Select(profile => profile.Id).OrderBy(value => value).ToArray();
-        OutputNames = descriptors.SelectMany(descriptor => descriptor.Outputs).Select(output => output.Name)
-            .Distinct(StringComparer.OrdinalIgnoreCase).OrderBy(value => value).ToArray();
+        ProfileIds = _multiOutputProfiles
+            .Select(profile => profile.Id)
+            .Concat(table.GenerationGroups.Select(group => group.ProfileId))
+            .Where(value => !string.IsNullOrWhiteSpace(value))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(value => value)
+            .ToArray();
         ColumnNames = table.Columns.Select(column => column.ColumnName).ToArray();
         DataContext = this;
         SelectedGroup = Groups.FirstOrDefault();
@@ -36,8 +44,11 @@ public partial class GenerationGroupsWindow : Window, INotifyPropertyChanged
 
     public ObservableCollection<GroupRow> Groups { get; }
     public IReadOnlyList<string> ProfileIds { get; }
-    public IReadOnlyList<string> OutputNames { get; }
     public IReadOnlyList<string> ColumnNames { get; }
+    public IReadOnlyList<string> SelectedOutputNames => SelectedGroup is null
+        ? Array.Empty<string>()
+        : GetDescriptor(SelectedGroup.ProfileId)?.Outputs.Select(output => output.Name).ToArray()
+          ?? Array.Empty<string>();
 
     public GroupRow? SelectedGroup
     {
@@ -51,6 +62,7 @@ public partial class GenerationGroupsWindow : Window, INotifyPropertyChanged
 
             _selectedGroup = value;
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(SelectedGroup)));
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(SelectedOutputNames)));
             BindingsGrid.ItemsSource = value?.Bindings;
         }
     }
@@ -62,9 +74,20 @@ public partial class GenerationGroupsWindow : Window, INotifyPropertyChanged
 
     private void AddGroup_Click(object sender, RoutedEventArgs e)
     {
-        GeneratorProfileConfiguration? profile = _profiles.FirstOrDefault(item =>
+        GeneratorProfileConfiguration? profile = _multiOutputProfiles.FirstOrDefault(item =>
             item.GeneratorType.Equals("PersonIdentity", StringComparison.OrdinalIgnoreCase))
-            ?? _profiles.FirstOrDefault();
+            ?? _multiOutputProfiles.FirstOrDefault();
+        if (profile is null)
+        {
+            MessageBox.Show(
+                this,
+                "Create a profile for a multi-output generator, such as PersonIdentity or PostalAddress, first.",
+                "No group profile",
+                MessageBoxButton.OK,
+                MessageBoxImage.Information);
+            return;
+        }
+
         var row = new GroupRow
         {
             Id = CreateUniqueGroupId(),
@@ -75,6 +98,41 @@ public partial class GenerationGroupsWindow : Window, INotifyPropertyChanged
         SelectedGroup = row;
         GroupsGrid.SelectedItem = row;
         AddMissingBindings(row);
+    }
+
+    private void Profile_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (!IsLoaded
+            || sender is not ComboBox { DataContext: GroupRow row, SelectedItem: string profileId })
+        {
+            return;
+        }
+
+        GeneratorProfileConfiguration? profile = _profiles.FirstOrDefault(item =>
+            item.Id.Equals(profileId, StringComparison.OrdinalIgnoreCase));
+        GeneratorDescriptor? descriptor = profile is null ? null : GetDescriptor(profile);
+        if (profile is null || descriptor is null || descriptor.Outputs.Count <= 1)
+        {
+            return;
+        }
+
+        row.ProfileId = profile.Id;
+        row.Locale = profile.Locale;
+        foreach (BindingRow binding in row.Bindings
+                     .Where(binding => descriptor.Outputs.All(output =>
+                         !output.Name.Equals(binding.Output, StringComparison.OrdinalIgnoreCase)))
+                     .ToArray())
+        {
+            row.Bindings.Remove(binding);
+        }
+
+        AddMissingBindings(row);
+        if (ReferenceEquals(SelectedGroup, row))
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(SelectedOutputNames)));
+        }
+
+        GroupsGrid.Items.Refresh();
     }
 
     private void RemoveGroup_Click(object sender, RoutedEventArgs e)
@@ -208,6 +266,11 @@ public partial class GenerationGroupsWindow : Window, INotifyPropertyChanged
         _table.GenerationGroups.AddRange(groups);
         foreach (ColumnProcessingOptions column in _table.Columns)
         {
+            if (!string.IsNullOrWhiteSpace(column.GenerationGroupId))
+            {
+                column.OperatorOverrides.GenerationGroup = true;
+            }
+
             column.GenerationGroupId = string.Empty;
         }
 
@@ -219,6 +282,7 @@ public partial class GenerationGroupsWindow : Window, INotifyPropertyChanged
                 ColumnProcessingOptions column = _table.Columns.Single(item =>
                     item.ColumnName.Equals(columnName, StringComparison.OrdinalIgnoreCase));
                 column.GenerationGroupId = group.Id;
+                column.OperatorOverrides.GenerationGroup = true;
                 column.Generator = new ColumnGeneratorConfiguration();
 
                 GeneratorOutputDescriptor? output = descriptor.Outputs.FirstOrDefault(item =>
@@ -241,6 +305,12 @@ public partial class GenerationGroupsWindow : Window, INotifyPropertyChanged
 
         foreach (GeneratorOutputDescriptor output in descriptor.Outputs)
         {
+            if (row.Bindings.Any(binding =>
+                    binding.Output.Equals(output.Name, StringComparison.OrdinalIgnoreCase)))
+            {
+                continue;
+            }
+
             string? matchingColumn = _table.Columns.FirstOrDefault(column =>
                 column.SemanticRole.Equals(output.SemanticRole, StringComparison.OrdinalIgnoreCase)
                 && Groups.SelectMany(group => group.Bindings).All(binding =>

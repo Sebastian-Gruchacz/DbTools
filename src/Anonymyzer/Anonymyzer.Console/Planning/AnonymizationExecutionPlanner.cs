@@ -71,7 +71,7 @@ internal sealed class AnonymizationExecutionPlanner
                 table,
                 generator,
                 enabledBindings,
-                profile.Options,
+                GeneratorOptionsResolver.ResolveGroupOptions(profile, group),
                 batchSize);
         }
     }

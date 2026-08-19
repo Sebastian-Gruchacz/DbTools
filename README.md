@@ -348,6 +348,10 @@ Edytor konfiguracji można uruchomić poleceniem:
 dotnet run --project .\src\Anonymyzer\Anonymyzer.ConfigEditor\Anonymyzer.ConfigEditor.csproj
 ```
 
+Instrukcja operatora jest dostępna po [polsku](docs/pl/anonymyzer-user-guide.md)
+i [angielsku](docs/en/anonymyzer-user-guide.md). Parametry wszystkich generatorów
+opisują katalogi [PL](docs/pl/generators.md) i [EN](docs/en/generators.md).
+
 Kropka `●` przy tabeli lub kolumnie oznacza propozycję automatu, nie zgodę na
 anonimizację. Lista tabel pokazuje obok kropki liczbę kandydatów; oba pola mają
 stałą szerokość, więc kwalifikowane nazwy tabel pozostają wyrównane. Wszystkie
