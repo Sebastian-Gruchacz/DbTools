@@ -3,23 +3,24 @@
 using System.Data;
 using Anonymyzer.Base;
 using Anonymyzer.Base.Detection;
+using Anonymyzer.Base.LanguagePacks;
 using Anonymyzer.Configuration;
 using Anonymyzer.Configuration.Safety;
 using Anonymyzer.Console.GenerateConfiguration;
 using Anonymyzer.DatabaseAccess;
-using Anonymyzer.LanguagePack.English;
-using Anonymyzer.LanguagePack.Polish;
 using Anonymyzer.PostgreSql;
 using Anonymyzer.SqlServer;
 
 internal sealed class DatabaseRescanService
 {
-    private readonly ColumnConfigurationBuilder _columnBuilder = new(
-        new ColumnCandidateDetector(new IColumnCandidateRuleProvider[]
-        {
-            new EnglishColumnCandidateRuleProvider(),
-            new PolishColumnCandidateRuleProvider()
-        }));
+    private readonly ColumnConfigurationBuilder _columnBuilder;
+
+    public DatabaseRescanService(LanguagePackCatalog languagePacks)
+    {
+        ArgumentNullException.ThrowIfNull(languagePacks);
+        _columnBuilder = new ColumnConfigurationBuilder(
+            new ColumnCandidateDetector(languagePacks.CreateProviders<IColumnCandidateRuleProvider>()));
+    }
 
     public Task<IReadOnlyList<TableProcessingOptions>> ScanAsync(
         AnonymizationConfiguration configuration,

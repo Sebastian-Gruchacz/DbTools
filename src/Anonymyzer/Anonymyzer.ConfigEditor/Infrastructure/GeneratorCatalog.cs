@@ -1,54 +1,39 @@
 ﻿namespace Anonymyzer.ConfigEditor.Infrastructure;
 
 using Anonymyzer.Base.Generation;
+using Anonymyzer.Base.LanguagePacks;
 using Anonymyzer.Configuration;
 using Anonymyzer.Generators.Address;
 using Anonymyzer.Generators.Person;
 using Anonymyzer.Generators.Simple;
-using Anonymyzer.LanguagePack.English;
-using Anonymyzer.LanguagePack.Polish;
 
 internal sealed class GeneratorCatalog
 {
-    private readonly IGenerator[] _generators =
+    private readonly IGenerator[] _generators;
+
+    public GeneratorCatalog(LanguagePackCatalog languagePacks)
     {
+        ArgumentNullException.ThrowIfNull(languagePacks);
+        _generators =
+        [
         new ShufflingTextGenerator(),
         new FixedTextGenerator(),
         new JsonPathRedactorGenerator(),
         new SequentialTextGenerator(),
         new EmailAddressGenerator(),
         new AccountLoginGenerator(),
-        new PhoneNumberGenerator(
-        [
-            new PolishPhoneNumberLocaleDataProvider(),
-            new EnglishPhoneNumberLocaleDataProvider()
-        ]),
+        new PhoneNumberGenerator(languagePacks.CreateProviders<IPhoneNumberLocaleDataProvider>()),
         new UuidGenerator(),
-        new CompanyNameGenerator(
-        [
-            new PolishCompanyNameLocaleDataProvider(),
-            new EnglishCompanyNameLocaleDataProvider()
-        ]),
-        new TaxIdentifierGenerator([new PolishTaxIdentifierLocaleDataProvider()]),
-        new BankAccountGenerator([new PolishBankAccountLocaleDataProvider()]),
+        new CompanyNameGenerator(languagePacks.CreateProviders<ICompanyNameLocaleDataProvider>()),
+        new TaxIdentifierGenerator(languagePacks.CreateProviders<ITaxIdentifierLocaleDataProvider>()),
+        new BankAccountGenerator(languagePacks.CreateProviders<IBankAccountLocaleDataProvider>()),
         new BirthDateGenerator(),
         new GenderGenerator(),
-        new NationalIdentifierGenerator(
-        [
-            new PolishNationalIdentifierLocaleDataProvider(),
-            new EnglishNationalIdentifierLocaleDataProvider()
-        ]),
-        new PostalAddressGenerator(
-        [
-            new PolishPostalAddressLocaleDataProvider(),
-            new EnglishPostalAddressLocaleDataProvider()
-        ]),
-        new PersonIdentityGenerator(
-        [
-            new PolishPersonLocaleDataProvider(),
-            new EnglishPersonLocaleDataProvider()
-        ])
-    };
+        new NationalIdentifierGenerator(languagePacks.CreateProviders<INationalIdentifierLocaleDataProvider>()),
+        new PostalAddressGenerator(languagePacks.CreateProviders<IPostalAddressLocaleDataProvider>()),
+        new PersonIdentityGenerator(languagePacks.CreateProviders<IPersonLocaleDataProvider>())
+        ];
+    }
 
     public IReadOnlyList<GeneratorDescriptor> Descriptors => _generators.Select(generator => generator.Descriptor).ToArray();
 

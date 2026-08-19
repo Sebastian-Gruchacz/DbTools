@@ -92,7 +92,8 @@ językowe opisuje [docs/anonymyzer-design.md](docs/anonymyzer-design.md).
 
 ### Architektura
 
-- `Anonymyzer.Base` — kontrakty silnika, metadanych oraz sesji generatorów
+- `Anonymyzer.Base` — kontrakty silnika, metadanych, sesji generatorów oraz
+  wersjonowanych pakietów językowych
   `Row`/`Column`/`Relational`;
 - `Anonymyzer.Configuration` — współdzielony, niesekretny model konfiguracji;
 - `Anonymyzer.SqlServer` — połączenia i odczyt tabel, kolumn tekstowych oraz PK;
@@ -192,6 +193,9 @@ językowe opisuje [docs/anonymyzer-design.md](docs/anonymyzer-design.md).
   pokazującym wersję, autora i odnośniki do projektu oraz zgłoszeń;
 - trwałe flagi `OperatorOverrides` dla ręcznej zmiany włączenia kolumny, roli,
   generatora/profilu i grupy; niebieski `◆` wyróżnia takie kolumny oraz tabele;
+- wspólny kontrakt `ILanguagePack` i `LanguagePackCatalog`; wbudowane biblioteki
+  EN/PL deklarują metadane oraz typy providerów, z których korzystają zarówno
+  generatory edytora, jak i analiza kandydatów;
 - niedestruktywny `File -> Rescan detached clone`, który ponownie waliduje nazwę
   i marker klona, odświeża metadane oraz detekcję, dodaje nowe obiekty i zachowuje
   decyzje operatora; niewidoczne już tabele i kolumny pozostają w pliku z czerwonym

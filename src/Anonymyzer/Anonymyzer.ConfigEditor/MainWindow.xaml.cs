@@ -10,10 +10,13 @@ using Anonymyzer.ConfigEditor.Infrastructure;
 using Anonymyzer.ConfigEditor.ViewModels;
 using Anonymyzer.ConfigEditor.Abstractions;
 using Anonymyzer.Configuration;
+using Anonymyzer.Base.LanguagePacks;
 using Anonymyzer.DatabaseAccess;
 using Anonymyzer.Generators.Address.Wpf;
 using Anonymyzer.Generators.Person.Wpf;
 using Anonymyzer.Generators.Simple.Wpf;
+using Anonymyzer.LanguagePack.English;
+using Anonymyzer.LanguagePack.Polish;
 using Microsoft.Win32;
 using Newtonsoft.Json.Linq;
 
@@ -25,8 +28,9 @@ public partial class MainWindow : Window
     private int _previewMaximumRows = 10;
     private readonly ConfigurationFileService _fileService = new();
     private readonly EditorViewModel _viewModel = new();
-    private readonly GeneratorCatalog _generatorCatalog = new();
-    private readonly DatabaseRescanService _rescanService = new();
+    private readonly LanguagePackCatalog _languagePacks;
+    private readonly GeneratorCatalog _generatorCatalog;
+    private readonly DatabaseRescanService _rescanService;
     private readonly GeneratorPreviewService _previewService;
     private readonly IGeneratorConfigurationEditorFactory[] _generatorEditors =
     {
@@ -50,6 +54,13 @@ public partial class MainWindow : Window
 
     public MainWindow()
     {
+        _languagePacks = new LanguagePackCatalog(
+        [
+            new EnglishLanguagePack(),
+            new PolishLanguagePack()
+        ]);
+        _generatorCatalog = new GeneratorCatalog(_languagePacks);
+        _rescanService = new DatabaseRescanService(_languagePacks);
         _previewService = new GeneratorPreviewService(_generatorCatalog);
         InitializeComponent();
         DataContext = _viewModel;

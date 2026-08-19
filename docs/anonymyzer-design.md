@@ -523,6 +523,15 @@ powinny być oddzielnymi, opcjonalnymi pakietami danych korzystającymi z tego
 samego kontraktu; nie dokładamy ich do rdzenia bez osoby zdolnej zweryfikować
 znaczenie i fałszywe dopasowania.
 
+Kontrakt DLL `ILanguagePack` udostępnia stabilny deskryptor (`Id`, nazwa, wersja,
+locale) oraz listę publicznych typów providerów. `LanguagePackCatalog` waliduje
+unikalność identyfikatorów i tworzy wyłącznie providery zgodne z kontraktem
+żądanym przez konsumenta. Wbudowane pakiety English i Polish używają dokładnie
+tej samej ścieżki co przyszłe biblioteki instalowane. Provider musi być publiczną,
+konkretną klasą z bezparametrowym konstruktorem. Ładowanie obcej biblioteki jest
+wykonaniem jej kodu, dlatego instalacja musi pozostać jawną operacją operatora i
+nie może automatycznie pobierać DLL z sieci.
+
 Słownik służy do wykrywania kandydatów, a nie do automatycznego włączania
 anonimizacji. Wynik powinien zawierać kategorię semantyczną, język, dopasowaną
 regułę, proponowany generator i score. Konfiguracja wynikowa nadal ma
