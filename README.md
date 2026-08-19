@@ -236,7 +236,7 @@ językowe opisuje [docs/anonymyzer-design.md](docs/anonymyzer-design.md).
 
 - wykonania planów wielotabelowych i `Relational`; `--execute` obsługuje obecnie
   jedną tabelę, kroki `Row`/`Column` i pojedynczy niezmieniany PK;
-- checkpointów, wznawiania przerwanego wykonania i raportu walidacji po zapisie;
+- checkpointów, wznawiania przerwanego wykonania i walidacji constraintów po zapisie;
 - pozostałych generatorów grupowych;
 - podglądu generatorów `Relational` oraz przyszłych generatorów `Column`
   wymagających wielu skanów lub przypisanych przez grupę;
@@ -282,7 +282,8 @@ dotnet run --project .\src\Anonymyzer\Anonymyzer.Console -- run `
 # Mutuje wyłącznie zwalidowany klon i tylko plan oznaczony przez dry-run jako ready:
 dotnet run --project .\src\Anonymyzer\Anonymyzer.Console -- run `
   --config .\anonymyzer-config.json `
-  --connection-env ANONYMYZER_CONNECTION --marker-id $marker --execute
+  --connection-env ANONYMYZER_CONNECTION --marker-id $marker --execute `
+  --report .\anonymyzer-execution-report.json
 ```
 
 Obie komendy sprawdzają nazwę bazy i marker. `generate-config` tylko czyta
@@ -293,7 +294,10 @@ zmiany schematu aktywnych kolumn oraz pokazuje szacowaną liczbę wierszy i pami
 pełnych skanów. Dla nieograniczonego `text` pamięć pozostaje jawnie nieznana.
 Komenda kończy bez zapisu danych. `--execute` wymaga jawnego trybu, ponawia te
 same walidacje, odrzuca plan bez statusu `write slice ready`, czyta wiersze
-keyset pagingiem po PK i zapisuje każdy batch w osobnej transakcji. Wywołanie
+keyset pagingiem po PK i zapisuje każdy batch w osobnej transakcji. Opcjonalny
+`--report` zapisuje atomowo raport JSON z fingerprintem konfiguracji, markerem,
+czasem, planem oraz liczbą zatwierdzonych batchy i wierszy. Raport nie zawiera
+connection stringa, wartości rekordów ani ostatniego klucza. Wywołanie
 bez `--dry-run` i `--execute` albo z obiema flagami jest odrzucane.
 
 Edytor konfiguracji można uruchomić poleceniem:
@@ -389,7 +393,7 @@ skasowany po wypchnięciu lub zarchiwizowaniu nowego repozytorium.
 
 ## Proponowana kolejka
 
-1. Dodać raport walidacji po zapisie oraz checkpoint/wznowienie wykonania, zanim
+1. Dodać checkpoint/wznowienie i walidację po zapisie, zanim
    executor zostanie rozszerzony poza jedną tabelę.
 2. Dodać limit pamięci i strategię spill/alternatywnego losowania dla dużych
    kolumn `TextShuffler`.
@@ -401,7 +405,7 @@ skasowany po wypchnięciu lub zarchiwizowaniu nowego repozytorium.
 6. Ujednolicić historyczne nazwy `Anonymyzer` / `Anonymization` bez zmiany
    zachowania i usunąć nieaktualne refy dopiero po upewnieniu się, że są na GH.
 
-Najbardziej opłacalny następny krok to raport po wykonaniu i checkpoint. Obecny
-executor bezpiecznie obsługuje pojedynczą tabelę, ale awaria między batchami nie
-ma jeszcze trwałego śladu pozwalającego operatorowi jednoznacznie ocenić zakres
-wykonanych zmian lub wznowić pracę.
+Najbardziej opłacalny następny krok to checkpoint i bezpieczne wznowienie. Raport
+po wykonaniu jest już dostępny przez `--report`, a executor emituje postęp dopiero
+po zatwierdzeniu batcha. Trzeba jeszcze jawnie rozwiązać odtwarzanie stanu
+generatorów oraz pełnych skanów, zanim przerwane wykonanie będzie można wznowić.

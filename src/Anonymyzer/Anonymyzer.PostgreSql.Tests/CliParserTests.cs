@@ -90,6 +90,41 @@ public sealed class CliParserTests
         var options = Assert.IsType<RunCliOptions>(result.Command);
         Assert.True(options.Execute);
         Assert.False(options.DryRun);
+        Assert.Null(options.ReportPath);
+    }
+
+    [Fact]
+    public void ParsesExecutionReportPath()
+    {
+        CliParseResult result = CliParser.Parse(
+        [
+            "run",
+            "--config", "config.json",
+            "--connection-env", "ANONYMYZER_CONNECTION",
+            "--marker-id", MarkerId.ToString("D"),
+            "--execute",
+            "--report", "execution-report.json"
+        ]);
+
+        var options = Assert.IsType<RunCliOptions>(result.Command);
+        Assert.Equal("execution-report.json", options.ReportPath);
+    }
+
+    [Fact]
+    public void RejectsExecutionReportForDryRun()
+    {
+        CliParseResult result = CliParser.Parse(
+        [
+            "run",
+            "--config", "config.json",
+            "--connection-env", "ANONYMYZER_CONNECTION",
+            "--marker-id", MarkerId.ToString("D"),
+            "--dry-run",
+            "--report", "execution-report.json"
+        ]);
+
+        Assert.False(result.IsSuccess);
+        Assert.Contains("only with --execute", result.Error);
     }
 
     [Fact]

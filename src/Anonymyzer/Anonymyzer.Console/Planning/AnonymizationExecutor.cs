@@ -12,6 +12,14 @@ internal sealed class AnonymizationExecutor(IEnumerable<IGenerator> generators)
         AnonymizationExecutionPlan plan,
         ExecutionWriteSliceAssessment writeSlice,
         IExecutionRowStore store,
+        CancellationToken cancellationToken = default) =>
+        (await ExecuteWithResultAsync(plan, writeSlice, store, cancellationToken: cancellationToken)).ProcessedRows;
+
+    public async Task<AnonymizationExecutionResult> ExecuteWithResultAsync(
+        AnonymizationExecutionPlan plan,
+        ExecutionWriteSliceAssessment writeSlice,
+        IExecutionRowStore store,
+        Func<AnonymizationExecutionProgress, CancellationToken, Task>? batchCommitted = null,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(plan);
@@ -44,6 +52,7 @@ internal sealed class AnonymizationExecutor(IEnumerable<IGenerator> generators)
                 .ToArray();
             object? afterPrimaryKey = null;
             long processedRows = 0;
+            int committedBatches = 0;
 
             while (true)
             {
@@ -57,7 +66,10 @@ internal sealed class AnonymizationExecutor(IEnumerable<IGenerator> generators)
                     cancellationToken);
                 if (sourceRows.Count == 0)
                 {
-                    return processedRows;
+                    return new AnonymizationExecutionResult(
+                        processedRows,
+                        committedBatches,
+                        afterPrimaryKey);
                 }
 
                 var updatedRows = new List<ExecutionUpdatedRow>(sourceRows.Count);
@@ -85,6 +97,17 @@ internal sealed class AnonymizationExecutor(IEnumerable<IGenerator> generators)
                     cancellationToken);
                 processedRows += updatedRows.Count;
                 afterPrimaryKey = sourceRows[^1].PrimaryKey;
+                committedBatches++;
+                if (batchCommitted is not null)
+                {
+                    await batchCommitted(
+                        new AnonymizationExecutionProgress(
+                            processedRows,
+                            committedBatches,
+                            afterPrimaryKey,
+                            updatedRows.Count),
+                        cancellationToken);
+                }
             }
         }
         finally
@@ -221,3 +244,14 @@ internal sealed class AnonymizationExecutor(IEnumerable<IGenerator> generators)
         }
     }
 }
+
+internal sealed record AnonymizationExecutionProgress(
+    long ProcessedRows,
+    int CommittedBatches,
+    object? LastPrimaryKey,
+    int LastBatchSize);
+
+internal sealed record AnonymizationExecutionResult(
+    long ProcessedRows,
+    int CommittedBatches,
+    object? LastPrimaryKey);

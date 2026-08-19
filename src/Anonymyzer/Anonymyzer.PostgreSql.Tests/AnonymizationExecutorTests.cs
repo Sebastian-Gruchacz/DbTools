@@ -44,6 +44,62 @@ public sealed class AnonymizationExecutorTests
     }
 
     [Fact]
+    public async Task ReportsProgressOnlyAfterEachBatchWasCommitted()
+    {
+        var generator = new FixedTextGenerator();
+        var table = new GeneratorTableReference("public", "people");
+        var binding = new GeneratorBinding(
+            table,
+            new Dictionary<string, string> { [FixedTextGenerator.ValueOutput] = "name" });
+        var step = new GeneratorExecutionPlanStep(
+            "public.people/column:name",
+            table,
+            generator.Descriptor,
+            binding,
+            new FixedTextGeneratorConfiguration { Value = "MASKED", PreserveNulls = false },
+            Array.Empty<GeneratorDataRequirement>(),
+            2);
+        var store = new FakeExecutionRowStore(
+        [
+            new ExecutionSourceRow(1, new Dictionary<string, object?> { ["name"] = "Ada" }),
+            new ExecutionSourceRow(2, new Dictionary<string, object?> { ["name"] = "Grace" }),
+            new ExecutionSourceRow(3, new Dictionary<string, object?> { ["name"] = "Margaret" })
+        ]);
+        var progress = new List<AnonymizationExecutionProgress>();
+
+        AnonymizationExecutionResult result = await new AnonymizationExecutor([generator])
+            .ExecuteWithResultAsync(
+                new AnonymizationExecutionPlan(2, [step]),
+                new ExecutionWriteSliceAssessment(true, "ready", table, "id"),
+                store,
+                (update, _) =>
+                {
+                    Assert.Equal(store.WrittenBatchSizes.Count, update.CommittedBatches);
+                    progress.Add(update);
+                    return Task.CompletedTask;
+                },
+                TestContext.Current.CancellationToken);
+
+        Assert.Equal(3, result.ProcessedRows);
+        Assert.Equal(2, result.CommittedBatches);
+        Assert.Equal(3, result.LastPrimaryKey);
+        Assert.Collection(
+            progress,
+            first =>
+            {
+                Assert.Equal(2, first.ProcessedRows);
+                Assert.Equal(2, first.LastBatchSize);
+                Assert.Equal(2, first.LastPrimaryKey);
+            },
+            second =>
+            {
+                Assert.Equal(3, second.ProcessedRows);
+                Assert.Equal(1, second.LastBatchSize);
+                Assert.Equal(3, second.LastPrimaryKey);
+            });
+    }
+
+    [Fact]
     public async Task RefusesPlanThatDidNotPassWriteSliceValidation()
     {
         var generator = new FixedTextGenerator();

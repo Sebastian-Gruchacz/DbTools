@@ -11,10 +11,11 @@ internal static class CliHelp
                           --output <path> [--force]
 
           run --config <path> --connection-env <variable> --marker-id <guid>
-              (--dry-run | --execute)
+              (--dry-run | --execute) [--report <path>]
 
         Connection strings are accepted only through the named environment variable.
         --execute modifies only a validated detached clone and currently supports one table,
         Row and Column generators, a single unchanged primary key, and no cross-table input.
+        --report writes an atomic JSON execution report without connection strings or row values.
         """;
 }

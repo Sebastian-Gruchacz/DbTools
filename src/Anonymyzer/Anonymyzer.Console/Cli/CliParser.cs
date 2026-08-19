@@ -74,7 +74,7 @@ internal static class CliParser
     {
         string? error = RequireOnly(
             parsed,
-            valueOptions: ["config", "connection-env", "marker-id"],
+            valueOptions: ["config", "connection-env", "marker-id", "report"],
             flags: ["dry-run", "execute"]);
         if (error is not null)
         {
@@ -98,13 +98,23 @@ internal static class CliParser
                 ShowHelp: false);
         }
 
+        parsed.Values.TryGetValue("report", out string? reportPath);
+        if (dryRun && reportPath is not null)
+        {
+            return new CliParseResult(
+                null,
+                "Option '--report' is available only with --execute.",
+                ShowHelp: false);
+        }
+
         return new CliParseResult(
             new RunCliOptions(
                 connectionEnvironment,
                 markerId,
                 config,
                 dryRun,
-                execute),
+                execute,
+                reportPath),
             null,
             ShowHelp: false);
     }

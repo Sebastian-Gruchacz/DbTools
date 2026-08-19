@@ -33,6 +33,7 @@ internal sealed class ProcessAnonymyzerCommand
 
     public int Process(ProcessAnonymyzerCommandParameters parameters)
     {
+        EnsureReportDoesNotOverwriteConfiguration(parameters);
         AnonymizationConfiguration configuration = LoadConfiguration(parameters.ConfigurationFilePath);
         ConfigurationValidator.EnsureValid(configuration);
         DetachedCopySafetyValidator.EnsureConfigurationDoesNotTargetMarker(configuration);
@@ -81,15 +82,59 @@ internal sealed class ProcessAnonymyzerCommand
         }
 
         var store = new DatabaseExecutionRowStore(connection, configuration.Database.DatabaseEngine);
-        long processedRows = new AnonymizationExecutor(_generatorsProvider.GetAllGenerators())
-            .ExecuteAsync(plan, writeSlice, store)
+        DateTimeOffset startedAtUtc = DateTimeOffset.UtcNow;
+        AnonymizationExecutionResult result = new AnonymizationExecutor(_generatorsProvider.GetAllGenerators())
+            .ExecuteWithResultAsync(plan, writeSlice, store)
             .GetAwaiter()
             .GetResult();
+        DateTimeOffset completedAtUtc = DateTimeOffset.UtcNow;
         _logger.Info(
             $"Execution completed on detached clone '{configuration.Database.DatabaseName}', " +
-            $"marker {marker.MarkerId:D}. Updated {processedRows:N0} row(s).");
+            $"marker {marker.MarkerId:D}. Updated {result.ProcessedRows:N0} row(s) " +
+            $"in {result.CommittedBatches:N0} committed batch(es).");
+        if (!string.IsNullOrWhiteSpace(parameters.ReportFilePath))
+        {
+            AnonymizationExecutionReport report = AnonymizationExecutionReport.Completed(
+                startedAtUtc,
+                completedAtUtc,
+                Path.GetFullPath(parameters.ConfigurationFilePath),
+                configuration.Database.DatabaseEngine,
+                configuration.Database.DatabaseName,
+                marker.MarkerId,
+                plan,
+                writeSlice,
+                result);
+            try
+            {
+                AnonymizationExecutionReportWriter.Write(parameters.ReportFilePath, report);
+            }
+            catch (Exception exception)
+            {
+                throw new InvalidOperationException(
+                    "Anonymization completed and data was modified, but the execution report could not be written: " +
+                    exception.Message,
+                    exception);
+            }
+
+            _logger.Info($"Execution report written to '{Path.GetFullPath(parameters.ReportFilePath)}'.");
+        }
 
         return (int)ErrorCodes.Success;
+    }
+
+    private static void EnsureReportDoesNotOverwriteConfiguration(ProcessAnonymyzerCommandParameters parameters)
+    {
+        if (string.IsNullOrWhiteSpace(parameters.ReportFilePath))
+        {
+            return;
+        }
+
+        string configurationPath = Path.GetFullPath(parameters.ConfigurationFilePath);
+        string reportPath = Path.GetFullPath(parameters.ReportFilePath);
+        if (configurationPath.Equals(reportPath, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException("The execution report must not overwrite the configuration file.");
+        }
     }
 
     private static AnonymizationConfiguration LoadConfiguration(string path)
@@ -115,4 +160,6 @@ internal sealed class ProcessAnonymyzerCommandParameters : DbParameters
     public bool DryRun { get; set; }
 
     public bool Execute { get; set; }
+
+    public string? ReportFilePath { get; set; }
 }

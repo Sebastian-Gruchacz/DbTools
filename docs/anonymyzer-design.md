@@ -30,7 +30,8 @@ transakcji obejmującej całą bazę.
    aktywne kolumny z bieżącym schematem klona i raportuje estymowaną liczbę
    wierszy oraz górne zużycie pamięci pełnych skanów.
 6. `run --execute` w pierwszym wycinku przetwarza jedną tabelę batchami po PK;
-   checkpointy i raport końcowy pozostają kolejnym etapem.
+   opcjonalny `--report` zapisuje niesekretny raport końcowy, a checkpointy
+   pozostają kolejnym etapem.
 7. Walidacja po wykonaniu sprawdza constrainty, liczbę wierszy i spójność
    relacji. Kopia może dopiero wtedy zostać przekazana dalej.
 
@@ -242,8 +243,10 @@ czyta kolejne batche tym samym pagingiem, utrzymuje sesje generatorów między
 batchami i zapisuje batch w jednej transakcji. Aktualizacja innej liczby wierszy
 niż dokładnie jeden dla danego PK powoduje rollback batcha. Pełny skan jest
 buforowany przez generator, dlatego estymata pamięci z `dry-run` jest istotnym
-ostrzeżeniem operatora. Nie ma jeszcze checkpointu ani automatycznej walidacji
-constraintów po zakończeniu.
+ostrzeżeniem operatora. Po zakończeniu opcjonalny raport JSON zawiera fingerprint
+konfiguracji, marker, czasy, kroki oraz liczbę zatwierdzonych batchy i wierszy,
+ale nie connection string, wartości rekordów ani ostatni klucz. Nie ma jeszcze
+checkpointu ani automatycznej walidacji constraintów po zakończeniu.
 
 Reader przekazuje dane strumieniowo, natomiast generator decyduje, co buforuje.
 Dokładny shuffle ma koszt pamięci `O(n)` i nie nadaje się bezpośrednio do każdej

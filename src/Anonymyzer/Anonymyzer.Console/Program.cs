@@ -62,7 +62,8 @@ try
                 ExpectedMarkerId = options.MarkerId,
                 ConfigurationFilePath = options.ConfigurationPath,
                 DryRun = options.DryRun,
-                Execute = options.Execute
+                Execute = options.Execute,
+                ReportFilePath = options.ReportPath
             }),
         _ => (int)ErrorCodes.ConfigurationError
     };
