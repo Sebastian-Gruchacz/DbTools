@@ -120,6 +120,8 @@ public sealed class ExecutionPlanDatabaseInspectorTests
         public IEnumerable<ITableInfo> ListTables(bool listSystemTables = false) => new[] { table };
 
         public IEnumerable<IColumnInfo> ListColumns(ITableInfo tableInfo) => new[] { column };
+
+        public IEnumerable<ForeignKeyInfo> ListForeignKeys(ITableInfo tableInfo) => [];
     }
 
     private sealed record StubTable(string Name, string SchemaName, long EstimatedRowCount) : ITableInfo;

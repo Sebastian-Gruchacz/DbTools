@@ -17,6 +17,7 @@ public sealed class SequentialTextGenerator : GeneratorBase<SequentialTextGenera
         GeneratorExecutionScope.Row,
         DbDataType.Text)
     {
+        SupportsDeterministicReplay = true,
         Outputs = [new GeneratorOutputDescriptor(ValueOutput, "Value", string.Empty, Required: true)]
     };
 

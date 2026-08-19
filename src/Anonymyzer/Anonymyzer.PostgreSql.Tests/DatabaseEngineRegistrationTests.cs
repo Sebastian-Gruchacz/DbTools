@@ -2,7 +2,9 @@
 
 using Anonymyzer.Base;
 using Anonymyzer.Base.Generation;
+using Anonymyzer.Base.LanguagePacks;
 using Anonymyzer.Console;
+using Anonymyzer.Generators.Address;
 using Anonymyzer.Generators.Person;
 using Anonymyzer.Generators.Simple;
 using Anonymyzer.PostgreSql;
@@ -27,7 +29,7 @@ public class DatabaseEngineRegistrationTests
     }
 
     [Fact]
-    public void RegistersBuiltInGeneratorsAndPolishLanguagePack()
+    public void RegistersBuiltInGeneratorsAndLanguagePacks()
     {
         using ServiceProvider provider = new ServiceCollection()
             .AddBuiltInGenerators()
@@ -38,7 +40,40 @@ public class DatabaseEngineRegistrationTests
         Assert.Contains(generators, generator => generator is PersonIdentityGenerator);
         Assert.Contains(generators, generator => generator.Descriptor.Type == "TextShuffler");
         Assert.Contains(generators, generator => generator is FixedTextGenerator);
+        Assert.Contains(generators, generator => generator is JsonPathRedactorGenerator);
         Assert.Contains(generators, generator => generator is SequentialTextGenerator);
         Assert.Contains(generators, generator => generator is EmailAddressGenerator);
+        Assert.Contains(generators, generator => generator is AccountLoginGenerator);
+        Assert.Contains(generators, generator => generator is PhoneNumberGenerator);
+        Assert.Contains(generators, generator => generator is UuidGenerator);
+        Assert.Contains(generators, generator => generator is CompanyNameGenerator);
+        Assert.Contains(generators, generator => generator is TaxIdentifierGenerator);
+        Assert.Contains(generators, generator => generator is BankAccountGenerator);
+        Assert.Contains(generators, generator => generator is BirthDateGenerator);
+        Assert.Contains(generators, generator => generator is GenderGenerator);
+        Assert.Contains(generators, generator => generator is NationalIdentifierGenerator);
+        Assert.Contains(generators, generator => generator is PostalAddressGenerator);
+        Assert.Contains(
+            provider.GetServices<INationalIdentifierLocaleDataProvider>(),
+            localeProvider => localeProvider.Locale == "en-US");
+        Assert.Contains(
+            provider.GetServices<IPersonLocaleDataProvider>(),
+            localeProvider => localeProvider.Locale == "en-US");
+        Assert.Equal(
+            ["en-US", "pl-PL"],
+            provider.GetServices<IPostalAddressLocaleDataProvider>()
+                .Select(localeProvider => localeProvider.Locale)
+                .OrderBy(locale => locale));
+        Assert.Contains(
+            provider.GetServices<IBankAccountLocaleDataProvider>(),
+            localeProvider => localeProvider.Locale == "pl-PL");
+        Assert.Equal(
+            ["en-US", "pl-PL"],
+            provider.GetServices<ICompanyNameLocaleDataProvider>()
+                .Select(localeProvider => localeProvider.Locale)
+                .OrderBy(locale => locale));
+        LanguagePackCatalog languagePacks = provider.GetRequiredService<LanguagePackCatalog>();
+        Assert.Equal(2, languagePacks.Packs.Count);
+        Assert.Equal(12, languagePacks.Profiles.Count);
     }
 }

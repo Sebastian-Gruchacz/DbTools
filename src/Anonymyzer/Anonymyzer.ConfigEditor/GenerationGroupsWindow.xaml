@@ -13,6 +13,12 @@
             <Button Width="90" Content="Cancel" IsCancel="True" />
         </StackPanel>
 
+        <TextBlock DockPanel.Dock="Top"
+                   Margin="0,0,0,10"
+                   Foreground="DimGray"
+                   TextWrapping="Wrap"
+                   Text="A group maps coherent generator outputs. Enable the table and every bound column in the main grid before execution." />
+
         <Grid>
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
@@ -43,7 +49,8 @@
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
                                 <ComboBox ItemsSource="{Binding DataContext.ProfileIds, RelativeSource={RelativeSource AncestorType=Window}}"
-                                          SelectedItem="{Binding ProfileId, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                          SelectedItem="{Binding ProfileId, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                          SelectionChanged="Profile_SelectionChanged" />
                             </DataTemplate>
                         </DataGridTemplateColumn.CellTemplate>
                     </DataGridTemplateColumn>
@@ -68,16 +75,20 @@
                     <DataGridTemplateColumn Header="Generator output" Width="1.2*">
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
-                                <ComboBox ItemsSource="{Binding DataContext.OutputNames, RelativeSource={RelativeSource AncestorType=Window}}"
-                                          SelectedItem="{Binding Output, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                <ComboBox ItemsSource="{Binding DataContext.SelectedOutputOptions, RelativeSource={RelativeSource AncestorType=Window}}"
+                                          DisplayMemberPath="DisplayName"
+                                          SelectedValuePath="Name"
+                                          SelectedValue="{Binding Output, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                             </DataTemplate>
                         </DataGridTemplateColumn.CellTemplate>
                     </DataGridTemplateColumn>
                     <DataGridTemplateColumn Header="Table column" Width="1.4*">
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
-                                <ComboBox ItemsSource="{Binding DataContext.ColumnNames, RelativeSource={RelativeSource AncestorType=Window}}"
-                                          SelectedItem="{Binding ColumnName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                                <ComboBox ItemsSource="{Binding DataContext.ColumnOptions, RelativeSource={RelativeSource AncestorType=Window}}"
+                                          DisplayMemberPath="DisplayName"
+                                          SelectedValuePath="Name"
+                                          SelectedValue="{Binding ColumnName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                             </DataTemplate>
                         </DataGridTemplateColumn.CellTemplate>
                     </DataGridTemplateColumn>

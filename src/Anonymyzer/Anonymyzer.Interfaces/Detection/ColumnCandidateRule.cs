@@ -5,4 +5,7 @@ public sealed record ColumnCandidateRule(
     string Locale,
     string SemanticRole,
     string NamePattern,
-    decimal Confidence);
+    decimal Confidence)
+{
+    public IReadOnlySet<string> ExcludedTokens { get; init; } = new HashSet<string>(StringComparer.Ordinal);
+}

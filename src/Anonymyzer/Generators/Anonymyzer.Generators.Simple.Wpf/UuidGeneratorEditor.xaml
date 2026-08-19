@@ -1,0 +1,44 @@
+﻿<UserControl x:Class="Anonymyzer.Generators.Simple.Wpf.UuidGeneratorEditor"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Grid Margin="16">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="Auto" />
+            <ColumnDefinition Width="260" />
+        </Grid.ColumnDefinitions>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <TextBlock Grid.Row="0"
+                   Grid.ColumnSpan="2"
+                   Margin="0,0,0,14"
+                   TextWrapping="Wrap"
+                   Text="Generates deterministic UUID text with a version 4 marker. Values depend on the seed and processing order; do not use them as secrets." />
+
+        <TextBlock Grid.Row="1" Margin="0,0,12,8" VerticalAlignment="Center" Text="Seed:" />
+        <TextBox x:Name="SeedTextBox" Grid.Row="1" Grid.Column="1" Margin="0,0,0,8" />
+
+        <TextBlock Grid.Row="2" Margin="0,0,12,8" VerticalAlignment="Center" Text="Start at:" />
+        <TextBox x:Name="StartAtTextBox" Grid.Row="2" Grid.Column="1" Margin="0,0,0,8" />
+
+        <TextBlock Grid.Row="3" Margin="0,0,12,8" VerticalAlignment="Center" Text="Format:" />
+        <ComboBox x:Name="FormatComboBox" Grid.Row="3" Grid.Column="1" Margin="0,0,0,8" />
+
+        <CheckBox x:Name="UppercaseCheckBox"
+                  Grid.Row="4"
+                  Grid.ColumnSpan="2"
+                  Margin="0,0,0,8"
+                  Content="Use uppercase hexadecimal digits" />
+
+        <CheckBox x:Name="PreserveNullsCheckBox"
+                  Grid.Row="5"
+                  Grid.ColumnSpan="2"
+                  Content="Preserve null positions" />
+    </Grid>
+</UserControl>

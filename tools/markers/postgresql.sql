@@ -1,6 +1,12 @@
+\set ON_ERROR_STOP on
+
 \if :{?marker_id}
 \else
-\error 'Pass marker_id with: psql -v marker_id=<guid> -f postgresql.sql'
+DO $anonymyzer$
+BEGIN
+    RAISE EXCEPTION 'Pass marker_id with: psql -v marker_id=<guid> -f postgresql.sql';
+END
+$anonymyzer$;
 \endif
 
 CREATE TABLE public.__anonymyzer_detached_copy (

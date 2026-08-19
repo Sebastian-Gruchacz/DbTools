@@ -12,6 +12,7 @@
             <MenuItem Header="_File">
                 <MenuItem Header="_New" Click="New_Click" InputGestureText="Ctrl+N" />
                 <MenuItem Header="_Open..." Click="Open_Click" InputGestureText="Ctrl+O" />
+                <MenuItem Header="_Rescan detached clone..." Click="Rescan_Click" />
                 <Separator />
                 <MenuItem Header="_Save" Click="Save_Click" InputGestureText="Ctrl+S" />
                 <MenuItem Header="Save _As..." Click="SaveAs_Click" />
@@ -20,6 +21,13 @@
             </MenuItem>
             <MenuItem Header="_Generators">
                 <MenuItem Header="_Profiles..." Click="Profiles_Click" />
+                <MenuItem Header="_Language packs..." Click="LanguagePacks_Click" />
+            </MenuItem>
+            <MenuItem Header="_Help">
+                <MenuItem Header="Table marking _legend" Click="TableLegend_Click" />
+                <MenuItem Header="Online _documentation" Click="Documentation_Click" />
+                <Separator />
+                <MenuItem Header="_About Anonymyzer" Click="About_Click" />
             </MenuItem>
         </Menu>
 
@@ -57,6 +65,8 @@
                             <Grid MinWidth="380" ToolTip="{Binding CandidateDetails}">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="18" />
+                                    <ColumnDefinition Width="18" />
+                                    <ColumnDefinition Width="20" />
                                     <ColumnDefinition Width="34" />
                                     <ColumnDefinition Width="*" />
                                 </Grid.ColumnDefinitions>
@@ -64,12 +74,22 @@
                                            Foreground="DarkOrange"
                                            Text="{Binding CandidateMark}" />
                                 <TextBlock Grid.Column="1"
+                                           HorizontalAlignment="Center"
+                                           Foreground="SteelBlue"
+                                           Text="{Binding ManualMark}"
+                                           ToolTip="{Binding ManualDetails}" />
+                                <TextBlock Grid.Column="2"
+                                           HorizontalAlignment="Center"
+                                           Foreground="Firebrick"
+                                           Text="{Binding SchemaWarningMark}"
+                                           ToolTip="{Binding SchemaWarningDetails}" />
+                                <TextBlock Grid.Column="3"
                                            Margin="0,0,8,0"
                                            HorizontalAlignment="Right"
                                            Foreground="DarkOrange"
                                            FontWeight="SemiBold"
                                            Text="{Binding CandidateCountText}" />
-                                <TextBlock Grid.Column="2"
+                                <TextBlock Grid.Column="4"
                                            Text="{Binding QualifiedName}"
                                            TextTrimming="CharacterEllipsis" />
                             </Grid>
@@ -94,12 +114,16 @@
                             Grid.ColumnSpan="2"
                             Margin="0,8,0,0"
                             Orientation="Horizontal">
+                    <CheckBox Margin="0,0,16,0"
+                              VerticalAlignment="Center"
+                              Content="Anonymize table"
+                              IsChecked="{Binding SelectedTable.Enabled}" />
                     <Button Width="110" Margin="0,0,8,0" Content="Edit groups..." Click="Groups_Click" />
                     <Button Width="115" Margin="0,0,8,0" Content="Add column ▾" Click="AddColumns_Click" />
                     <Button Width="120" Margin="0,0,14,0" Content="Refresh sample" Click="RefreshSample_Click" />
                     <TextBlock VerticalAlignment="Center"
                                Foreground="DimGray"
-                               Text="● + count = automatic candidates; every table remains available" />
+                               Text="● + count = automatic candidates; ◆ = operator choices; ⚠ = absent in latest rescan" />
                 </StackPanel>
             </Grid>
 
@@ -112,13 +136,22 @@
                       IsReadOnly="False"
                       SelectionUnit="FullRow">
                 <DataGrid.Columns>
-                    <DataGridTemplateColumn Header="" IsReadOnly="True" Width="28">
+                    <DataGridTemplateColumn Header="" IsReadOnly="True" Width="68">
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
-                                <TextBlock HorizontalAlignment="Center"
-                                           Foreground="DarkOrange"
-                                           Text="{Binding CandidateMark}"
-                                           ToolTip="{Binding CandidateDetails}" />
+                                <StackPanel HorizontalAlignment="Center" Orientation="Horizontal">
+                                    <TextBlock Foreground="DarkOrange"
+                                               Text="{Binding CandidateMark}"
+                                               ToolTip="{Binding CandidateDetails}" />
+                                    <TextBlock Margin="4,0,0,0"
+                                               Foreground="SteelBlue"
+                                               Text="{Binding ManualMark}"
+                                               ToolTip="{Binding ManualDetails}" />
+                                    <TextBlock Margin="4,0,0,0"
+                                               Foreground="Firebrick"
+                                               Text="{Binding SchemaWarningMark}"
+                                               ToolTip="{Binding SchemaWarningDetails}" />
+                                </StackPanel>
                             </DataTemplate>
                         </DataGridTemplateColumn.CellTemplate>
                     </DataGridTemplateColumn>

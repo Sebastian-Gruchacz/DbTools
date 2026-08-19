@@ -15,11 +15,13 @@ public partial class GeneratorProfilesWindow : Window
     private readonly ObservableCollection<GeneratorProfileRow> _rows;
     private readonly IReadOnlyDictionary<string, IGeneratorConfigurationEditorFactory> _editorFactories;
     private readonly IReadOnlyList<GeneratorProfileConfiguration> _profileTemplates;
+    private readonly GeneratorConfigurationEditorContext _editorContext;
 
     public GeneratorProfilesWindow(
         List<GeneratorProfileConfiguration> profiles,
         IEnumerable<IGeneratorConfigurationEditorFactory> editorFactories,
-        IReadOnlyList<GeneratorProfileConfiguration> profileTemplates)
+        IReadOnlyList<GeneratorProfileConfiguration> profileTemplates,
+        GeneratorConfigurationEditorContext? editorContext = null)
     {
         InitializeComponent();
         _target = profiles;
@@ -28,6 +30,7 @@ public partial class GeneratorProfilesWindow : Window
             factory => BuildFactoryKey(factory.GeneratorType, factory.GeneratorVersion),
             StringComparer.OrdinalIgnoreCase);
         _profileTemplates = profileTemplates;
+        _editorContext = editorContext ?? GeneratorConfigurationEditorContext.Empty;
         DataContext = _rows;
     }
 
@@ -119,7 +122,9 @@ public partial class GeneratorProfilesWindow : Window
 
         try
         {
-            IGeneratorConfigurationEditor editor = factory.Create(JObject.Parse(row.OptionsJson));
+            IGeneratorConfigurationEditor editor = factory.Create(
+                JObject.Parse(row.OptionsJson),
+                _editorContext);
             var dialog = new GeneratorConfigurationWindow(editor) { Owner = this };
             if (dialog.ShowDialog() == true && dialog.SavedOptions is not null)
             {
@@ -162,6 +167,7 @@ public partial class GeneratorProfilesWindow : Window
         public string GeneratorType { get; set; } = string.Empty;
         public string GeneratorVersion { get; set; } = string.Empty;
         public string Locale { get; set; } = string.Empty;
+        public string Origin { get; set; } = string.Empty;
         public string OptionsJson { get; set; } = "{}";
 
         public static GeneratorProfileRow FromModel(GeneratorProfileConfiguration model)
@@ -173,6 +179,7 @@ public partial class GeneratorProfilesWindow : Window
                 GeneratorType = model.GeneratorType,
                 GeneratorVersion = model.GeneratorVersion,
                 Locale = model.Locale,
+                Origin = model.Origin,
                 OptionsJson = model.Options.ToString(Formatting.None)
             };
         }
@@ -201,6 +208,7 @@ public partial class GeneratorProfilesWindow : Window
                 GeneratorType = GeneratorType.Trim(),
                 GeneratorVersion = GeneratorVersion.Trim(),
                 Locale = Locale.Trim(),
+                Origin = string.IsNullOrWhiteSpace(Origin) ? "User" : Origin.Trim(),
                 Options = JObject.Parse(OptionsJson)
             };
         }

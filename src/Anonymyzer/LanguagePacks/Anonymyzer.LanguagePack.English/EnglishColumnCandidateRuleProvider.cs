@@ -12,6 +12,7 @@ public sealed class EnglishColumnCandidateRuleProvider : IColumnCandidateRulePro
         Rule("firstname", "Person.FirstName", 0.96m),
         Rule("given_name", "Person.FirstName", 0.96m),
         Rule("forename", "Person.FirstName", 0.94m),
+        Rule("preferred_name", "Person.FirstName", 0.90m),
         Rule("last_name", "Person.LastName", 0.98m),
         Rule("lastname", "Person.LastName", 0.96m),
         Rule("surname", "Person.LastName", 0.98m),
@@ -41,7 +42,12 @@ public sealed class EnglishColumnCandidateRuleProvider : IColumnCandidateRulePro
         Rule("mailing_address", "Address.Street", 0.92m),
         Rule("postal_address", "Address.Street", 0.94m),
         Rule("address_line_1", "Address.Street", 0.94m),
+        Rule("address_line1", "Address.Street", 0.94m),
         Rule("address1", "Address.Street", 0.90m),
+        Rule("address_line_2", "Address.Street", 0.92m),
+        Rule("address_line2", "Address.Street", 0.92m),
+        Rule("address2", "Address.Street", 0.88m),
+        Rule("address", "Address.Street", 0.86m, "ip", "mac", "memory", "net", "network", "web", "website"),
         Rule("postal_code", "Address.PostalCode", 0.98m),
         Rule("postcode", "Address.PostalCode", 0.96m),
         Rule("zip_code", "Address.PostalCode", 0.98m),
@@ -49,6 +55,7 @@ public sealed class EnglishColumnCandidateRuleProvider : IColumnCandidateRulePro
         Rule("login", "Account.Login", 0.92m),
         Rule("username", "Account.Login", 0.96m),
         Rule("user_name", "Account.Login", 0.96m),
+        Rule("logon_name", "Account.Login", 0.96m),
         Rule("screen_name", "Account.Login", 0.92m),
         Rule("ssn", "Person.NationalId", 0.99m),
         Rule("national_id", "Person.NationalId", 0.98m),
@@ -58,13 +65,25 @@ public sealed class EnglishColumnCandidateRuleProvider : IColumnCandidateRulePro
         Rule("company_name", "Company.Name", 0.94m),
         Rule("legal_name", "Company.Name", 0.90m),
         Rule("business_name", "Company.Name", 0.92m),
+        Rule("supplier_name", "Company.Name", 0.94m),
         Rule("iban", "Financial.BankAccount", 0.99m),
-        Rule("bank_account", "Financial.BankAccount", 0.96m),
-        Rule("account_number", "Financial.BankAccount", 0.86m)
+        Rule("bank_account", "Financial.BankAccount", 0.96m, "branch", "code", "name")
     };
 
     public IReadOnlyList<ColumnCandidateRule> GetRules() => Rules;
 
-    private static ColumnCandidateRule Rule(string name, string role, decimal confidence) =>
-        new($"en:{name}", Locale, role, name, confidence);
+    private static ColumnCandidateRule Rule(
+        string name,
+        string role,
+        decimal confidence,
+        params string[] excludedTokens) =>
+        new ColumnCandidateRule(
+            $"en:{name}",
+            Locale,
+            role,
+            name,
+            confidence)
+        {
+            ExcludedTokens = new HashSet<string>(excludedTokens, StringComparer.Ordinal)
+        };
 }

@@ -7,13 +7,23 @@ internal static class ExecutionPlanFormatter
 {
     public static IReadOnlyList<string> Format(
         AnonymizationExecutionPlan plan,
-        ExecutionPlanDatabaseInspection? databaseInspection = null)
+        ExecutionPlanDatabaseInspection? databaseInspection = null,
+        ExecutionWriteSliceAssessment? writeSlice = null)
     {
         ArgumentNullException.ThrowIfNull(plan);
         var lines = new List<string>
         {
             $"Execution plan: {plan.Steps.Count} generator step(s), proposed batch size {plan.BatchSize}."
         };
+        if (writeSlice is not null)
+        {
+            string status = writeSlice.IsSupported ? "ready" : "not ready";
+            string target = writeSlice.IsSupported
+                ? $" Target {writeSlice.TargetTable!.SchemaName}.{writeSlice.TargetTable.TableName}, " +
+                  $"primary key {writeSlice.PrimaryKeyColumn}."
+                : string.Empty;
+            lines.Add($"Write slice {status}: {writeSlice.Message}.{target}");
+        }
 
         for (int index = 0; index < plan.Steps.Count; index++)
         {

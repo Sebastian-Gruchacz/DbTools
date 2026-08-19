@@ -83,6 +83,49 @@ public sealed class SqlServerAnonymyzerEngineIntegrationTests
         Assert.InRange(samples.Count, 0, 2);
     }
 
+    [Fact]
+    public void ReadsCompositeForeignKeyMetadataInDeclaredOrder()
+    {
+        string connectionString = RequireConnectionString();
+        using var connection = new SqlConnection(connectionString);
+        connection.Open();
+        _ = new DetachedCopyMarkerReader().Read("SqlServer", connection);
+        string suffix = Guid.NewGuid().ToString("N")[..8];
+        string lookupTable = $"fk_lookup_{suffix}";
+        string targetTable = $"fk_target_{suffix}";
+        string constraintName = $"fk_metadata_{suffix}";
+        using var command = connection.CreateCommand();
+        command.CommandText =
+            $"CREATE TABLE [dbo].[{lookupTable}] ([TenantId] int, [Id] int, " +
+            $"PRIMARY KEY ([TenantId], [Id])); " +
+            $"CREATE TABLE [dbo].[{targetTable}] ([LookupTenantId] int, [LookupId] int, " +
+            $"CONSTRAINT [{constraintName}] FOREIGN KEY ([LookupTenantId], [LookupId]) " +
+            $"REFERENCES [dbo].[{lookupTable}]([TenantId], [Id]));";
+        command.ExecuteNonQuery();
+
+        try
+        {
+            var engine = new SqlServerAnonymyzerEngine(connection);
+            ITableInfo table = Assert.Single(engine.ListTables(), candidate =>
+                candidate.SchemaName == "dbo" && candidate.Name == targetTable);
+
+            ForeignKeyInfo foreignKey = Assert.Single(engine.ListForeignKeys(table));
+
+            Assert.Equal(constraintName, foreignKey.Name);
+            Assert.Equal(["LookupTenantId", "LookupId"], foreignKey.Columns);
+            Assert.Equal("dbo", foreignKey.ReferencedSchemaName);
+            Assert.Equal(lookupTable, foreignKey.ReferencedTableName);
+            Assert.Equal(["TenantId", "Id"], foreignKey.ReferencedColumns);
+        }
+        finally
+        {
+            command.CommandText =
+                $"DROP TABLE IF EXISTS [dbo].[{targetTable}]; " +
+                $"DROP TABLE IF EXISTS [dbo].[{lookupTable}];";
+            command.ExecuteNonQuery();
+        }
+    }
+
     private static string RequireConnectionString()
     {
         string? connectionString = Environment.GetEnvironmentVariable("ANONYMYZER_SQLSERVER_CONNECTION");

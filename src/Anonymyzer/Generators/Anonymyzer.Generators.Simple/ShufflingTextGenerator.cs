@@ -58,28 +58,89 @@ public sealed class ShufflingTextGenerator : GeneratorBase<ShufflingTextGenerato
         string columnName = context.Binding.GetRequiredOutput(ValueOutput);
         GeneratorDataRequirement requirement = GetDataRequirements(context.Binding, configuration).Single();
         var values = new List<object?>();
+        EncryptedExternalTextShuffleBuilder? externalBuilder = null;
+        long estimatedInMemoryBytes = 0;
+        long valueCount = 0;
 
-        await foreach (GeneratorDataRow row in context.DataReader.ReadAsync(requirement, cancellationToken)
-                           .WithCancellation(cancellationToken)
-                           .ConfigureAwait(false))
+        try
         {
-            object? value = row.GetValue(columnName);
-            if (!configuration.PreserveNulls || value is not null)
+            await foreach (GeneratorDataRow row in context.DataReader.ReadAsync(requirement, cancellationToken)
+                               .WithCancellation(cancellationToken)
+                               .ConfigureAwait(false))
             {
-                values.Add(value);
+                object? value = row.GetValue(columnName);
+                if (configuration.PreserveNulls && value is null)
+                {
+                    continue;
+                }
+
+                long valueBytes = EncryptedExternalTextShuffleBuilder.EstimateInMemoryBytes(value);
+                valueCount++;
+                if (externalBuilder is not null)
+                {
+                    externalBuilder.Add(value);
+                    continue;
+                }
+
+                if (estimatedInMemoryBytes + valueBytes <= configuration.MaximumInMemoryBytes)
+                {
+                    values.Add(value);
+                    estimatedInMemoryBytes += valueBytes;
+                    continue;
+                }
+
+                if (configuration.OverflowStrategy == ShuffleOverflowStrategy.Fail)
+                {
+                    throw new InvalidOperationException(
+                        $"TextShuffler exceeded its {configuration.MaximumInMemoryBytes:N0}-byte memory limit. " +
+                        "Increase MaximumInMemoryBytes or select EncryptedTemporaryFiles.");
+                }
+
+                externalBuilder = new EncryptedExternalTextShuffleBuilder(
+                    configuration.Seed,
+                    configuration.MaximumInMemoryBytes);
+                foreach (object? bufferedValue in values)
+                {
+                    externalBuilder.Add(bufferedValue);
+                }
+
+                values.Clear();
+                externalBuilder.Add(value);
             }
-        }
 
-        if (values.Count >= configuration.MinimumPopulation)
+            if (externalBuilder is not null)
+            {
+                if (valueCount < configuration.MinimumPopulation)
+                {
+                    externalBuilder.Dispose();
+                    return new ShufflingTextGeneratorSession(
+                        columnName,
+                        Array.Empty<object?>(),
+                        configuration.PreserveNulls,
+                        shouldApply: false);
+                }
+
+                IGeneratorSession session = externalBuilder.Complete(columnName, configuration.PreserveNulls);
+                externalBuilder.Dispose();
+                return session;
+            }
+
+            if (values.Count >= configuration.MinimumPopulation)
+            {
+                Shuffle(values, new Random(configuration.Seed));
+            }
+
+            return new ShufflingTextGeneratorSession(
+                columnName,
+                values,
+                configuration.PreserveNulls,
+                values.Count >= configuration.MinimumPopulation);
+        }
+        catch
         {
-            Shuffle(values, new Random(configuration.Seed));
+            externalBuilder?.Dispose();
+            throw;
         }
-
-        return new ShufflingTextGeneratorSession(
-            columnName,
-            values,
-            configuration.PreserveNulls,
-            values.Count >= configuration.MinimumPopulation);
     }
 
     private static void Shuffle(IList<object?> values, Random random)

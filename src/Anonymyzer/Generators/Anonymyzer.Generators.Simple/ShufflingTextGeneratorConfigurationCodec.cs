@@ -16,5 +16,15 @@ public sealed class ShufflingTextGeneratorConfigurationCodec
         {
             yield return "MinimumPopulation must be at least 2.";
         }
+
+        if (configuration.MaximumInMemoryBytes < 1024 * 1024)
+        {
+            yield return "MaximumInMemoryBytes must be at least 1048576 (1 MiB).";
+        }
+
+        if (!Enum.IsDefined(configuration.OverflowStrategy))
+        {
+            yield return "OverflowStrategy is invalid.";
+        }
     }
 }

@@ -11,6 +11,8 @@
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
         <TextBlock Grid.Row="0" Grid.ColumnSpan="2" Margin="0,0,0,14" TextWrapping="Wrap"
@@ -22,7 +24,13 @@
         <TextBlock Grid.Row="2" Margin="0,0,12,8" VerticalAlignment="Center" Text="Minimum population:" />
         <TextBox x:Name="MinimumPopulationTextBox" Grid.Row="2" Grid.Column="1" Margin="0,0,0,8" />
 
-        <CheckBox x:Name="PreserveNullsCheckBox" Grid.Row="3" Grid.ColumnSpan="2"
+        <TextBlock Grid.Row="3" Margin="0,0,12,8" VerticalAlignment="Center" Text="Memory limit (MiB):" />
+        <TextBox x:Name="MaximumMemoryTextBox" Grid.Row="3" Grid.Column="1" Margin="0,0,0,8" />
+
+        <TextBlock Grid.Row="4" Margin="0,0,12,8" VerticalAlignment="Center" Text="On overflow:" />
+        <ComboBox x:Name="OverflowStrategyComboBox" Grid.Row="4" Grid.Column="1" Margin="0,0,0,8" />
+
+        <CheckBox x:Name="PreserveNullsCheckBox" Grid.Row="5" Grid.ColumnSpan="2"
                   Content="Preserve null positions" />
     </Grid>
 </UserControl>

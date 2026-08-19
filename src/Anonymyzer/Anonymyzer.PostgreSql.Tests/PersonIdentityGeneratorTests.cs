@@ -2,6 +2,7 @@
 
 using Anonymyzer.Base.Generation;
 using Anonymyzer.Generators.Person;
+using Anonymyzer.LanguagePack.English;
 using Anonymyzer.LanguagePack.Polish;
 using Newtonsoft.Json.Linq;
 
@@ -17,6 +18,7 @@ public class PersonIdentityGeneratorTests
             generator.Descriptor.Outputs,
             output => Assert.Equal((PersonIdentityGenerator.FirstNameOutput, "Person.FirstName"), (output.Name, output.SemanticRole)),
             output => Assert.Equal((PersonIdentityGenerator.LastNameOutput, "Person.LastName"), (output.Name, output.SemanticRole)),
+            output => Assert.Equal((PersonIdentityGenerator.FullNameOutput, "Person.FullName"), (output.Name, output.SemanticRole)),
             output => Assert.Equal((PersonIdentityGenerator.GenderOutput, "Person.Gender"), (output.Name, output.SemanticRole)),
             output => Assert.Equal((PersonIdentityGenerator.EmailOutput, "Contact.Email"), (output.Name, output.SemanticRole)));
     }
@@ -30,6 +32,7 @@ public class PersonIdentityGeneratorTests
         {
             Seed = 123,
             Locale = "pl-PL",
+            FullNamePattern = PersonFullNamePattern.LastNameFirstName,
             EmailPattern = PersonEmailPattern.NameBased,
             EmailDomain = "example.invalid"
         };
@@ -45,10 +48,53 @@ public class PersonIdentityGeneratorTests
 
         string firstName = Assert.IsType<string>(row.GetValue("first_name"));
         string lastName = Assert.IsType<string>(row.GetValue("last_name"));
+        Assert.Equal($"{lastName} {firstName}", row.GetValue("full_name"));
         string email = Assert.IsType<string>(row.GetValue("email"));
         Assert.Equal($"{localeProvider.NormalizeEmailToken(firstName)}.{localeProvider.NormalizeEmailToken(lastName)}.000001@example.invalid", email);
         Assert.Contains(Assert.IsType<string>(row.GetValue("gender")), new[] { "Female", "Male" });
         Assert.Empty(generator.GetDataRequirements(binding, configuration));
+    }
+
+    [Fact]
+    public async Task GeneratesCoherentEnglishIdentityAndNameBasedEmailInOneRow()
+    {
+        var localeProvider = new EnglishPersonLocaleDataProvider();
+        var generator = new PersonIdentityGenerator(new IPersonLocaleDataProvider[]
+        {
+            new PolishPersonLocaleDataProvider(),
+            localeProvider
+        });
+        var configuration = new PersonIdentityGeneratorConfiguration
+        {
+            Seed = 456,
+            Locale = "en-US",
+            EmailPattern = PersonEmailPattern.NameBased,
+            EmailDomain = "example.invalid"
+        };
+        CancellationToken cancellationToken = TestContext.Current.CancellationToken;
+        var row = new DictionaryGeneratorRow();
+
+        await using IGeneratorSession session = await generator.PrepareAsync(
+            new GeneratorPreparationContext(CreateBinding(), new RejectingDataReader()),
+            configuration,
+            cancellationToken);
+        await session.ApplyAsync(row, cancellationToken);
+
+        string firstName = Assert.IsType<string>(row.GetValue("first_name"));
+        string lastName = Assert.IsType<string>(row.GetValue("last_name"));
+        Assert.Equal($"{firstName} {lastName}", row.GetValue("full_name"));
+        Assert.Equal(
+            $"{localeProvider.NormalizeEmailToken(firstName)}.{localeProvider.NormalizeEmailToken(lastName)}.000001@example.invalid",
+            row.GetValue("email"));
+        Assert.Contains(Assert.IsType<string>(row.GetValue("gender")), new[] { "Female", "Male" });
+    }
+
+    [Theory]
+    [InlineData("José O'Connor", "joseoconnor")]
+    [InlineData("Anne-Marie 42", "annemarie42")]
+    public void EnglishPackNormalizesEmailTokens(string value, string expected)
+    {
+        Assert.Equal(expected, new EnglishPersonLocaleDataProvider().NormalizeEmailToken(value));
     }
 
     [Fact]
@@ -74,6 +120,7 @@ public class PersonIdentityGeneratorTests
         {
             Seed = 19,
             Locale = "pl-PL",
+            FullNamePattern = PersonFullNamePattern.LastNameFirstName,
             EmailPattern = PersonEmailPattern.Opaque,
             EmailDomain = "example.invalid"
         };
@@ -82,8 +129,15 @@ public class PersonIdentityGeneratorTests
         var restored = (PersonIdentityGeneratorConfiguration)codec.Deserialize(json);
 
         Assert.Equal("Opaque", json[nameof(configuration.EmailPattern)]?.Value<string>());
+        Assert.Equal("LastNameFirstName", json[nameof(configuration.FullNamePattern)]?.Value<string>());
         Assert.Equal(PersonEmailPattern.Opaque, restored.EmailPattern);
+        Assert.Equal(PersonFullNamePattern.LastNameFirstName, restored.FullNamePattern);
         Assert.Empty(codec.Validate(restored));
+
+        var legacyJson = (JObject)json.DeepClone();
+        legacyJson.Remove(nameof(configuration.FullNamePattern));
+        var restoredLegacy = (PersonIdentityGeneratorConfiguration)codec.Deserialize(legacyJson);
+        Assert.Equal(PersonFullNamePattern.FirstNameLastName, restoredLegacy.FullNamePattern);
     }
 
     [Fact]
@@ -115,6 +169,7 @@ public class PersonIdentityGeneratorTests
             {
                 [PersonIdentityGenerator.FirstNameOutput] = "first_name",
                 [PersonIdentityGenerator.LastNameOutput] = "last_name",
+                [PersonIdentityGenerator.FullNameOutput] = "full_name",
                 [PersonIdentityGenerator.GenderOutput] = "gender",
                 [PersonIdentityGenerator.EmailOutput] = "email"
             });

@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
@@ -6,6 +6,9 @@
     <UseWPF>true</UseWPF>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <Version>0.4.0</Version>
+    <Authors>Sebastian Gruchacz</Authors>
+    <RepositoryUrl>https://github.com/Sebastian-Gruchacz/DbTools</RepositoryUrl>
   </PropertyGroup>
 
   <ItemGroup>
@@ -16,11 +19,14 @@
     <ProjectReference Include="..\Anonymyzer.ConfigEditor.Abstractions\Anonymyzer.ConfigEditor.Abstractions.csproj" />
     <ProjectReference Include="..\Anonymyzer.Configuration\Anonymyzer.Configuration.csproj" />
     <ProjectReference Include="..\Anonymyzer.DatabaseAccess\Anonymyzer.DatabaseAccess.csproj" />
+    <ProjectReference Include="..\Generators\Anonymyzer.Generators.Address\Anonymyzer.Generators.Address.csproj" />
+    <ProjectReference Include="..\Generators\Anonymyzer.Generators.Address.Wpf\Anonymyzer.Generators.Address.Wpf.csproj" />
     <ProjectReference Include="..\Generators\Anonymyzer.Generators.Person\Anonymyzer.Generators.Person.csproj" />
     <ProjectReference Include="..\Generators\Anonymyzer.Generators.Person.Wpf\Anonymyzer.Generators.Person.Wpf.csproj" />
     <ProjectReference Include="..\Generators\Anonymyzer.Generators.Simple\Anonymyzer.Generators.Simple.csproj" />
     <ProjectReference Include="..\Generators\Anonymyzer.Generators.Simple.Wpf\Anonymyzer.Generators.Simple.Wpf.csproj" />
     <ProjectReference Include="..\LanguagePacks\Anonymyzer.LanguagePack.Polish\Anonymyzer.LanguagePack.Polish.csproj" />
+    <ProjectReference Include="..\LanguagePacks\Anonymyzer.LanguagePack.English\Anonymyzer.LanguagePack.English.csproj" />
   </ItemGroup>
 
 </Project>

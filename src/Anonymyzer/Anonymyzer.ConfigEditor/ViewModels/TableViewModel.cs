@@ -1,9 +1,11 @@
 ﻿namespace Anonymyzer.ConfigEditor.ViewModels;
 
 using System.Collections.ObjectModel;
+using System.ComponentModel;
+using System.Runtime.CompilerServices;
 using Anonymyzer.Configuration;
 
-internal sealed class TableViewModel
+internal sealed class TableViewModel : INotifyPropertyChanged
 {
     private readonly IReadOnlyList<GeneratorProfileConfiguration> _profiles;
     private readonly IReadOnlyList<SemanticRoleGroup> _semanticRoleGroups;
@@ -33,6 +35,7 @@ internal sealed class TableViewModel
     }
 
     public event EventHandler? ConfigurationChanged;
+    public event PropertyChangedEventHandler? PropertyChanged;
 
     public TableProcessingOptions Model { get; }
     public ObservableCollection<ColumnViewModel> Columns { get; } = new();
@@ -40,10 +43,46 @@ internal sealed class TableViewModel
     public int CandidateCount => Model.Columns.Count(column => column.Detection.IsCandidate);
     public string CandidateMark => CandidateCount > 0 ? "●" : string.Empty;
     public string CandidateCountText => CandidateCount > 0 ? CandidateCount.ToString() : string.Empty;
+    public int ManualOverrideCount => Model.Columns.Count(column => column.OperatorOverrides?.HasAny == true);
+    public string ManualMark => Enabled || ManualOverrideCount > 0 ? "◆" : string.Empty;
+    public string ManualDetails => Enabled
+        ? $"Table enabled by the operator; columns with additional choices: {ManualOverrideCount}."
+        : ManualOverrideCount > 0
+        ? $"Columns with operator choices: {ManualOverrideCount}."
+        : "No explicit operator choices.";
+    public int MissingColumnCount => Model.Columns.Count(column =>
+        string.Equals(column.SchemaStatus, "Missing", StringComparison.OrdinalIgnoreCase));
+    public string SchemaWarningMark => string.Equals(Model.SchemaStatus, "Missing", StringComparison.OrdinalIgnoreCase)
+                                       || MissingColumnCount > 0
+        ? "⚠"
+        : string.Empty;
+    public string SchemaWarningDetails => string.Equals(Model.SchemaStatus, "Missing", StringComparison.OrdinalIgnoreCase)
+        ? "Table was not found during the latest database rescan; its saved configuration was retained."
+        : MissingColumnCount > 0
+            ? $"Columns retained but missing from the latest database rescan: {MissingColumnCount}."
+            : "Table and configured columns are present in the latest database scan.";
     public string CandidateDetails => CandidateCount > 0
         ? $"Automatic candidates: {CandidateCount}."
         : "No automatic candidates.";
     public string QualifiedName => $"{Model.SchemaName}.{Model.TableName}";
+
+    public bool Enabled
+    {
+        get => Model.Enabled;
+        set
+        {
+            if (Model.Enabled == value)
+            {
+                return;
+            }
+
+            Model.Enabled = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(ManualMark));
+            OnPropertyChanged(nameof(ManualDetails));
+            OnConfigurationChanged();
+        }
+    }
 
     public void RevealColumn(ColumnViewModel column)
     {
@@ -74,7 +113,13 @@ internal sealed class TableViewModel
     private ColumnViewModel CreateColumnViewModel(ColumnProcessingOptions column)
     {
         var viewModel = new ColumnViewModel(column, _profiles, _semanticRoleGroups);
-        viewModel.ConfigurationChanged += (_, _) => OnConfigurationChanged();
+        viewModel.ConfigurationChanged += (_, _) =>
+        {
+            OnPropertyChanged(nameof(ManualOverrideCount));
+            OnPropertyChanged(nameof(ManualMark));
+            OnPropertyChanged(nameof(ManualDetails));
+            OnConfigurationChanged();
+        };
         return viewModel;
     }
 
@@ -90,7 +135,8 @@ internal sealed class TableViewModel
     }
 
     private static bool ShouldShowInitially(ColumnProcessingOptions column) =>
-        column.Detection.IsCandidate
+        string.Equals(column.SchemaStatus, "Missing", StringComparison.OrdinalIgnoreCase)
+        || column.Detection.IsCandidate
         || column.Enabled
         || !string.IsNullOrWhiteSpace(column.SemanticRole)
         || !string.IsNullOrWhiteSpace(column.GenerationGroupId);
@@ -99,4 +145,7 @@ internal sealed class TableViewModel
     {
         ConfigurationChanged?.Invoke(this, EventArgs.Empty);
     }
+
+    private void OnPropertyChanged([CallerMemberName] string? propertyName = null) =>
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 }

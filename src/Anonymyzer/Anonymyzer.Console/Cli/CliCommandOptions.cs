@@ -14,7 +14,11 @@ internal sealed record RunCliOptions(
     string ConnectionEnvironmentVariable,
     Guid MarkerId,
     string ConfigurationPath,
-    bool DryRun) : CliCommandOptions(ConnectionEnvironmentVariable);
+    bool DryRun,
+    bool Execute,
+    string? ReportPath,
+    string? CheckpointPath,
+    string? CheckpointKeyEnvironmentVariable) : CliCommandOptions(ConnectionEnvironmentVariable);
 
 internal sealed record CliParseResult(CliCommandOptions? Command, string? Error, bool ShowHelp)
 {

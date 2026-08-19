@@ -6,9 +6,10 @@ using Anonymyzer.Base.Generation;
 public sealed class PersonIdentityGenerator : GeneratorBase<PersonIdentityGeneratorConfiguration>
 {
     public const string GeneratorType = "PersonIdentity";
-    public const string GeneratorVersion = "1.0.0";
+    public const string GeneratorVersion = "1.2.0";
     public const string FirstNameOutput = "FirstName";
     public const string LastNameOutput = "LastName";
+    public const string FullNameOutput = "FullName";
     public const string GenderOutput = "Gender";
     public const string EmailOutput = "Email";
 
@@ -19,10 +20,12 @@ public sealed class PersonIdentityGenerator : GeneratorBase<PersonIdentityGenera
         GeneratorExecutionScope.Row,
         DbDataType.Text)
     {
+        SupportsDeterministicReplay = true,
         Outputs = new[]
         {
             new GeneratorOutputDescriptor(FirstNameOutput, "First name", "Person.FirstName", Required: false),
             new GeneratorOutputDescriptor(LastNameOutput, "Last name", "Person.LastName", Required: false),
+            new GeneratorOutputDescriptor(FullNameOutput, "Full name", "Person.FullName", Required: false),
             new GeneratorOutputDescriptor(GenderOutput, "Gender", "Person.Gender", Required: false),
             new GeneratorOutputDescriptor(EmailOutput, "E-mail", "Contact.Email", Required: false)
         }
@@ -91,12 +94,24 @@ public sealed class PersonIdentityGenerator : GeneratorBase<PersonIdentityGenera
 
             SetIfBound(row, FirstNameOutput, person.FirstName);
             SetIfBound(row, LastNameOutput, person.LastName);
+            SetIfBound(row, FullNameOutput, BuildFullName(person));
             SetIfBound(row, GenderOutput, person.Gender.ToString());
             SetIfBound(row, EmailOutput, BuildEmail(person));
             return ValueTask.CompletedTask;
         }
 
         public ValueTask DisposeAsync() => ValueTask.CompletedTask;
+
+        private string BuildFullName(GeneratedPersonName person)
+        {
+            return configuration.FullNamePattern switch
+            {
+                PersonFullNamePattern.FirstNameLastName => $"{person.FirstName} {person.LastName}",
+                PersonFullNamePattern.LastNameFirstName => $"{person.LastName} {person.FirstName}",
+                _ => throw new InvalidOperationException(
+                    $"Unsupported full-name pattern {configuration.FullNamePattern}.")
+            };
+        }
 
         private string BuildEmail(GeneratedPersonName person)
         {

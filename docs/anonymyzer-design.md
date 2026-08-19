@@ -29,7 +29,10 @@ transakcji obejmującej całą bazę.
    bazy, konfigurację generatorów, relacje oraz kolejność operacji. Porównuje
    aktywne kolumny z bieżącym schematem klona i raportuje estymowaną liczbę
    wierszy oraz górne zużycie pamięci pełnych skanów.
-6. `run` przetwarza dane batchami, zapisuje checkpointy i raport końcowy.
+6. `run --execute` w pierwszym wycinku przetwarza jedną tabelę batchami po PK;
+   opcjonalny `--report` zapisuje niesekretny raport końcowy, a `--checkpoint`
+   pozwala wznowić plan, którego sesje `Row` albo kontrolowane `Relational`
+   można odtworzyć.
 7. Walidacja po wykonaniu sprawdza constrainty, liczbę wierszy i spójność
    relacji. Kopia może dopiero wtedy zostać przekazana dalej.
 
@@ -88,9 +91,14 @@ Skrypt `tools/Test-PostgreSqlProvider.ps1` realizuje już pierwszy bezpieczny
 wzorzec integracyjny: uruchamia własny kontener, ładuje fixture i usuwa kontener
 w `finally`. Nie korzysta z istniejących kontenerów ani baz.
 
-Opcjonalny test SQL Servera wymaga `ANONYMYZER_SQLSERVER_CONNECTION` i tylko
-odczytuje metadane jawnie wskazanego klona. Fixture lub klon musi zawierać marker
-`dbo.__AnonymyzerDetachedCopy`; test nie tworzy ani nie modyfikuje bazy.
+Opcjonalne testy executora wymagają `ANONYMYZER_POSTGRES_CONNECTION` albo
+`ANONYMYZER_SQLSERVER_CONNECTION`. Po walidacji markera tworzą w jawnie wskazanym
+klonie tabele o losowych, jednoznacznych nazwach, wykonują na trzech wierszach
+grupę `PersonIdentity`, a na PostgreSQL także pełny `TextShuffler`, weryfikują
+wynik i usuwają dokładnie te tabele w `finally`. Osobny scenariusz na obu
+silnikach tworzy parę tabel połączonych FK, wykonuje `ReferencePseudonym` i
+potwierdza, że referencje pozostały bez zmian. Istniejące tabele klona nie są
+odczytywane ani modyfikowane przez ten scenariusz.
 
 ## Model generatorów i konfiguracji 0.4
 
@@ -145,13 +153,48 @@ JSON nie zmieniają dokumentu. `New`, `Open` i zamknięcie aplikacji wymagają w
 decyzji `Save / Don't Save / Cancel`. Flaga jest czyszczona dopiero po udanym
 zapisie albo załadowaniu innego dokumentu.
 
-Podgląd generatorów `Row` uruchamia ich rzeczywistą sesję w pamięci, bez dostępu
-do bazy. Obejmuje grupy wielokolumnowe i generatory `Row` przypisane bezpośrednio
-do jednej kolumny; lokalne `Options` są nakładane na profil tak samo jak w
-plannerze. Dla pojedynczej kolumny operator może otworzyć kilka niemodalnych okien
-surowych wartości `non-null` z odłączonego klona. Jest to narzędzie inspekcyjne,
-nie podgląd wyniku generatora `Column`: UI nadal nie symuluje shuffle ani
-generatorów `Relational`. Podgląd nigdy nie może modyfikować bazy.
+Każda jawna zmiana operatora zapisuje również odpowiednią flagę w
+`ColumnProcessingOptions.OperatorOverrides`: `Enabled`, `SemanticRole`,
+`Generator` albo `GenerationGroup`. Pomarańczowy `●` nadal oznacza automatyczną
+propozycję detektora, natomiast niebieski `◆` oznacza co najmniej jedną decyzję
+operatora chronioną przed przyszłym rescanem. Tabela pokazuje `◆`, jeśli zawiera
+choć jedną taką kolumnę. Starsze pliki bez flag pozostają poprawne; niedestruktywny
+merge skanu musi dodatkowo zachowywać ich istniejące ustawienia konserwatywnie.
+
+`File -> Rescan detached clone` uruchamia aktualną analizę na bazie wskazanej przez
+zmienną środowiskową. Przed odczytem ponownie sprawdzane są oczekiwana nazwa bazy
+i marker odłączonej kopii. Merge aktualizuje typ, długość, kolejność i wynik
+detektora, dodaje nowe tabele i kolumny, ale nie usuwa elementów nieobecnych w
+nowym schemacie. Takie elementy dostają `SchemaStatus = Missing` i czerwone `⚠`.
+Ustawienia z flagami `OperatorOverrides` są zachowywane; konfiguracje starszego
+formatu są chronione konserwatywnie, jeśli zawierają aktywne ustawienia bez flag.
+Rescan zmienia wyłącznie dokument w pamięci i ustawia flagę dirty — zapis nadal
+wymaga jawnej decyzji operatora. Zapisane w tabeli `PrimaryKeyColumns` i
+`ForeignKeys` są metadanymi pomocniczymi dla edytorów generatorów relacyjnych;
+starszy dokument może mieć puste listy, które następny rescan uzupełni
+niedestruktywnie. Metadane FK zachowują nazwy oraz kolejność par kolumn także dla
+kluczy złożonych.
+
+Podgląd generatorów `Row` uruchamia ich rzeczywistą sesję w pamięci. Generatory
+syntetyczne nie wymagają dostępu do bazy. Generator z flagą
+`RequiresExistingValue`, obecnie `JsonPathRedactor`, pobiera małą próbkę po
+ponownej walidacji markera klona, po czym modyfikuje dokumenty wyłącznie w pamięci.
+Obejmuje to przypisanie bezpośrednie oraz jednowyjściową grupę. Lokalne `Options`
+są nakładane na profil tak samo jak w plannerze. Obcięte próbki nie są przekazywane
+do parsera. Dla pojedynczej kolumny operator może również otworzyć kilka
+niemodalnych okien surowych wartości `non-null` z odłączonego klona.
+
+Bezpośrednio przypisany `TextShuffler` ma ograniczony podgląd `Column`. Operator
+wskazuje zmienną środowiskową połączenia i limit 2–50 wierszy. Reader ponownie
+waliduje marker odłączonej kopii, pobiera próbkę razem z pozycjami `NULL`, a
+następnie prawdziwa sesja shuffle działa wyłącznie w pamięci. Wynik jest jawnie
+oznaczony jako próbka, a nie symulacja pełnego rozkładu kolumny; pojedyncza
+wartość jest ograniczona w zapytaniu do 32 768 znaków. Bezpośrednio przypisany
+`ReferencePseudonym` używa tej samej walidowanej ścieżki, pobiera do 50 kluczy
+lookup i pokazuje wyłącznie wynik HMAC, bez wyświetlania kluczy źródłowych.
+Pozostałe generatory `Relational`, wieloskanowe i `Column` użyte przez grupę nadal
+nie mają podglądu.
+Żaden wariant podglądu nie może modyfikować bazy.
 
 Grid pokazuje początkowo kandydatów oraz kolumny już skonfigurowane. `Add column`
 rozwija pozostałe kolumny zapisane podczas analizy i ujawnia wybraną bez dostępu
@@ -177,18 +220,28 @@ Rdzeń nie zależy od WPF. Dokładna wersja generatora może dostarczyć osobny
 adapter `IGeneratorConfigurationEditorFactory`. Adapter otwiera dedykowany panel,
 ale zapisuje ustawienia przez ten sam codec. Gdy panelu nie ma, edytor pozwala
 zmienić należący do generatora obiekt `Options` jako surowy JSON.
+Opcjonalny `GeneratorConfigurationEditorContext` przekazuje panelowi wyłącznie
+niesekretne nazwy schematów, tabel, kolumn, PK i relacji FK z otwartego dokumentu.
+Panel `ReferencePseudonym` wykorzystuje je jako podpowiedzi w edytowalnych
+listach: rzeczywiste jednokolumnowe relacje są pierwsze i jednoznaczna relacja
+jest wybierana automatycznie, a pozostałe kolumny PK nadal są przed zwykłymi;
+nie otrzymuje połączenia ani dostępu do bazy.
 
 ### Zakresy wykonania
 
 - `Row` korzysta wyłącznie z bieżącego wiersza. Tak mogą działać generatory
   imienia/nazwiska i e-maila, jeśli wszystkie zależności są w tej samej tabeli.
 - `Column` deklaruje pełny skan kolumny i przygotowuje stan przed zapisem.
-  `TextShuffler` 1.0.0 buforuje wartości i wykonuje deterministyczny Fisher-Yates,
-  zachowując dokładny multizbiór zamiast jedynie przybliżać rozkład losowaniem.
+  `TextShuffler` 1.0.0 do limitu profilu buforuje wartości i wykonuje
+  deterministyczny Fisher-Yates. Po przekroczeniu limitu profil jawnie odmawia
+  pracy albo przechodzi na szyfrowane sortowanie zewnętrzne, nadal zachowując
+  dokładny multizbiór zamiast jedynie przybliżać rozkład losowaniem.
 - `Relational` deklaruje kolumny z innych tabel oraz czy potrzebuje ich wartości
   oryginalnych czy już wygenerowanych. Planner `dry-run` buduje z deklaracji
   `Generated` graf zależności, wykrywa brakujących producentów, podwójne zapisy
-  i cykle oraz ustala deterministyczną kolejność wykonania.
+  i cykle oraz ustala deterministyczną kolejność wykonania. Pierwszy wykonywalny
+  przypadek, `ReferencePseudonym` 1.0.0, skanuje oryginalne klucze tabeli lookup,
+  a zapisuje wyłącznie tekstową kolumnę jednej tabeli docelowej. Nie zmienia PK/FK.
 
 Plan obejmuje wyłącznie włączone tabele i kolumny. Dla każdego kroku podaje
 docelową tabelę, dokładny typ i wersję generatora, zakres `Row`/`Column`/
@@ -199,11 +252,63 @@ Planner nadal nie odczytuje liczby wierszy ani nie wykonuje sesji generatorów.
 Liczbę wierszy i koszt pamięci uzupełnia osobny inspektor bieżącego schematu,
 uruchamiany przez `run --dry-run` po zbudowaniu planu.
 
+Ten sam inspektor zapisuje rzeczywiste kolumny PK. Walidator wycinka zapisu
+dopuszcza dokładnie jedną tabelę docelową i jeden niezmieniany klucz główny.
+Zewnętrzne wymaganie danych musi być pełnym skanem wartości `Original`, a jego
+tabela musi mieć pojedynczy PK używany do bezpiecznego pageingu. Pełny skan
+wartości `Generated`, brak lub złożony PK albo zmiana PK daje w `dry-run` jawny
+status `not ready`. `--execute` działa wyłącznie dla statusu `ready`: przed pierwszym
+zapisem przygotowuje sesje `Column` z pełnego, oryginalnego skanu keyset, potem
+czyta kolejne batche tym samym pagingiem, utrzymuje sesje generatorów między
+batchami i zapisuje batch w jednej transakcji. Aktualizacja innej liczby wierszy
+niż dokładnie jeden dla danego PK powoduje rollback batcha. Pełny skan jest
+buforowany lub spillowany przez generator, dlatego estymata pamięci z `dry-run`
+jest istotnym ostrzeżeniem operatora. Przed pierwszą zmianą executor odrzuca
+tabelę z istniejącymi naruszeniami constraintów. Po zakończeniu ponownie waliduje
+marker i aktywny schemat, porównuje dokładną liczbę wierszy oraz sprawdza `CHECK`
+i wychodzące FK tabeli docelowej. SQL Server korzysta z `DBCC CHECKCONSTRAINTS`,
+a PostgreSQL z odczytowych zapytań zbudowanych na podstawie `pg_constraint`.
+PostgreSQL-owy skan działa w transakcji `REPEATABLE READ, READ ONLY`, aby także
+funkcja użyta przez wyrażenie `CHECK` nie mogła niczego zapisać.
+Opcjonalny raport JSON formatu 2 zawiera wynik tej walidacji, fingerprint
+konfiguracji, marker, czasy, kroki oraz liczbę zatwierdzonych batchy i wierszy,
+ale nie connection string, wartości rekordów ani ostatni klucz. Nie ma jeszcze
+checkpointu dla `Column` ani pełnej walidacji indeksów i triggerów.
+
+Checkpoint formatu 2 przechowuje fingerprint konfiguracji, tożsamość klona,
+target, rozmiar batcha, liczniki i HMAC-SHA-256 granicznego PK, ale nie sam klucz,
+sekret HMAC ani wartości rekordów. Dla `ReferencePseudonym` zapisuje również HMAC
+sekretu wskazanego w profilu, obliczony kluczem checkpointu; sam sekret nie trafia
+do pliku. Przy wznowieniu executor odczytuje już zatwierdzone wiersze od początku
+i uruchamia sesje bez zapisu, aby deterministycznie odtworzyć ich stan. Hash
+ostatniego odtworzonego PK wykrywa przesunięcie granicy po zmianie zbioru wierszy.
+Scope `Column`, pełny skan tabeli docelowej, zależność od nadpisanej wartości
+oryginalnej lub `RequiresExistingValue` blokują checkpoint. Pełny skan
+niezmienianej tabeli lookup jest dopuszczony dla deterministycznego generatora
+`Relational`. Format 1 pozostaje akceptowany tylko dla planu bez zależności
+środowiskowych.
+
+`ReferencePseudonym` kanonizuje klucz referencji i liczy skrócony HMAC-SHA-256.
+Profil zawiera nazwę zmiennej środowiskowej, prefiks i długość skrótu, lecz nigdy
+sam klucz HMAC; wartość klucza musi mieć co najmniej 32 znaki. Generator wykrywa
+kolizję w obrębie pełnego zbioru lookup przed pierwszym zapisem, nie loguje
+wartości brakującej referencji i odmawia nadpisania kolumny referencyjnej. Mapa
+ma domyślny limit 64 MiB. Strategia `Fail` kończy przygotowanie przed zapisem,
+a `EncryptedTemporaryIndex` sortuje pełne skróty HMAC porcjami ograniczonymi tym
+samym budżetem. Pliki przechowują stałej długości rekordy AES-GCM z losowym,
+efemerycznym kluczem; sesja sprawdza referencję wyszukiwaniem binarnym bez
+wczytywania indeksu do RAM. Scalanie usuwa duplikaty i nadal wykrywa kolizje
+skróconego pseudonimu przed pierwszym zapisem. Dispose usuwa plik i zeruje klucze.
+
 Reader przekazuje dane strumieniowo, natomiast generator decyduje, co buforuje.
-Dokładny shuffle ma koszt pamięci `O(n)` i nie nadaje się bezpośrednio do każdej
-wielkiej tabeli. Kolejne strategie powinny obejmować limit pamięci, spill do
-pliku tymczasowego lub bazowej tabeli roboczej oraz opcjonalne losowanie ważone,
-które zachowuje rozkład tylko statystycznie. Wybór musi być jawny w profilu.
+`TextShuffler` ma `MaximumInMemoryBytes` (domyślnie 64 MiB) oraz jawną strategię
+`Fail` lub `EncryptedTemporaryFiles`. Spill przypisuje wartościom deterministyczne
+klucze sortowania, sortuje porcje ograniczone tym samym budżetem i scala je
+strumieniowo. Same wartości w każdym pliku są szyfrowane AES-GCM losowym kluczem
+istniejącym wyłącznie w pamięci procesu. Pliki są usuwane po zwolnieniu sesji;
+pozostałość po awarii nie zawiera klucza deszyfrującego. Metadane sortowania i
+liczba rekordów nie są tajne. Strategia nadal wymaga wolnego miejsca na dysku i
+nie umożliwia wznowienia częściowo wykonanego pełnego skanu.
 
 Samo przestawienie wartości nie usuwa rzadkich danych z całej kopii, dlatego
 `TextShuffler` nie jest właściwym generatorem dla silnie identyfikujących pól.
@@ -226,6 +331,32 @@ konfigurację przez ten sam wersjonowany codec JSON co wykonanie CLI. Menu
 `Profiles → Add` buduje gotowy profil z domyślnej konfiguracji właściciela
 generatora; pusty profil pozostaje dostępny dla zewnętrznych pluginów.
 
+### JsonPathRedactor 1.0.0
+
+`JsonPathRedactor` jest generatorem `Row` dla dokumentów JSON zapisanych w
+kolumnie tekstowej. Reguła składa się ze ścieżki raportowanej przez profiler
+próbek oraz zastępczego literału JSON. Składnia obsługuje root `$`, właściwości
+rozdzielane `/`, escaping JSON Pointer (`~0`, `~1`) i przejście po wszystkich
+elementach tablicy przez `[]`. Dzięki temu `$/Events[]/DriverID` podmienia pole
+we wszystkich elementach bez znajomości długości tablicy.
+
+Generator parsuje dokument, zmienia tylko wskazane tokeny i serializuje wynik
+bez dodatkowego formatowania. Typ wartości zastępczej wynika z literału JSON,
+więc `0`, `null`, `false`, `"tekst"`, obiekt i tablica pozostają odpowiednimi
+typami. `NULL` bazy jest zachowywany. Niepoprawny dokument przerywa wiersz, ale
+komunikat nigdy nie zawiera wartości źródłowej. `RequireEveryPath` pozwala
+operatorowi wybrać między tolerowaniem opcjonalnych gałęzi i rygorystycznym
+odrzuceniem dokumentu z brakującą ścieżką.
+
+Codec wymaga co najmniej jednej reguły i odrzuca niepoprawne literały, duplikaty
+oraz ścieżki nakładające się rodzic–potomek. Zapobiega to zależności wyniku od
+kolejności reguł. Dedykowany panel WPF udostępnia tabelę ścieżek i literałów.
+Wersja 1.0.0 deklaruje `DbDataType.Text` i `DbDataType.Json`. Planner przenosi typ
+każdego powiązanego wyjścia do `GeneratorBinding`, a executor przekazuje go do
+warstwy zapisu. PostgreSQL rzutuje wyłącznie parametry wyjść JSON na `jsonb`, który
+ma poprawne przypisanie zarówno do kolumn `jsonb`, jak i `json`; SQL Server nadal
+otrzymuje zwykły parametr tekstowy.
+
 ### Samodzielny EmailAddress 1.0.0
 
 `EmailAddress` ma jedno wyjście `Value` sugerujące rolę `Contact.Email` i dwa
@@ -243,15 +374,166 @@ ASCII DNS, długość domeny, długość local-part, licznik i wymagane nazwy ko
 Generator zachowuje `NULL` opcjonalnie, a pominięty wiersz nie zużywa numeru.
 Unikalność, podobnie jak w `SequentialText`, dotyczy jednej sesji wykonawczej.
 
-### Pierwszy generator Row: PersonIdentity 1.0.0
+### AccountLogin 1.0.0
+
+`AccountLogin` generuje tekst dla roli `Account.Login`. Tryb `Opaque` łączy
+znormalizowany prefiks z licznikiem, a `NameBased` dodatkowo czyta wskazane
+kolumny imienia i nazwiska. Źródło `Original`/`Generated` jest deklarowanym
+wymaganiem danych, więc planner może uruchomić producenta nazw wcześniej.
+
+Separator jest ograniczony do krótkich kombinacji `.`, `_` i `-`. Końcowy
+licznik jest zawsze obecny i zapewnia unikalność w sesji; `StartAt`, minimalna
+liczba cyfr i zachowanie `NULL` należą do konfiguracji generatora. Normalizacja
+korzysta z tych samych zasad transliteracji co `EmailAddress`.
+
+### BankAccount 1.0.0
+
+`BankAccount` generuje tekst dla roli `Financial.BankAccount`. Pierwszy provider
+obsługuje `pl-PL` i formaty zwartego IBAN-u, IBAN-u grupowanego spacjami oraz
+krajowego NRB. Każda wartość przechodzi kontrolę modulo 97, a sekwencja jest
+deterministyczna i nie powtarza wartości w ramach sesji.
+
+Ośmiocyfrowy segment banku i oddziału ma stałą wartość `00000000`. Dzięki temu
+dane zachowują strukturę i checksum wymaganą przez typową walidację formularza,
+ale nie wskazują świadomie wybranego działającego banku. Nie wolno używać tych
+wartości do wykonywania przelewów ani traktować ich jako potwierdzenia istnienia
+rachunku. Profil wybiera locale, format, seed oraz zachowanie pozycji `NULL`.
+
+### PhoneNumber 1.0.0
+
+`PhoneNumber` jest generatorem `Row` z jednym wyjściem `Value` dla roli
+`Contact.Phone`. Profil wybiera `Locale`, format krajowy lub międzynarodowy,
+deterministyczny `Seed` i zachowanie pozycji `NULL`. Generator nie czyta danych
+źródłowych; składanie numeru należy do providerów pakietów językowych. Provider
+deklaruje pojemność własnego zakresu, a sesja tworzy wartości bez powtórzeń i
+kończy się błędem przed ponownym użyciem numeru.
+
+Provider `pl-PL` tworzy dziewięciocyfrowy numer w układzie `501 XXX XXX` i może
+dodać prefiks `+48`. Jest to wartość syntetyczna o poprawnym kształcie, ale polski
+plan numeracji nie udostępnia ogólnego zakresu fikcyjnego, więc nie należy jej
+wybierać ani używać do wysyłki. Provider `en-US` używa zakresu `202-555-0100`–
+`202-555-0199`, zastrzeżonego jako fikcyjny i niedziałający, oraz opcjonalnego
+prefiksu `+1`. Format polski odpowiada [opisowi numeracji krajowej UKE](https://cik.uke.gov.pl/news/nie-oddzwaniaj%2C100.html),
+a zakres amerykański [dokumentuje NANPA](https://nanpa.com/numbering/555-line-numbers).
+
+Panel WPF udostępnia dokładnie parametry własnego codeca. Nieznane locale jest
+poprawnym JSON-em pluginu, lecz przygotowanie sesji kończy się czytelnym błędem,
+jeżeli odpowiadający provider nie został zainstalowany.
+
+### Uuid 1.0.0
+
+`Uuid` generuje tekstowe identyfikatory z markerem wersji 4 i prawidłowym
+wariantem UUID. Nie jest to źródło losowych UUID v4. Profil
+zawiera tekstowy `Seed`, początek sekwencji, format `Hyphenated`, `Compact`,
+`Braced` albo `Parenthesized`, wielkość liter i zachowanie pozycji `NULL`.
+Identyfikator powstaje z SHA-256 seeda oraz kolejnego numeru, dlatego ta sama
+konfiguracja i kolejność wierszy dają ten sam wynik.
+
+Generator nie używa losowości kryptograficznej i nie służy do tworzenia sekretów.
+Kolizja skrótu jest skrajnie mało prawdopodobna, ale nie jest matematycznie
+niemożliwa. Zachowany `NULL` nie zużywa numeru sekwencji, a po wygenerowaniu
+wartości dla `Int64.MaxValue` następne wywołanie kończy się błędem.
+
+### TaxIdentifier 1.0.0 i polski NIP
+
+`TaxIdentifier` jest rozszerzalnym generatorem `Row` dla roli `Company.TaxId`.
+Profil zawiera `Locale`, deterministyczny `Seed`, format oraz zachowanie `NULL`.
+Provider regionalny deklaruje pojemność i odpowiada zarówno za cyfry kontrolne,
+jak i prezentację wartości. Brak providera dla wybranego locale zatrzymuje
+przygotowanie sesji.
+
+Pierwszy provider `pl-PL` generuje dziesięciocyfrowy NIP. Dla pierwszych dziewięciu
+cyfr stosuje wagi `6, 5, 7, 2, 3, 4, 5, 6, 7`; reszta z dzielenia sumy przez 11
+jest cyfrą kontrolną, a kombinacje dające resztę 10 są pomijane. Generator oferuje
+format `DigitsOnly`, `Hyphenated` (`XXX-XXX-XX-XX`) oraz `International`
+(`PLXXXXXXXXXX`). Ministerstwo Finansów potwierdza, że urzędowa walidacja NIP
+[sprawdza strukturę identyfikatora i algorytm cyfry kontrolnej](https://www.podatki.gov.pl/pytania-i-odpowiedzi/mikrorachunek/czy-i-w-jaki-sposob-generator-bedzie-weryfikowal-poprawnosc-pesel-i-nip).
+
+Provider mapuje numer porządkowy na jeden z 810 milionów różnych wyników, więc
+nie używa retry ani rosnącego bufora zajętych wartości. Poprawność cyfry kontrolnej
+nie dowodzi, że NIP jest nieprzydzielony; są to dane syntetyczne przeznaczone
+wyłącznie do odłączonej kopii bazy. Obecna wersja zapisuje tekst i nie obsługuje
+jeszcze liczbowych kolumn z NIP-em.
+
+Ten sam provider obsługuje warianty `REGON9` i `REGON14`, wyłącznie jako
+`DigitsOnly`. REGON9 zawiera osiem cyfr porządkowych i checksum, natomiast
+REGON14 składa się z poprawnego REGON9 jednostki nadrzędnej, czterech cyfr
+jednostki lokalnej i końcowej cyfry kontrolnej. Tę strukturę potwierdza
+[definicja GUS](https://stat.gov.pl/metainformacje/slownik-pojec/pojecia-stosowane-w-statystyce-publicznej/2963%2Cpojecie.html?pdf=1).
+Wagi checksum są testowane osobno dla obu długości. Pole `Variant` ma domyślną
+wartość `NIP`, więc konfiguracje utworzone przed dodaniem REGON zachowują
+dotychczasowe działanie.
+
+### NationalIdentifier 1.0.0: PESEL i bezpieczny SSN
+
+`NationalIdentifier` generuje pojedynczą wartość dla roli `Person.NationalId`.
+Profil określa locale, zakres dat urodzenia zapisany jako `yyyy-MM-dd`, płeć
+`Any`/`Female`/`Male`, seed i zachowanie `NULL`. Provider `pl-PL` obsługuje pełny
+zakres stuleci kodowanych przez PESEL, czyli lata 1800–2299.
+
+Pierwsze sześć cyfr koduje datę, cztery następne numer porządkowy i płeć, a
+ostatnia jest obliczana z wag `1, 3, 7, 9, 1, 3, 7, 9, 1, 3`. Reguły, parytet
+płci i przesunięcia miesiąca dla stuleci odpowiadają [opisowi gov.pl](https://www.gov.pl/web/gov/czym-jest-numer-pesel).
+Numer porządkowy jest mapowany bez powtórzeń; przy jednej dacie dostępne jest
+10 000 wartości dla `Any` albo 5 000 dla wskazanej płci.
+
+Poprawny strukturalnie PESEL może należeć do rzeczywistej osoby, dlatego wynik
+wolno stosować wyłącznie w odłączonej kopii i nie należy używać go do zapytań
+urzędowych. Domyślnie generator dobiera datę oraz płeć wewnętrznie. Opcjonalne
+`BirthDateColumn` i `GenderColumn` pozwalają jednak czytać je z bieżącego wiersza,
+osobno wskazując `Original` albo `Generated`; wymagania uczestniczą wtedy w grafie
+plannera. Wartości płci są mapowane przez konfigurowalne listy żeńskie i męskie.
+Sesja utrzymuje osobny licznik dla każdej pary data+płeć, dzięki czemu powtarzająca
+się data nie powoduje kolizji przed wyczerpaniem 5 000 numerów danej płci.
+
+Provider `en-US` generuje wyłącznie wartości w formacie `000-xx-xxxx`. Prefiks
+`000` nie jest przydzielany: SSA zaleca go do przykładów, aby nie pokazać
+przypadkiem prawdziwego SSN. Daje to milion unikalnych, deterministycznych
+wartości. Data i płeć mogą nadal uczestniczyć w konfiguracji wiersza, ale nie
+dzielą przestrzeni numerów na osobne liczniki, ponieważ SSN ich nie koduje.
+
+To celowy kompromis bezpieczeństwa: walidator wymagający numeru możliwego do
+przydzielenia odrzuci prefiks `000`. Generator nie próbuje obchodzić takiej
+walidacji przez tworzenie numerów, które mogłyby należeć do rzeczywistych osób.
+Format 3-2-4 odpowiada opisowi SSA, a zasada nieprzydzielonego prefiksu `000`
+pochodzi z [instrukcji SSA](https://secure.ssa.gov/apps10/poms.nsf/links/0110201020).
+
+### BirthDate 1.0.0
+
+`BirthDate` jest jednowyjściowym generatorem `Row` dla roli `Person.BirthDate`.
+Profil określa minimalną i maksymalną datę w formacie `yyyy-MM-dd`, seed oraz
+zachowanie pozycji `NULL`. Wynik jest wartością `DateOnly`; descriptor dopuszcza
+kolumny `Date` i `DateTime`.
+
+Oddzielny generator zachowuje poprawne typowanie: `PersonIdentity` ma tekstowe
+wyjścia, natomiast data nie jest do niego dokładana jako wyjątek. Kolumna
+wygenerowana przez `BirthDate` może zostać wskazana w `NationalIdentifier` jako
+`BirthDateColumn` ze źródłem `Generated`, dzięki czemu planner ustawi kolejność,
+a PESEL zakoduje dokładnie tę samą datę.
+
+### Gender 1.0.0
+
+`Gender` generuje pojedynczą tekstową wartość dla roli `Person.Gender`. Profil
+zawiera osobne wartości żeńską i męską, całkowity udział żeński od 0 do 100,
+seed oraz zachowanie `NULL`. Pozwala to dopasować wynik do konwencji konkretnej
+bazy, np. `Female`/`Male`, `K`/`M` albo `F`/`M`.
+
+`NationalIdentifier` może czytać tę kolumnę jako `GenderColumn` ze źródłem
+`Generated`. Wspólnie z `BirthDate` tworzy to trzy kroki, które planner układa
+w kolejności data+płeć, a następnie zależny PESEL. Mapowania wartości pozostają
+w profilu identyfikatora, więc generator płci nie zależy od formatu PESEL.
+
+### Pierwszy generator Row: PersonIdentity 1.2.0
 
 `PersonIdentity` wykonuje jedno atomowe wywołanie dla wiersza i może wystawić
-wyjścia `FirstName`, `LastName`, `Gender` oraz `Email`. Binding decyduje, które
-z nich trafią do kolumn. E-mail jest budowany z wartości wygenerowanych w tym
-samym wywołaniu, więc nie zależy od kolejności kolumn.
+wyjścia `FirstName`, `LastName`, `FullName`, `Gender` oraz `Email`. Binding
+decyduje, które z nich trafią do kolumn. Pełna nazwa i e-mail są budowane z
+wartości wygenerowanych w tym samym wywołaniu, więc nie zależą od kolejności
+kolumn.
 
-Konfiguracja należąca do generatora zawiera `Seed`, `Locale`, `EmailPattern` i
-`EmailDomain`. Dostępne są na razie schematy:
+Konfiguracja należąca do generatora zawiera `Seed`, `Locale`, `FullNamePattern`,
+`EmailPattern` i `EmailDomain`. `FullNamePattern` wybiera kolejność
+`FirstNameLastName` albo `LastNameFirstName`. Dostępne schematy e-mail to:
 
 - `NameBased`: znormalizowane imię, nazwisko i licznik zapewniający unikalność;
 - `Opaque`: sztuczny identyfikator bez imienia i nazwiska.
@@ -260,10 +542,42 @@ Domyślna domena `example.invalid` jest zastrzeżona do przykładów i nie prowa
 do prawdziwej skrzynki. Pakiet `pl-PL` odpowiada za pary męskich/żeńskich form
 nazwisk oraz transliterację polskich znaków w local-part e-maila.
 
-Aktualny pakiet zawiera mały, równomiernie losowany zestaw startowy. Nie należy
-traktować go jako modelu rozkładu polskiej populacji. Docelowy pakiet danych
-powinien zawierać wersjonowane częstotliwości wraz z pochodzeniem danych i
-testami jakości. Generator nie tworzy jeszcze PESEL ani NIP.
+Pakiet `en-US` udostępnia osobne listy imion żeńskich i męskich oraz wspólną
+listę nazwisk. Normalizacja local-part usuwa znaki diakrytyczne i interpunkcję,
+więc np. `José O'Connor` staje się `joseoconnor`. Oba pakiety są wybierane przez
+to samo pole `Locale` bez rozgałęzień regionalnych w samym generatorze.
+
+Pakiety regionalne 1.1.0 losują imiona i nazwiska według częstotliwości z małych,
+wersjonowanych wycinków oficjalnych zbiorów. Są to nadal listy czołowych pozycji,
+więc celowo nadreprezentują popularne wartości; polskie i amerykańskie imiona
+opisują też inne okresy i populacje. Wersje, ograniczenia i źródła są podane w
+[dokumentacji danych regionalnych](pl/regional-data.md). Generator nie tworzy
+jeszcze PESEL ani NIP.
+
+### PostalAddress 1.0.0
+
+`PostalAddress` jest generatorem `Row` z opcjonalnymi wyjściami `Country`,
+`Region`, `City`, `Street` i `PostalCode`. Provider regionalny najpierw wybiera
+rekord lokalizacji, który wiąże region, miasto i kod pocztowy, a następnie ulicę
+i numer domu. Dzięki temu operator może związać dowolny podzbiór kolumn, ale kod
+nie powstaje niezależnie od miasta w tym samym wierszu.
+
+Pierwsze providery `pl-PL` i `en-US` mają małe, równomierne zestawy startowe.
+Kody są przypisane do miasta; zestaw nie gwarantuje jeszcze zgodności kodu z
+konkretnym numerem budynku ani reprezentatywnego rozkładu geograficznego. Pełne
+dane powinny później trafić do wersjonowanych zasobów pakietu językowego.
+
+### CompanyName 1.0.0
+
+`CompanyName` generuje pojedynczy tekst dla roli `Company.Name`. Provider
+`pl-PL` albo `en-US` składa regionalnie brzmiący rdzeń, określenie branży oraz
+opcjonalną formę prawną. Licznik sesji zapewnia unikalność, a seed powtarzalność.
+
+Każdy profil musi zawierać widoczny `SyntheticMarker` (domyślnie `TEST`), który
+jest częścią każdej nazwy obok sześciocyfrowego licznika. To świadomy bezpiecznik:
+nawet jeśli losowe człony przypominają istniejącą firmę, wynik pozostaje jawnie
+syntetyczny. Marker można dopasować do konwencji testowanej organizacji, ale nie
+można go wyłączyć.
 
 ## Słowniki kandydatów
 
@@ -271,6 +585,42 @@ Pierwszy zakres językowy to angielski (`en`) i polski (`pl`). Kolejne języki
 powinny być oddzielnymi, opcjonalnymi pakietami danych korzystającymi z tego
 samego kontraktu; nie dokładamy ich do rdzenia bez osoby zdolnej zweryfikować
 znaczenie i fałszywe dopasowania.
+
+Kontrakt DLL `ILanguagePack` udostępnia stabilny deskryptor (`Id`, nazwa, wersja,
+locale), listę publicznych typów providerów oraz gotowe, wersjonowane profile
+generatorów. `LanguagePackCatalog` waliduje
+unikalność identyfikatorów i tworzy wyłącznie providery zgodne z kontraktem
+żądanym przez konsumenta. Wbudowane pakiety English i Polish używają dokładnie
+tej samej ścieżki co przyszłe biblioteki instalowane. Provider musi być publiczną,
+konkretną klasą z bezparametrowym konstruktorem. Ładowanie obcej biblioteki jest
+wykonaniem jej kodu, dlatego instalacja musi pozostać jawną operacją operatora i
+nie może automatycznie pobierać DLL z sieci.
+
+Edytor udostępnia `Generators -> Language packs`. Instalacja kopiuje wybraną,
+lokalną DLL do `%LocalAppData%\Anonymyzer\LanguagePacks`; katalog nie pobiera
+pakietów ani zależności z sieci. Stan enabled/disabled jest ustawieniem aplikacji,
+nie dokumentu anonimizacji. Zmiana wymaga restartu, ponieważ sesje generatorów i
+detektor kandydatów dostają niezmienny zestaw providerów przy uruchomieniu.
+Wyłączenie pakietu nie usuwa profili ani ręcznych ustawień z otwartego JSON-a;
+użycie profilu wymagającego nieaktywnego locale zakończy się błędem walidacji.
+Zewnętrzna biblioteka powinna być samowystarczalna poza kontraktami dostarczanymi
+razem z aplikacją.
+
+Zainstalowaną bibliotekę można oznaczyć do usunięcia. Edytor natychmiast usuwa ją
+z listy przyszłych aktywnych pakietów, ale sam plik kasuje dopiero na początku
+następnego procesu, zanim DLL zostanie załadowana. Pozwala to bezpiecznie wykonać
+upgrade: oznaczyć starą wersję do usunięcia, zainstalować DLL z nowym numerem
+wersji i zrestartować aplikację. Wbudowane pakiety nie mają pliku instalacyjnego,
+więc można je tylko wyłączyć.
+
+Profile `pl-PL` zachowują historyczne identyfikatory `GeneratorType:Default`.
+Profile `en-US` używają `GeneratorType:en-US:Default`, dzięki czemu oba zestawy
+mogą współistnieć. Pochodzenie ma postać `Language pack: Nazwa Wersja`. Merge
+rozpoznaje również starsze profile wbudowane, w których locale znajdowało się
+tylko wewnątrz `Options`, i migruje je bez tworzenia trzeciej kopii. Edytor przy
+otwarciu pliku i po edycji profili zgłasza profile wymagające locale, którego nie
+udostępnia żaden aktywny pakiet. CLI i nowy dokument generują profile wyłącznie z
+aktywnych/wbudowanych pakietów oraz neutralne profile generatorów nieregionalnych.
 
 Słownik służy do wykrywania kandydatów, a nie do automatycznego włączania
 anonimizacji. Wynik powinien zawierać kategorię semantyczną, język, dopasowaną
@@ -290,16 +640,16 @@ regułę, proponowany generator i score. Konfiguracja wynikowa nadal ma
 
 | Kategoria | Angielskie kandydaty | Polskie kandydaty |
 | --- | --- | --- |
-| Imię | `first_name`, `firstname`, `given_name`, `forename` | `imie`, `imię`, `pierwsze_imie` |
+| Imię | `first_name`, `firstname`, `given_name`, `forename`, `preferred_name` | `imie`, `imię`, `pierwsze_imie` |
 | Nazwisko | `last_name`, `lastname`, `surname`, `family_name` | `nazwisko`, `nazwisko_rodowe` |
 | Pełna nazwa osoby | `full_name`, `display_name`, `contact_name` | `pelne_imie`, `pełne_imie`, `nazwa_kontaktu` |
 | E-mail | `email`, `email_address`, `e_mail`, `mail` | `email`, `e_mail`, `adres_email` |
 | Telefon | `phone`, `phone_number`, `mobile`, `telephone` | `telefon`, `nr_telefonu`, `numer_telefonu`, `komorka`, `komórka` |
 | Adres | `address`, `street`, `city`, `postal_code`, `zip_code` | `adres`, `ulica`, `miasto`, `kod_pocztowy` |
-| Login | `login`, `username`, `user_name`, `screen_name` | `login`, `nazwa_uzytkownika`, `nazwa_użytkownika` |
+| Login | `login`, `username`, `user_name`, `logon_name`, `screen_name` | `login`, `nazwa_uzytkownika`, `nazwa_użytkownika` |
 | Data urodzenia | `birth_date`, `date_of_birth`, `dob` | `data_urodzenia`, `urodzony`, `urodzona` |
 | Identyfikator osoby/podatkowy | `ssn`, `tax_id`, `national_id`, `identity_number` | `pesel`, `nip`, `regon`, `nr_dowodu`, `numer_dowodu` |
-| Konto bankowe | `iban`, `bank_account`, `account_number` | `iban`, `rachunek_bankowy`, `numer_konta` |
+| Konto bankowe | `iban`, `bank_account` | `iban`, `rachunek_bankowy`, `numer_konta` |
 
 Lista jest zalążkiem do testów i strojenia, nie zamkniętym słownikiem. Należy
 uwzględnić także prefiksy/sufiksy techniczne (`customer_email`, `billing_city`)
@@ -310,9 +660,11 @@ Pierwszy zestaw jest zaimplementowany jako dwa niezależne providery reguł.
 Wspólny detektor usuwa diakrytykę, rozpoznaje skróty w `PascalCase`, dopasowuje
 pełne sekwencje tokenów i obniża score dla prefiksów technicznych. Tokeny takie
 jak `enabled`, `required`, `type`, `status` i `flag` odrzucają dopasowanie.
-Reguła ogólnego angielskiego `address` została celowo zastąpiona formami
-`street_address`, `mailing_address` i `postal_address`, ponieważ na realnym
-schemacie myliła adres pocztowy z adresem strony, sieci i nadawcy e-maila.
+Reguła ogólnego angielskiego `address` odrzuca techniczne konteksty, takie jak
+`website`, `network`, `ip`, `mac` i `memory`. Provider może dostarczyć własne
+tokeny wykluczające także dla innych niejednoznacznych reguł. Przykładowo
+`bank_account` nie klasyfikuje pól zakończonych `Branch`, `Code` ani `Name`, a
+ogólne `account_number` nie jest uznawane za rachunek bankowy.
 
 Generator konfiguracji pobiera wszystkie kolumny niebędące PK i klasyfikuje je
 do przenośnych kategorii: tekst, liczba całkowita/dziesiętna, boolean, data/czas,

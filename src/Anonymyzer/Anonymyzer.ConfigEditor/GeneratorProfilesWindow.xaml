@@ -32,6 +32,7 @@
                 <DataGridTextColumn Header="Generator type" Binding="{Binding GeneratorType}" Width="1.1*" />
                 <DataGridTextColumn Header="Version" Binding="{Binding GeneratorVersion}" Width="80" />
                 <DataGridTextColumn Header="Locale" Binding="{Binding Locale}" Width="90" />
+                <DataGridTextColumn Header="Origin" Binding="{Binding Origin}" IsReadOnly="True" Width="110" />
                 <DataGridTextColumn Header="Options JSON" Binding="{Binding OptionsJson}" Width="2*" />
             </DataGrid.Columns>
         </DataGrid>

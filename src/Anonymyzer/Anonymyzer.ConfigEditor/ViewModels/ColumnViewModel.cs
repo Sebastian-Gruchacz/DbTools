@@ -35,6 +35,29 @@ internal sealed class ColumnViewModel : INotifyPropertyChanged
     public string CandidateDetails => _model.Detection.IsCandidate
         ? $"{_model.Detection.SuggestedRole} ({_model.Detection.Confidence:P0}, {_model.Detection.MatchedRule})"
         : "No automatic candidate match.";
+    public string ManualMark => Overrides.HasAny ? "◆" : string.Empty;
+    public string SchemaWarningMark => string.Equals(_model.SchemaStatus, "Missing", StringComparison.OrdinalIgnoreCase)
+        ? "⚠"
+        : string.Empty;
+    public string SchemaWarningDetails => string.IsNullOrEmpty(SchemaWarningMark)
+        ? "Present in the latest database scan."
+        : "Not found during the latest database rescan. The saved configuration was retained and must be reviewed.";
+    public string ManualDetails
+    {
+        get
+        {
+            string[] choices =
+            [
+                .. (Overrides.Enabled ? ["anonymize flag"] : Array.Empty<string>()),
+                .. (Overrides.SemanticRole ? ["semantic role"] : Array.Empty<string>()),
+                .. (Overrides.Generator ? ["generator/profile"] : Array.Empty<string>()),
+                .. (Overrides.GenerationGroup ? ["generation group"] : Array.Empty<string>())
+            ];
+            return choices.Length == 0
+                ? "No choices explicitly changed by the operator."
+                : $"Operator choices: {string.Join(", ", choices)}.";
+        }
+    }
     public string Sample
     {
         get => _sample;
@@ -63,7 +86,9 @@ internal sealed class ColumnViewModel : INotifyPropertyChanged
             }
 
             _model.Enabled = value;
+            Overrides.Enabled = true;
             OnPropertyChanged();
+            NotifyManualOverrideChanged();
             OnConfigurationChanged();
         }
     }
@@ -84,8 +109,10 @@ internal sealed class ColumnViewModel : INotifyPropertyChanged
         }
 
         _model.SemanticRole = option.Value;
+        Overrides.SemanticRole = true;
         OnPropertyChanged(nameof(SemanticRoleDisplay));
         OnPropertyChanged(nameof(SemanticRoleValue));
+        NotifyManualOverrideChanged();
         OnConfigurationChanged();
     }
 
@@ -101,7 +128,9 @@ internal sealed class ColumnViewModel : INotifyPropertyChanged
             }
 
             _model.GenerationGroupId = groupId;
+            Overrides.GenerationGroup = true;
             OnPropertyChanged();
+            NotifyManualOverrideChanged();
             OnConfigurationChanged();
         }
     }
@@ -118,6 +147,7 @@ internal sealed class ColumnViewModel : INotifyPropertyChanged
             }
 
             _model.Generator.GeneratorType = generatorType;
+            Overrides.Generator = true;
             GeneratorProfileConfiguration? profile = FindProfile(_model.Generator.ProfileId);
             if (profile is not null && !profile.GeneratorType.Equals(generatorType, StringComparison.OrdinalIgnoreCase))
             {
@@ -127,6 +157,7 @@ internal sealed class ColumnViewModel : INotifyPropertyChanged
             }
 
             OnPropertyChanged();
+            NotifyManualOverrideChanged();
             OnConfigurationChanged();
         }
     }
@@ -143,6 +174,7 @@ internal sealed class ColumnViewModel : INotifyPropertyChanged
             }
 
             _model.Generator.ProfileId = profileId;
+            Overrides.Generator = true;
             GeneratorProfileConfiguration? profile = FindProfile(profileId);
             if (profile is not null)
             {
@@ -152,6 +184,7 @@ internal sealed class ColumnViewModel : INotifyPropertyChanged
             }
 
             OnPropertyChanged();
+            NotifyManualOverrideChanged();
             OnConfigurationChanged();
         }
     }
@@ -159,6 +192,14 @@ internal sealed class ColumnViewModel : INotifyPropertyChanged
     private GeneratorProfileConfiguration? FindProfile(string profileId)
     {
         return _profiles.FirstOrDefault(profile => profile.Id.Equals(profileId, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private ColumnOperatorOverrides Overrides => _model.OperatorOverrides ??= new ColumnOperatorOverrides();
+
+    private void NotifyManualOverrideChanged()
+    {
+        OnPropertyChanged(nameof(ManualMark));
+        OnPropertyChanged(nameof(ManualDetails));
     }
 
     private (SemanticRoleGroup Group, SemanticRoleOption Option)? FindSemanticRole(string value)

@@ -1,0 +1,53 @@
+﻿<UserControl x:Class="Anonymyzer.Generators.Simple.Wpf.ReferencePseudonymGeneratorEditor"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <Grid Margin="16">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="150" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <TextBlock Grid.Row="0" Grid.ColumnSpan="2" Margin="0,0,0,14" TextWrapping="Wrap"
+                       Text="Creates the same deterministic text for every row with the same reference key. The lookup table is read only and its key is verified before the target table is changed." />
+            <TextBlock Grid.Row="1" VerticalAlignment="Center" Text="Reference column:" />
+            <ComboBox x:Name="ReferenceColumnComboBox" Grid.Row="1" Grid.Column="1" Margin="0,2"
+                      IsEditable="True" IsTextSearchEnabled="True"
+                      SelectionChanged="ReferenceColumn_SelectionChanged" />
+            <TextBlock Grid.Row="2" VerticalAlignment="Center" Text="Lookup schema:" />
+            <ComboBox x:Name="LookupSchemaComboBox" Grid.Row="2" Grid.Column="1" Margin="0,2"
+                      IsEditable="True" IsTextSearchEnabled="True" SelectionChanged="LookupSchema_SelectionChanged" />
+            <TextBlock Grid.Row="3" VerticalAlignment="Center" Text="Lookup table:" />
+            <ComboBox x:Name="LookupTableComboBox" Grid.Row="3" Grid.Column="1" Margin="0,2"
+                      IsEditable="True" IsTextSearchEnabled="True" SelectionChanged="LookupTable_SelectionChanged" />
+            <TextBlock Grid.Row="4" VerticalAlignment="Center" Text="Lookup key column:" />
+            <ComboBox x:Name="LookupKeyColumnComboBox" Grid.Row="4" Grid.Column="1" Margin="0,2"
+                      IsEditable="True" IsTextSearchEnabled="True" />
+            <TextBlock Grid.Row="5" VerticalAlignment="Center" Text="Output prefix:" />
+            <TextBox x:Name="PrefixTextBox" Grid.Row="5" Grid.Column="1" Margin="0,2" />
+            <TextBlock Grid.Row="6" VerticalAlignment="Center" Text="Key environment variable:" />
+            <TextBox x:Name="KeyEnvironmentVariableTextBox" Grid.Row="6" Grid.Column="1" Margin="0,2" />
+            <TextBlock Grid.Row="7" VerticalAlignment="Center" Text="Hash length:" />
+            <TextBox x:Name="HashLengthTextBox" Grid.Row="7" Grid.Column="1" Margin="0,2" />
+            <TextBlock Grid.Row="8" VerticalAlignment="Center" Text="Memory limit (bytes):" />
+            <TextBox x:Name="MaximumInMemoryBytesTextBox" Grid.Row="8" Grid.Column="1" Margin="0,2" />
+            <TextBlock Grid.Row="9" VerticalAlignment="Center" Text="Overflow strategy:" />
+            <ComboBox x:Name="OverflowStrategyComboBox" Grid.Row="9" Grid.Column="1" Margin="0,2" />
+            <CheckBox x:Name="PreserveNullsCheckBox" Grid.Row="10" Grid.ColumnSpan="2" Margin="0,10,0,0"
+                      Content="Preserve null references" />
+        </Grid>
+    </ScrollViewer>
+</UserControl>

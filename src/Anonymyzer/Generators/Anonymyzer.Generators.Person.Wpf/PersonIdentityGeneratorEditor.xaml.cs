@@ -15,9 +15,12 @@ public partial class PersonIdentityGeneratorEditor : UserControl, IGeneratorConf
         InitializeComponent();
 
         var configuration = (PersonIdentityGeneratorConfiguration)_codec.Deserialize(options);
+        LocaleComboBox.ItemsSource = new[] { "pl-PL", "en-US" };
+        FullNamePatternComboBox.ItemsSource = Enum.GetValues<PersonFullNamePattern>();
         EmailPatternComboBox.ItemsSource = Enum.GetValues<PersonEmailPattern>();
         SeedTextBox.Text = configuration.Seed.ToString(CultureInfo.InvariantCulture);
-        LocaleTextBox.Text = configuration.Locale;
+        LocaleComboBox.Text = configuration.Locale;
+        FullNamePatternComboBox.SelectedItem = configuration.FullNamePattern;
         EmailPatternComboBox.SelectedItem = configuration.EmailPattern;
         EmailDomainTextBox.Text = configuration.EmailDomain;
     }
@@ -67,10 +70,17 @@ public partial class PersonIdentityGeneratorEditor : UserControl, IGeneratorConf
             emailPattern = PersonEmailPattern.NameBased;
         }
 
+        if (FullNamePatternComboBox.SelectedItem is not PersonFullNamePattern fullNamePattern)
+        {
+            errors.Add("Full-name pattern is required.");
+            fullNamePattern = PersonFullNamePattern.FirstNameLastName;
+        }
+
         configuration = new PersonIdentityGeneratorConfiguration
         {
             Seed = seed,
-            Locale = LocaleTextBox.Text.Trim(),
+            Locale = LocaleComboBox.Text.Trim(),
+            FullNamePattern = fullNamePattern,
             EmailPattern = emailPattern,
             EmailDomain = EmailDomainTextBox.Text.Trim()
         };

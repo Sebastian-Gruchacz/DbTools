@@ -92,20 +92,27 @@ językowe opisuje [docs/anonymyzer-design.md](docs/anonymyzer-design.md).
 
 ### Architektura
 
-- `Anonymyzer.Base` — kontrakty silnika, metadanych oraz sesji generatorów
+- `Anonymyzer.Base` — kontrakty silnika, metadanych, sesji generatorów oraz
+  wersjonowanych pakietów językowych
   `Row`/`Column`/`Relational`;
 - `Anonymyzer.Configuration` — współdzielony, niesekretny model konfiguracji;
 - `Anonymyzer.SqlServer` — połączenia i odczyt tabel, kolumn tekstowych oraz PK;
 - `Anonymyzer.PostgreSql` — analogiczny provider oparty na Npgsql i
   `information_schema`;
 - `Anonymyzer.PostgreSql.Tests` — testy buildera i opcjonalna integracja z bazą;
-- `Anonymyzer.Generators.Simple` — `TextShuffler`, `FixedText`, `SequentialText`
-  i `EmailAddress`;
-- `Anonymyzer.Generators.Person` — generator spójnej tożsamości w jednym wierszu;
+- `Anonymyzer.Generators.Simple` — `TextShuffler`, `FixedText`, `SequentialText`,
+  `EmailAddress`, `AccountLogin`, `PhoneNumber`, `Uuid`, `CompanyName`,
+  `TaxIdentifier`, `BankAccount` i `ReferencePseudonym`;
+- `Anonymyzer.Generators.Person` — generatory spójnej tożsamości oraz krajowego
+  identyfikatora osoby;
+- `Anonymyzer.Generators.Address` — grupowy generator spójnego adresu pocztowego;
 - `Anonymyzer.ConfigEditor.Abstractions` — kontrakt opcjonalnych paneli WPF;
 - `Anonymyzer.Generators.Simple.Wpf` — panele konfiguracji generatorów prostych;
-- `Anonymyzer.Generators.Person.Wpf` — panel konfiguracji `PersonIdentity` 1.0.0;
+- `Anonymyzer.Generators.Person.Wpf` — panel konfiguracji `PersonIdentity` 1.2.0;
+- `Anonymyzer.Generators.Address.Wpf` — panel konfiguracji `PostalAddress` 1.0.0;
 - `Anonymyzer.LanguagePack.Polish` — dane i reguły regionalne `pl-PL`;
+- `Anonymyzer.LanguagePack.English` — reguły `en-US` oraz bezpieczne numery
+  telefonów i SSN;
 - `Anonymyzer.ConfigEditor` — edytor konfiguracji WPF;
 - `Anonymyzer.Console` — DI, generowanie konfiguracji i przyszłe wykonanie.
 
@@ -116,8 +123,8 @@ językowe opisuje [docs/anonymyzer-design.md](docs/anonymyzer-design.md).
 - generowanie pliku JSON z domyślnie wyłączonymi tabelami i kolumnami;
 - rejestracja generatorów i eksport ich domyślnej konfiguracji;
 - model konfiguracji `0.4.0`: marker odłączonej kopii, role semantyczne,
-  wykryci kandydaci, profile
-  generatorów oraz grupy wiążące kilka kolumn;
+  wykryci kandydaci, profile generatorów, niesekretne nazwy kolumn PK/FK oraz
+  grupy wiążące kilka kolumn;
 - edytor WPF: New/Open/Save/Save As, wybór tabeli, grid kolumn, dwupoziomowe
   menu ról semantycznych, edycja profili oraz grup wielokolumnowych z mapowaniem
   wyjść generatora na kolumny;
@@ -126,26 +133,96 @@ językowe opisuje [docs/anonymyzer-design.md](docs/anonymyzer-design.md).
 - wersjonowany kontrakt generatora: własny codec JSON, walidacja, deklaracja
   wymagań danych, przygotowanie stanu i sesja wykonawcza;
 - `TextShuffler` 1.0.0: deterministyczna permutacja całej kolumny zachowująca
-  dokładny multizbiór wartości oraz opcjonalnie pozycje `NULL`;
+  dokładny multizbiór wartości oraz opcjonalnie pozycje `NULL`; profil określa
+  limit pamięci i zachowanie `Fail` albo `EncryptedTemporaryFiles`;
+- `ReferencePseudonym` 1.0.0: pierwszy wykonywalny generator `Relational`; pełnym
+  skanem tylko do odczytu ładuje klucze wskazanej tabeli lookup, sprawdza każdą
+  referencję w tabeli docelowej i generuje spójny pseudonim HMAC. Klucz HMAC nie
+  trafia do JSON-a — profil przechowuje wyłącznie nazwę zmiennej środowiskowej;
+  mapa lookup ma konfigurowalny limit pamięci oraz strategię `Fail` albo
+  `EncryptedTemporaryIndex`; spill przechowuje wyłącznie zaszyfrowane skróty,
+  nigdy surowe klucze;
 - `FixedText` 1.0.0: stała wartość tekstowa z opcjonalnym zachowaniem `NULL`;
+- `JsonPathRedactor` 1.0.0: selektywna zamiana wartości pod ścieżkami JSON
+  w kolumnach tekstowych oraz natywnych PostgreSQL `json/jsonb`, bez ujawniania
+  błędnej wartości źródłowej w komunikacie;
 - `SequentialText` 1.0.0: unikalny w ramach sesji tekst z prefiksem, sufiksem,
   początkiem numeracji i konfigurowalnym dopełnieniem zerami;
 - `EmailAddress` 1.0.0: tryb opaque albo adres oparty na kolumnach imienia i
   nazwiska, z zależnością od ich wartości oryginalnych lub wygenerowanych;
-- dedykowane panele WPF parametrów wszystkich czterech generatorów prostych;
+- `AccountLogin` 1.0.0: unikalny login opaque albo złożony z kolumn imienia i
+  nazwiska, również ze źródłem `Original`/`Generated`;
+- `PhoneNumber` 1.0.0: deterministyczne formaty `pl-PL` i `en-US`, krajowe albo
+  międzynarodowe; wariant amerykański korzysta z zastrzeżonego zakresu 555-0100–0199;
+- `Uuid` 1.0.0: deterministyczne tekstowe UUID w formacie hyphenated, compact,
+  braced albo parenthesized, z wyborem wielkości liter;
+- `CompanyName` 1.0.0: unikalne w sesji nazwy `pl-PL`/`en-US` z obowiązkowym
+  markerem syntetycznym i opcjonalną lokalną formą prawną;
+- `TaxIdentifier` 1.0.0: polskie NIP-y oraz REGON 9/14 z poprawnymi cyframi
+  kontrolnymi i bez powtórzeń; brak `Variant` w starszym JSON-ie oznacza NIP;
+- `BankAccount` 1.0.0: polski IBAN lub NRB z poprawną sumą modulo 97,
+  deterministyczną numeracją i zerowym, celowo nieroutowalnym segmentem banku;
+- dedykowane panele WPF parametrów wszystkich wbudowanych generatorów prostych;
+- merge profili przy otwieraniu starszej konfiguracji: profile z pliku pozostają
+  bez zmian, bieżące profile wbudowane są dodawane pod unikalnymi identyfikatorami,
+  a kolumna `Origin` pokazuje ich pochodzenie;
 - rozwijane `Profiles → Add` tworzące kompletny profil domyślny wybranego
   generatora także w starszej konfiguracji;
-- `PersonIdentity` 1.0.0 w zakresie `Row`: spójne imię, nazwisko, rodzaj i e-mail
-  na podstawie pakietu `pl-PL`, bez dodatkowego skanu bazy;
+- `PersonIdentity` 1.2.0 w zakresie `Row`: spójne imię, nazwisko, pełna nazwa,
+  rodzaj i e-mail na podstawie pakietu `pl-PL` albo `en-US`, bez dodatkowego
+  skanu bazy; pełna nazwa obsługuje kolejność imię–nazwisko lub nazwisko–imię;
+- `BirthDate` 1.0.0: deterministyczna data z konfigurowalnego zakresu dla kolumn
+  `Date` i `DateTime`, gotowa jako zależność `Generated` dla identyfikatora;
+- `Gender` 1.0.0: konfigurowalne wartości żeńska/męska, proporcja i seed, gotowe
+  jako druga zależność `Generated` dla identyfikatora;
+- `NationalIdentifier` 1.0.0: polski PESEL z prawidłową datą, płcią i checksum
+  albo bezpiecznie nieprzydzielony amerykański SSN z prefiksem `000`; generator
+  obsługuje konfigurowalny zakres dat i seed oraz jawne zależności od kolumn daty
+  urodzenia i płci (`Original`/`Generated`);
+- `PostalAddress` 1.0.0: atomowo generowane kraj, region, miasto, ulica i kod
+  pocztowy dla `pl-PL` albo `en-US`; kod jest wybierany razem z miastem, a nie
+  losowany niezależnie;
 - dwa schematy e-mail: oparty na imieniu i nazwisku oraz opaque; domyślna domena
   `example.invalid` jest celowo niedostarczalna;
 - dedykowany panel WPF konfiguracji `PersonIdentity`;
 - bezpieczny podgląd generatorów `Row`, także przypisanych bezpośrednio do jednej
-  kolumny, wykonywany w pamięci bez połączenia z bazą;
+  kolumny; generatory syntetyczne działają bez połączenia, a `JsonPathRedactor`
+  pobiera wyłącznie małą próbkę po ponownej walidacji klona;
+- podgląd bezpośrednio przypisanego `TextShuffler`: 2–50 wierszy odczytywanych
+  tylko z ponownie zwalidowanego klona, po czym prawdziwa sesja generatora działa
+  wyłącznie w pamięci; wartości są ograniczone do 32 768 znaków, a connection
+  string pochodzi ze zmiennej środowiskowej;
+- podgląd bezpośrednio przypisanego `ReferencePseudonym`: do 50 rzeczywistych
+  kluczy z tabeli lookup jest odczytywanych z ponownie zwalidowanego klona, a
+  panel pokazuje wyłącznie wygenerowane pseudonimy; lista konfiguracji profilu
+  podpowiada schematy, tabele, kolumny oraz klucze główne zapisane w otwartym
+  dokumencie, a rzeczywiste jednokolumnowe relacje FK umieszcza przed pozostałymi
+  możliwościami i wybiera automatycznie, gdy dopasowanie jest jednoznaczne;
+- podgląd `JsonPathRedactor` na kompletnych, nieobciętych wartościach z tej samej
+  bezpiecznej ścieżki próbkowania; dokumenty są zmieniane wyłącznie w pamięci;
 - niemodalne, tylko-odczytowe okna wartości `non-null` dla dowolnej kolumny z
   konfiguracji: limit 1–50, wiele okien naraz, kopiowanie i ponowna walidacja
   nazwy oraz markera klona przed każdym odczytem;
 - prezentacja tekstowego typu kolumny wraz z długością albo `MAX`;
+- menu `Help` z legendą oznaczeń tabel i kolumn, dokumentacją oraz oknem `About`
+  pokazującym wersję, autora i odnośniki do projektu oraz zgłoszeń;
+- trwałe flagi `OperatorOverrides` dla ręcznej zmiany włączenia kolumny, roli,
+  generatora/profilu i grupy; niebieski `◆` wyróżnia takie kolumny oraz tabele;
+- wspólny kontrakt `ILanguagePack` i `LanguagePackCatalog`; wbudowane biblioteki
+  EN/PL deklarują metadane, typy providerów i gotowe profile generatorów, z
+  których korzystają zarówno CLI, generatory edytora, jak i analiza kandydatów;
+- `Generators -> Language packs` instaluje zaufaną lokalną DLL oraz pozwala
+  włączać i wyłączać także wbudowane pakiety EN/PL; biblioteki trafiają do
+  `%LocalAppData%\Anonymyzer\LanguagePacks`, a zmiany obowiązują po restarcie;
+- zainstalowany pakiet można zaplanować do bezpiecznego usunięcia przy następnym
+  starcie; wbudowane pakiety można wyłączyć, ale nie można ich skasować;
+- profile regionalne mają widoczne pochodzenie pakietu; edytor ostrzega przy
+  otwarciu lub edycji konfiguracji, jeśli profil wymaga wyłączonego locale;
+- niedestruktywny `File -> Rescan detached clone`, który ponownie waliduje nazwę
+  i marker klona, odświeża metadane oraz detekcję, dodaje nowe obiekty i zachowuje
+  decyzje operatora; niewidoczne już tabele i kolumny pozostają w pliku z czerwonym
+  oznaczeniem `⚠` do ręcznego przeglądu; rescan uzupełnia też `PrimaryKeyColumns`
+  i `ForeignKeys` w konfiguracjach utworzonych przez starszą wersję;
 - klasyfikacja typów SQL Server/PostgreSQL oraz kandydaci wykrywani po nazwie
   także dla pól liczbowych, np. PESEL, NIP i telefonów;
 - zgodność roli z typem oraz negatywne tokeny odrzucające m.in. booleanowe
@@ -153,7 +230,7 @@ językowe opisuje [docs/anonymyzer-design.md](docs/anonymyzer-design.md).
 - rozwijane `Add column`, które pokazuje ukryte kolumny zapisane podczas analizy,
   a na końcu pozwala po walidacji klona wczytać z bazy brakujące kolumny
   niebędące PK; dodane pola są domyślnie wyłączone;
-- CLI `generate-config` i `run --dry-run`, które pobiera connection string
+- CLI `generate-config`, `run --dry-run` i ograniczone `run --execute`, które pobierają connection string
   wyłącznie ze wskazanej zmiennej środowiskowej;
 - potrójna walidacja markera odłączonej kopii: argument operatora, konfiguracja
   i pojedynczy rekord w bazie muszą wskazywać ten sam identyfikator;
@@ -161,6 +238,8 @@ językowe opisuje [docs/anonymyzer-design.md](docs/anonymyzer-design.md).
   zakresy generatorów, mapowania wyjść, wymagane skany i batch po 1000 wierszy;
 - porównanie aktywnego planu z bieżącym schematem klona przed wykonaniem,
   wraz z estymacją liczby wierszy i górnego zużycia pamięci pełnych skanów;
+- ocena gotowości wycinka zapisu: dokładnie jedna tabela docelowa, jeden
+  niezmieniany PK oraz kontrolowane skany międzytabelowe tylko do odczytu;
 - deterministyczny detektor kandydatów EN/PL: `snake_case`, `camelCase`,
   prefiksy techniczne, polskie znaki, score i negatywne flagi; propozycje nigdy
   nie ustawiają `Enabled`;
@@ -171,16 +250,20 @@ językowe opisuje [docs/anonymyzer-design.md](docs/anonymyzer-design.md).
 
 ### Czego jeszcze nie ma
 
-- wykonania konfiguracji modyfikującego dane — `run` przyjmuje obecnie wyłącznie
-  `--dry-run` i kończy pracę po walidacji bezpieczeństwa oraz generatorów;
-- wykonawcy planu, który dostarczy generatorom strumienie danych i zapisze wynik
-  ich sesji do bazy;
-- pozostałych generatorów grupowych i angielskiego pakietu regionalnego;
-- podglądu generatorów `Column` i `Relational`, które wymagają odczytu danych
-  z odłączonego klona;
-- pełnych, ważonych zbiorów danych regionalnych oraz generatorów PESEL/NIP;
-- automatycznej analizy niestabilnych kolekcji, JSON, XML i tekstu swobodnego;
-- obsługi XML/JSON oraz zmian PK/FK;
+- zapisu do wielu tabel w jednym planie i relacyjnego mapowania zmienianych
+  PK/FK; `--execute` obsługuje jedną tabelę docelową oraz zewnętrzne pełne skany
+  oryginalnych wartości z tabel o pojedynczym PK;
+- checkpointów dla `Column`, generatorów zależnych od nadpisywanej wartości oraz
+  planów wielotabelowych; można wznawiać bezpieczne plany `Row` oraz
+  `ReferencePseudonym` czytający niezmienianą tabelę lookup;
+- pełnej walidacji indeksów, triggerów i constraintów spoza aktywnej tabeli;
+- pozostałych generatorów grupowych;
+- podglądu generatorów `Relational` innych niż `ReferencePseudonym` oraz
+  przyszłych generatorów `Column` wymagających wielu skanów lub przypisanych
+  przez grupę;
+- pełnych, ważonych zbiorów danych regionalnych;
+- automatycznej analizy semantyki niestabilnych kolekcji, XML i tekstu swobodnego;
+- obsługi XML oraz zmian PK/FK;
 - strategii wyłączania i odbudowy indeksów, constraintów i triggerów.
 
 Kod jest na .NET 10. SQL Server używa `Microsoft.Data.SqlClient` 7.0.2, a
@@ -216,6 +299,14 @@ dotnet run --project .\src\Anonymyzer\Anonymyzer.Console -- generate-config `
 dotnet run --project .\src\Anonymyzer\Anonymyzer.Console -- run `
   --config .\anonymyzer-config.json `
   --connection-env ANONYMYZER_CONNECTION --marker-id $marker --dry-run
+
+# Mutuje wyłącznie zwalidowany klon i tylko plan oznaczony przez dry-run jako ready:
+dotnet run --project .\src\Anonymyzer\Anonymyzer.Console -- run `
+  --config .\anonymyzer-config.json `
+  --connection-env ANONYMYZER_CONNECTION --marker-id $marker --execute `
+  --report .\anonymyzer-execution-report.json `
+  --checkpoint .\anonymyzer-execution.checkpoint.json `
+  --checkpoint-key-env ANONYMYZER_CHECKPOINT_KEY
 ```
 
 Obie komendy sprawdzają nazwę bazy i marker. `generate-config` tylko czyta
@@ -224,14 +315,46 @@ waliduje konfigurację, dokładne wersje generatorów i target, wypisuje kolejno
 kroków, mapowania, wymagane pełne skany i proponowany batch. Dodatkowo odrzuca
 zmiany schematu aktywnych kolumn oraz pokazuje szacowaną liczbę wierszy i pamięć
 pełnych skanów. Dla nieograniczonego `text` pamięć pozostaje jawnie nieznana.
-Komenda kończy bez zapisu danych. Wywołanie `run` bez `--dry-run` jest obecnie
-odrzucane.
+Komenda kończy bez zapisu danych. `--execute` wymaga jawnego trybu, ponawia te
+same walidacje, odrzuca plan bez statusu `write slice ready`, czyta wiersze
+keyset pagingiem po PK i zapisuje każdy batch w osobnej transakcji. Opcjonalny
+`--report` zapisuje atomowo raport JSON z fingerprintem konfiguracji, markerem,
+czasem, planem, liczbą zatwierdzonych batchy i wierszy oraz wynikiem walidacji
+po zapisie. Raport nie zawiera
+connection stringa, wartości rekordów ani ostatniego klucza. Wywołanie
+bez `--dry-run` i `--execute` albo z obiema flagami jest odrzucane.
+
+Przed zapisem CLI odmawia pracy, jeśli tabela już narusza constrainty. Po zapisie
+ponownie sprawdza marker i aktywny schemat, porównuje dokładne
+`COUNT(*)` sprzed i po wykonaniu oraz szuka naruszeń `CHECK` i FK tabeli docelowej.
+SQL Server używa `DBCC CHECKCONSTRAINTS`, a PostgreSQL wykonuje tylko zapytania
+odczytowe zbudowane z katalogów `pg_constraint`, wewnątrz transakcji `READ ONLY`.
+Nieudana walidacja daje kod
+błędu, raport ze statusem `ValidationFailed` i pozostawia checkpoint jako
+nieukończony; klon nie powinien wtedy zostać przekazany dalej.
+
+Opcjonalny `--checkpoint` działa dla deterministycznych planów `Row` oraz
+`ReferencePseudonym`, gdy jego pełny skan czyta wyłącznie niezmienianą tabelę
+lookup. Po każdym commicie zapisuje atomowo liczniki oraz HMAC granicznego PK,
+nigdy sam klucz. Format checkpointu 2 zapisuje także HMAC zależności wymaganych
+do odtworzenia sesji, ale nie ich sekrety. Sekret HMAC jest pobierany wyłącznie
+ze zmiennej wskazanej przez `--checkpoint-key-env`; powinien być losowy i mieć
+co najmniej 32 znaki. Wznowienie ponownie waliduje konfigurację, marker, tabelę,
+PK, batch, hash granicy i zależności środowiskowe. Plany `Column` (w tym
+`TextShuffler`) oraz generatory czytające nadpisywaną wartość są jawnie odrzucane.
+Checkpoint formatu 1 pozostaje zgodny wyłącznie z planem bez takich zależności.
+Ukończony checkpoint chroni też przed przypadkowym ponownym wykonaniem; świadomy
+nowy przebieg wymaga nowej ścieżki albo usunięcia starego pliku.
 
 Edytor konfiguracji można uruchomić poleceniem:
 
 ```powershell
 dotnet run --project .\src\Anonymyzer\Anonymyzer.ConfigEditor\Anonymyzer.ConfigEditor.csproj
 ```
+
+Instrukcja operatora jest dostępna po [polsku](docs/pl/anonymyzer-user-guide.md)
+i [angielsku](docs/en/anonymyzer-user-guide.md). Parametry wszystkich generatorów
+opisują katalogi [PL](docs/pl/generators.md) i [EN](docs/en/generators.md).
 
 Kropka `●` przy tabeli lub kolumnie oznacza propozycję automatu, nie zgodę na
 anonimizację. Lista tabel pokazuje obok kropki liczbę kandydatów; oba pola mają
@@ -255,6 +378,24 @@ kopiować dane, ale sample nie trafiają do konfiguracji, logów ani plików. Je
 zapytanie trwa najwyżej 15 sekund, a pojedyncza wyświetlana wartość jest obcinana
 po 32 768 znakach i oznaczana jako skrócona.
 
+Po wczytaniu próbek zwijany panel profilu JSON pokazuje ścieżki, liczbę
+dokumentów zawierających daną ścieżkę, liczbę wartości oraz obserwowane typy.
+Niepełne próbki obcięte limitem są raportowane osobno, zamiast udawać uszkodzony
+JSON. Dla odporności na patologiczne dokumenty profil kończy analizę na 16
+poziomach, 200 różnych ścieżkach lub 10 000 wartościach na próbkę i jawnie
+sygnalizuje osiągnięcie limitu. Profil służy wyłącznie operatorowi i nie jest
+zapisywany w configu.
+
+Profil może zostać ręcznie przełożony na reguły generatora `JsonPathRedactor`.
+Generator przyjmuje te same ścieżki (`$/property`, `$/array[]/property`) i osobny
+literał JSON dla każdej wartości zastępczej. Zachowuje wszystkie nieskonfigurowane
+gałęzie, istniejący `NULL` bazy oraz typ literału; wynik zapisuje jako zwarty JSON.
+Może ignorować brakujące ścieżki albo przerwać wiersz, gdy `RequireEveryPath` jest
+włączone. Reguły zduplikowane i nakładające się są odrzucane, aby wynik nie zależał
+od kolejności. Typ docelowy jest przenoszony przez plan wykonania; provider
+PostgreSQL jawnie rzutuje parametr JSON podczas zapisu, dzięki czemu ten sam
+generator obsługuje zarówno tekst, jak i natywne kolumny `json`/`jsonb`.
+
 `Add column` rozwija najpierw kolumny zapisane w konfiguracji podczas analizy,
 które nie są kandydatami ani nie zostały jeszcze skonfigurowane. Wybranie pozycji
 pokazuje ją w gridzie bez ponownego połączenia z bazą. Ostatnia pozycja menu używa
@@ -275,18 +416,25 @@ Można wskazać inny lokalny obraz przez `-Image`. Sam test korzysta ze zmiennej
 jednostkowe nadal się wykonują. Fixture znajduje się w
 `tests/postgresql/init.sql`. Bieżąca implementacja generowania konfiguracji
 tylko czyta metadane odłączonej kopii i nie zapisuje connection stringa w JSON.
-Przyszła komenda `run` będzie modyfikowała dane w
-odłączonej kopii. Testy wykonania muszą tworzyć nową bazę z fixture'a albo
-odtwarzać backup/dump (np. Northwind) i nigdy nie mogą wskazywać istniejącej
-bazy roboczej użytkownika.
+Testy executora są opt-in dla `ANONYMYZER_POSTGRES_CONNECTION` oraz
+`ANONYMYZER_SQLSERVER_CONNECTION`. Po walidacji markera tworzą tabele o unikalnych
+nazwach, uruchamiają `PersonIdentity`, a na PostgreSQL także pełny `TextShuffler`,
+oraz na obu silnikach relacyjny `ReferencePseudonym`; usuwają wyłącznie te tabele
+w `finally` i nie modyfikują istniejących tabel
+klona. Connection string nie trafia do logu ani konfiguracji.
+
+Powtarzalne lokalne środowiska Chinook, Northwind, AdventureWorksLT i Pagila,
+wraz z komendami pobrania, inicjalizacji i generowania configów, opisuje
+[katalog przykładowych baz](docs/sample-databases.md).
 
 ## Stan gałęzi
 
 | Gałąź | Zawartość | Ocena |
 | --- | --- | --- |
-| `master` | historyczna wersja `ScriptCut` | punkt bazowy, zastąpiony przez nowsze prace |
-| `some_changes` | obsługa triggerów i BAT w `ScriptCut` | w całości jest przodkiem `anonymyzator`; można później usunąć ref |
-| `anonymyzator` | `ScriptCut` oraz szkic anonimizatora | właściwa gałąź do dalszej pracy |
+| `master` | `ScriptCut` i pierwszy scalony pion anonimizatora (PR #1) | wspólna baza; bieżące prace nie są jeszcze scalone |
+| `anon-generators` | generatory, bezpieczny executor, SQL Server/PostgreSQL, WPF, rescan i pakiety językowe | aktywna gałąź rozwojowa |
+| `anonymyzator` | historyczna gałąź pierwszego pionu | scalona do `master`; ref można zarchiwizować |
+| `some_changes` | historyczne zmiany `ScriptCut` | scalona pośrednio; ref można zarchiwizować |
 | `gateway` | historyczne źródło `TimeGateService` | wydzielone do osobnego repozytorium `J:\GIT\Gateway`; nie scalać do `main` |
 
 Gateway został wydzielony do `J:\GIT\Gateway` wraz z dwoma historycznymi
@@ -296,18 +444,16 @@ skasowany po wypchnięciu lub zarchiwizowaniu nowego repozytorium.
 
 ## Proponowana kolejka
 
-1. Dodać testy regresyjne `ScriptCut` dla wielu tabel, tabel bez
-   `IDENTITY_INSERT`, pustego wejścia i znaków niedozwolonych w nazwie pliku.
-2. Podłączyć podgląd generatorów `Column` do bezpiecznego, tylko-odczytowego
-   źródła danych z odłączonego klona.
-3. Ujednolicić historyczne nazwy `Anonymyzer` / `Anonymization` bez zmiany
-   zachowania.
-4. Zrealizować mały pionowy wycinek: jedna tabela, grupa `PersonIdentity`,
-   deterministyczny seed, batche, `dry-run` i test na lokalnej bazie.
-5. Rozszerzyć pakiety regionalne o ważone dane oraz generatory PESEL/NIP/SSN.
-6. Dopiero po pomiarach dodać planowanie zależności FK, mapowanie zmienianych
-   kluczy, indeksy, XML/JSON i generatory odwołujące się do innych wierszy.
+1. Rozszerzać checkpoint tylko wraz z trwałym, odtwarzalnym stanem generatorów
+   `Column`/`Relational`.
+2. Rozszerzać startowe, ważone wycinki danych regionalnych bez utraty jawnej
+   wersji, źródła i ograniczeń każdego zbioru.
+3. Dopiero po pomiarach dodać mapowanie zmienianych kluczy, obsługę XML oraz
+   strategię indeksów, constraintów i triggerów.
+4. Ujednolicić historyczne nazwy `Anonymyzer` / `Anonymization` bez zmiany
+   zachowania i usunąć nieaktualne refy dopiero po upewnieniu się, że są na GH.
 
-Najbardziej opłacalny następny krok to punkt 2, a potem pionowy wycinek z punktu
-4. Próba rozwiązania od razu zmian PK/FK i wszystkich wariantów indeksów
-utrudniłaby zweryfikowanie podstawowego przepływu.
+Raport z walidacją, checkpoint dla bezpiecznych planów `Row` i kontrolowanego
+`ReferencePseudonym`, ograniczony pamięciowo `TextShuffler` oraz pierwszy
+generator `Relational` są już dostępne. Pełne skany celu pozostają celowo
+wyłączone ze wznowienia.

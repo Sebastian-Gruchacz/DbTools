@@ -12,21 +12,25 @@
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
         <TextBlock Grid.Row="0" Grid.ColumnSpan="2" Margin="0,0,0,14" TextWrapping="Wrap"
-                   Text="Generates a coherent first name, surname, gender and optional e-mail in one row-local operation." />
+                   Text="Generates a coherent first name, surname, full name, gender and optional e-mail in one row-local operation." />
 
         <TextBlock Grid.Row="1" Margin="0,0,12,8" VerticalAlignment="Center" Text="Seed:" />
         <TextBox x:Name="SeedTextBox" Grid.Row="1" Grid.Column="1" Margin="0,0,0,8" />
 
         <TextBlock Grid.Row="2" Margin="0,0,12,8" VerticalAlignment="Center" Text="Locale:" />
-        <TextBox x:Name="LocaleTextBox" Grid.Row="2" Grid.Column="1" Margin="0,0,0,8" />
+        <ComboBox x:Name="LocaleComboBox" Grid.Row="2" Grid.Column="1" Margin="0,0,0,8" IsEditable="True" />
 
-        <TextBlock Grid.Row="3" Margin="0,0,12,8" VerticalAlignment="Center" Text="E-mail pattern:" />
-        <ComboBox x:Name="EmailPatternComboBox" Grid.Row="3" Grid.Column="1" Margin="0,0,0,8" />
+        <TextBlock Grid.Row="3" Margin="0,0,12,8" VerticalAlignment="Center" Text="Full-name pattern:" />
+        <ComboBox x:Name="FullNamePatternComboBox" Grid.Row="3" Grid.Column="1" Margin="0,0,0,8" />
 
-        <TextBlock Grid.Row="4" Margin="0,0,12,0" VerticalAlignment="Center" Text="E-mail domain:" />
-        <TextBox x:Name="EmailDomainTextBox" Grid.Row="4" Grid.Column="1" />
+        <TextBlock Grid.Row="4" Margin="0,0,12,8" VerticalAlignment="Center" Text="E-mail pattern:" />
+        <ComboBox x:Name="EmailPatternComboBox" Grid.Row="4" Grid.Column="1" Margin="0,0,0,8" />
+
+        <TextBlock Grid.Row="5" Margin="0,0,12,0" VerticalAlignment="Center" Text="E-mail domain:" />
+        <TextBox x:Name="EmailDomainTextBox" Grid.Row="5" Grid.Column="1" />
     </Grid>
 </UserControl>

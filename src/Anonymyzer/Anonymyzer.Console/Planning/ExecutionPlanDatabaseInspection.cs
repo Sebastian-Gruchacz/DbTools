@@ -5,8 +5,12 @@ internal sealed record ExecutionPlanDatabaseInspection(
 
 internal sealed record GeneratorStepDatabaseInspection(
     long EstimatedTargetRows,
+    IReadOnlyList<string> PrimaryKeyColumns,
     IReadOnlyDictionary<string, DataRequirementEstimate> DataRequirements);
 
 internal sealed record DataRequirementEstimate(
     long EstimatedRows,
-    long? EstimatedMaximumMemoryBytes);
+    long? EstimatedMaximumMemoryBytes)
+{
+    public IReadOnlyList<string> PrimaryKeyColumns { get; init; } = Array.Empty<string>();
+}

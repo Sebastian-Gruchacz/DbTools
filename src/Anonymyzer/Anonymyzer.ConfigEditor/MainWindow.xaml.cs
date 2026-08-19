@@ -1,6 +1,7 @@
 ﻿namespace Anonymyzer.ConfigEditor;
 
 using System.ComponentModel;
+using System.Diagnostics;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
@@ -9,30 +10,60 @@ using Anonymyzer.ConfigEditor.Infrastructure;
 using Anonymyzer.ConfigEditor.ViewModels;
 using Anonymyzer.ConfigEditor.Abstractions;
 using Anonymyzer.Configuration;
+using Anonymyzer.Base.LanguagePacks;
 using Anonymyzer.DatabaseAccess;
+using Anonymyzer.Generators.Address.Wpf;
 using Anonymyzer.Generators.Person.Wpf;
 using Anonymyzer.Generators.Simple.Wpf;
+using Anonymyzer.LanguagePack.English;
+using Anonymyzer.LanguagePack.Polish;
 using Microsoft.Win32;
 using Newtonsoft.Json.Linq;
 
 public partial class MainWindow : Window
 {
     private int _sampleWindowOffset;
+    private string _previewConnectionEnvironmentVariable = "ANONYMYZER_CONNECTION";
+    private string _rescanConnectionEnvironmentVariable = "ANONYMYZER_CONNECTION";
+    private int _previewMaximumRows = 10;
     private readonly ConfigurationFileService _fileService = new();
     private readonly EditorViewModel _viewModel = new();
-    private readonly GeneratorCatalog _generatorCatalog = new();
+    private readonly LanguagePackCatalog _languagePacks;
+    private readonly LanguagePackInstallationService _languagePackInstallations;
+    private readonly GeneratorCatalog _generatorCatalog;
+    private readonly DatabaseRescanService _rescanService;
     private readonly GeneratorPreviewService _previewService;
     private readonly IGeneratorConfigurationEditorFactory[] _generatorEditors =
     {
         new ShufflingTextGeneratorEditorFactory(),
         new FixedTextGeneratorEditorFactory(),
+        new ReferencePseudonymGeneratorEditorFactory(),
+        new JsonPathRedactorGeneratorEditorFactory(),
         new SequentialTextGeneratorEditorFactory(),
         new EmailAddressGeneratorEditorFactory(),
-        new PersonIdentityGeneratorEditorFactory()
+        new AccountLoginGeneratorEditorFactory(),
+        new PhoneNumberGeneratorEditorFactory(),
+        new UuidGeneratorEditorFactory(),
+        new CompanyNameGeneratorEditorFactory(),
+        new TaxIdentifierGeneratorEditorFactory(),
+        new BankAccountGeneratorEditorFactory(),
+        new BirthDateGeneratorEditorFactory(),
+        new GenderGeneratorEditorFactory(),
+        new NationalIdentifierGeneratorEditorFactory(),
+        new PersonIdentityGeneratorEditorFactory(),
+        new PostalAddressGeneratorEditorFactory()
     };
 
     public MainWindow()
     {
+        _languagePackInstallations = new LanguagePackInstallationService(
+        [
+            new EnglishLanguagePack(),
+            new PolishLanguagePack()
+        ]);
+        _languagePacks = new LanguagePackCatalog(_languagePackInstallations.ActivePacks);
+        _generatorCatalog = new GeneratorCatalog(_languagePacks);
+        _rescanService = new DatabaseRescanService(_languagePacks);
         _previewService = new GeneratorPreviewService(_generatorCatalog);
         InitializeComponent();
         DataContext = _viewModel;
@@ -66,12 +97,62 @@ public partial class MainWindow : Window
             return;
         }
 
-        RunFileOperation(() => _viewModel.Load(_fileService.Load(dialog.FileName), dialog.FileName));
+        RunFileOperation(() =>
+        {
+            AnonymizationConfiguration configuration = _fileService.Load(dialog.FileName);
+            GeneratorProfileMergeResult merge = new GeneratorProfileMerger().Merge(
+                configuration.GeneratorProfiles,
+                _generatorCatalog.CreateDefaultProfiles());
+            _viewModel.Load(configuration, dialog.FileName);
+            if (merge.Changed)
+            {
+                _viewModel.MarkDirty();
+                _viewModel.Status = $"Opened {dialog.FileName}; merged built-in profiles: " +
+                                    $"{merge.AddedProfiles} added, {merge.UpdatedProfiles} updated, " +
+                                    $"{merge.IdCollisions} id collision(s). Save to persist the merge.";
+            }
+
+            ReportUnavailableProfileLocales(configuration.GeneratorProfiles);
+        });
     }
 
     private void Save_Click(object sender, RoutedEventArgs e)
     {
         TrySaveDocument();
+    }
+
+    private async void Rescan_Click(object sender, RoutedEventArgs e)
+    {
+        CommitPendingGridEdits();
+        var dialog = new RescanOptionsWindow(_rescanConnectionEnvironmentVariable) { Owner = this };
+        if (dialog.ShowDialog() != true)
+        {
+            return;
+        }
+
+        _rescanConnectionEnvironmentVariable = dialog.ConnectionEnvironmentVariable;
+        try
+        {
+            _viewModel.Status = "Rescanning detached clone...";
+            IReadOnlyList<TableProcessingOptions> freshTables = await _rescanService.ScanAsync(
+                _viewModel.Configuration,
+                _rescanConnectionEnvironmentVariable);
+            DatabaseRescanMergeResult result = new DatabaseRescanMerger().Merge(
+                _viewModel.Configuration,
+                freshTables);
+            _viewModel.RefreshTables();
+            _viewModel.MarkDirty();
+            string summary = $"Rescan complete: {result.AddedTables} table(s) and {result.AddedColumns} column(s) added; " +
+                             $"{result.RefreshedColumns} column(s) refreshed; {result.PreservedSelections} selection(s) preserved; " +
+                             $"{result.MissingTables} table(s) and {result.MissingColumns} column(s) retained as missing.";
+            _viewModel.Status = summary;
+            MessageBox.Show(this, summary, "Database rescan", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        catch (Exception exception)
+        {
+            _viewModel.Status = exception.Message;
+            MessageBox.Show(this, exception.Message, "Rescan error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
     }
 
     private void SaveAs_Click(object sender, RoutedEventArgs e)
@@ -100,7 +181,24 @@ public partial class MainWindow : Window
         var dialog = new GeneratorProfilesWindow(
             _viewModel.Configuration.GeneratorProfiles,
             _generatorEditors,
-            _generatorCatalog.CreateDefaultProfiles())
+            _generatorCatalog.CreateProfileTemplates(),
+            new GeneratorConfigurationEditorContext(
+                _viewModel.Configuration.Tables.Select(table => new GeneratorConfigurationTableOption(
+                    table.SchemaName,
+                    table.TableName,
+                    table.Columns.OrderBy(column => column.Ordinal).Select(column => column.ColumnName).ToArray())
+                    {
+                        PrimaryKeyColumns = table.PrimaryKeyColumns.ToArray(),
+                        ForeignKeys = table.ForeignKeys.Select(foreignKey =>
+                            new GeneratorConfigurationForeignKeyOption(
+                                foreignKey.Name,
+                                foreignKey.Columns.ToArray(),
+                                foreignKey.ReferencedSchemaName,
+                                foreignKey.ReferencedTableName,
+                                foreignKey.ReferencedColumns.ToArray()))
+                            .ToArray()
+                    })
+                    .ToArray()))
         {
             Owner = this
         };
@@ -113,6 +211,36 @@ public partial class MainWindow : Window
                 _viewModel.MarkDirty();
                 _viewModel.Status = "Generator profiles updated. Save the configuration to persist changes.";
             }
+
+            ReportUnavailableProfileLocales(_viewModel.Configuration.GeneratorProfiles);
+        }
+    }
+
+    private void ReportUnavailableProfileLocales(IEnumerable<GeneratorProfileConfiguration> profiles)
+    {
+        IReadOnlyList<string> errors = _generatorCatalog.ValidateProfileLocales(profiles);
+        if (errors.Count == 0)
+        {
+            return;
+        }
+
+        string message = string.Join(Environment.NewLine, errors);
+        _viewModel.Status = $"Language-pack validation: {errors.Count} profile(s) require an inactive locale.";
+        MessageBox.Show(this, message, "Inactive language-pack locale", MessageBoxButton.OK, MessageBoxImage.Warning);
+    }
+
+    private void LanguagePacks_Click(object sender, RoutedEventArgs e)
+    {
+        var dialog = new LanguagePacksWindow(_languagePackInstallations) { Owner = this };
+        if (dialog.ShowDialog() == true && dialog.RestartRequired)
+        {
+            MessageBox.Show(
+                this,
+                "Language-pack changes were saved and will take effect after restarting Anonymyzer. " +
+                "Existing document settings are not removed.",
+                "Restart required",
+                MessageBoxButton.OK,
+                MessageBoxImage.Information);
         }
     }
 
@@ -156,10 +284,32 @@ public partial class MainWindow : Window
 
         try
         {
+            if (_previewService.RequiresCloneData(
+                    table.Model,
+                    _viewModel.Configuration.GeneratorProfiles))
+            {
+                var dialog = new ClonePreviewOptionsWindow(
+                    _previewConnectionEnvironmentVariable,
+                    _previewMaximumRows)
+                {
+                    Owner = this
+                };
+                if (dialog.ShowDialog() != true)
+                {
+                    return;
+                }
+
+                _previewConnectionEnvironmentVariable = dialog.ConnectionEnvironmentVariable;
+                _previewMaximumRows = dialog.MaximumRows;
+            }
+
             _viewModel.Status = "Generating preview...";
             IReadOnlyDictionary<string, string> samples = await _previewService.GenerateAsync(
+                _viewModel.Configuration,
                 table.Model,
-                _viewModel.Configuration.GeneratorProfiles);
+                _viewModel.Configuration.GeneratorProfiles,
+                _previewConnectionEnvironmentVariable,
+                _previewMaximumRows);
             table.ApplySamples(samples);
             _viewModel.Status = "Preview generated without modifying the database.";
         }
@@ -305,6 +455,36 @@ public partial class MainWindow : Window
     private void Exit_Click(object sender, RoutedEventArgs e)
     {
         Close();
+    }
+
+    private void TableLegend_Click(object sender, RoutedEventArgs e)
+    {
+        MessageBox.Show(
+            this,
+            "● in the table list means that the latest saved analysis found at least one anonymization candidate.\n" +
+            "The adjacent number is the candidate-column count. An empty marker means no automatic candidate was found.\n\n" +
+            "The same ● in the column grid marks an automatically detected candidate; hover it to see the suggested " +
+            "semantic role, confidence and matched rule. Markers are suggestions only and never enable anonymization.\n\n" +
+            "A blue ◆ marks a table or column containing explicit operator choices. Hover it to see which settings " +
+            "are protected from a future database rescan.\n\n" +
+            "A red ⚠ means that a saved table or column was not found during the latest rescan. Its configuration " +
+            "is retained for review and is never silently deleted.",
+            "Table and column markings",
+            MessageBoxButton.OK,
+            MessageBoxImage.Information);
+    }
+
+    private void Documentation_Click(object sender, RoutedEventArgs e) =>
+        OpenWebPage("https://github.com/Sebastian-Gruchacz/DbTools#readme");
+
+    private void About_Click(object sender, RoutedEventArgs e)
+    {
+        new AboutWindow { Owner = this }.ShowDialog();
+    }
+
+    private static void OpenWebPage(string url)
+    {
+        Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
     }
 
     private void Window_Closing(object? sender, CancelEventArgs e)

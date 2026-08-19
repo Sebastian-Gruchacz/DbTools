@@ -65,6 +65,49 @@ public sealed class PostgreSqlAnonymyzerEngineIntegrationTests
         Assert.False(code.IsNullable);
     }
 
+    [Fact]
+    public void ReadsCompositeForeignKeyMetadataInDeclaredOrder()
+    {
+        string connectionString = RequireConnectionString();
+        using var connection = new NpgsqlConnection(connectionString);
+        connection.Open();
+        _ = new DetachedCopyMarkerReader().Read("PostgreSql", connection);
+        string suffix = Guid.NewGuid().ToString("N")[..8];
+        string lookupTable = $"fk_lookup_{suffix}";
+        string targetTable = $"fk_target_{suffix}";
+        string constraintName = $"fk_metadata_{suffix}";
+        using var command = connection.CreateCommand();
+        command.CommandText =
+            $"CREATE TABLE public.\"{lookupTable}\" (\"TenantId\" integer, \"Id\" integer, " +
+            $"PRIMARY KEY (\"TenantId\", \"Id\")); " +
+            $"CREATE TABLE public.\"{targetTable}\" (\"LookupTenantId\" integer, \"LookupId\" integer, " +
+            $"CONSTRAINT \"{constraintName}\" FOREIGN KEY (\"LookupTenantId\", \"LookupId\") " +
+            $"REFERENCES public.\"{lookupTable}\"(\"TenantId\", \"Id\"));";
+        command.ExecuteNonQuery();
+
+        try
+        {
+            var engine = new PostgreSqlAnonymyzerEngine(connection);
+            ITableInfo table = Assert.Single(engine.ListTables(), candidate =>
+                candidate.SchemaName == "public" && candidate.Name == targetTable);
+
+            ForeignKeyInfo foreignKey = Assert.Single(engine.ListForeignKeys(table));
+
+            Assert.Equal(constraintName, foreignKey.Name);
+            Assert.Equal(["LookupTenantId", "LookupId"], foreignKey.Columns);
+            Assert.Equal("public", foreignKey.ReferencedSchemaName);
+            Assert.Equal(lookupTable, foreignKey.ReferencedTableName);
+            Assert.Equal(["TenantId", "Id"], foreignKey.ReferencedColumns);
+        }
+        finally
+        {
+            command.CommandText =
+                $"DROP TABLE IF EXISTS public.\"{targetTable}\"; " +
+                $"DROP TABLE IF EXISTS public.\"{lookupTable}\";";
+            command.ExecuteNonQuery();
+        }
+    }
+
     private static string RequireConnectionString()
     {
         string? connectionString = Environment.GetEnvironmentVariable("ANONYMYZER_POSTGRES_CONNECTION");

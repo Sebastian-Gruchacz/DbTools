@@ -3,14 +3,30 @@
 using Anonymyzer.Base;
 using Anonymyzer.Configuration;
 
-internal sealed class ColumnConfigurationBuilder(ColumnCandidateDetector candidateDetector)
+public sealed class ColumnConfigurationBuilder(ColumnCandidateDetector candidateDetector)
 {
     private const string DefaultProfile = "Default";
 
     public TableProcessingOptions CreateTable(IAnonymyzerEngine engine, ITableInfo tableInfo)
     {
         var config = TableProcessingOptions.DefaultForTable(tableInfo.Name, tableInfo.SchemaName);
-        foreach (IColumnInfo column in engine.ListColumns(tableInfo).Where(column => !column.IsPartOfThePrimaryKey))
+        IColumnInfo[] columns = engine.ListColumns(tableInfo).ToArray();
+        config.PrimaryKeyColumns = columns
+            .Where(column => column.IsPartOfThePrimaryKey)
+            .OrderBy(column => column.Ordinal)
+            .Select(column => column.Name)
+            .ToList();
+        config.ForeignKeys = engine.ListForeignKeys(tableInfo)
+            .Select(foreignKey => new ForeignKeyConfiguration
+            {
+                Name = foreignKey.Name,
+                Columns = foreignKey.Columns.ToList(),
+                ReferencedSchemaName = foreignKey.ReferencedSchemaName,
+                ReferencedTableName = foreignKey.ReferencedTableName,
+                ReferencedColumns = foreignKey.ReferencedColumns.ToList()
+            })
+            .ToList();
+        foreach (IColumnInfo column in columns.Where(column => !column.IsPartOfThePrimaryKey))
         {
             config.Columns.Add(new ColumnProcessingOptions
             {

@@ -1,14 +1,24 @@
 ﻿namespace Anonymyzer.LanguagePack.Polish;
 
 using Anonymyzer.Base.Detection;
+using Anonymyzer.Base.LanguagePacks;
+using Anonymyzer.Generators.Address;
 using Anonymyzer.Generators.Person;
+using Anonymyzer.Generators.Simple;
 using Microsoft.Extensions.DependencyInjection;
 
 public static class PolishLanguagePackLoader
 {
     public static IServiceCollection AddPolishLanguagePack(this IServiceCollection services)
     {
+        services.AddSingleton<ILanguagePack, PolishLanguagePack>();
         services.AddSingleton<IPersonLocaleDataProvider, PolishPersonLocaleDataProvider>();
+        services.AddSingleton<IPostalAddressLocaleDataProvider, PolishPostalAddressLocaleDataProvider>();
+        services.AddSingleton<IPhoneNumberLocaleDataProvider, PolishPhoneNumberLocaleDataProvider>();
+        services.AddSingleton<ITaxIdentifierLocaleDataProvider, PolishTaxIdentifierLocaleDataProvider>();
+        services.AddSingleton<INationalIdentifierLocaleDataProvider, PolishNationalIdentifierLocaleDataProvider>();
+        services.AddSingleton<ICompanyNameLocaleDataProvider, PolishCompanyNameLocaleDataProvider>();
+        services.AddSingleton<IBankAccountLocaleDataProvider, PolishBankAccountLocaleDataProvider>();
         services.AddSingleton<IColumnCandidateRuleProvider, PolishColumnCandidateRuleProvider>();
         return services;
     }

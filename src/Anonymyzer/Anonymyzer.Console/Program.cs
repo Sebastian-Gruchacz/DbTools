@@ -31,6 +31,19 @@ if (string.IsNullOrWhiteSpace(connectionString))
     return (int)ErrorCodes.ConfigurationError;
 }
 
+string? checkpointFingerprintSecret = null;
+if (parsed.Command is RunCliOptions runOptions && runOptions.CheckpointPath is not null)
+{
+    checkpointFingerprintSecret = Environment.GetEnvironmentVariable(
+        runOptions.CheckpointKeyEnvironmentVariable!);
+    if (string.IsNullOrWhiteSpace(checkpointFingerprintSecret))
+    {
+        global::System.Console.Error.WriteLine(
+            $"Environment variable '{runOptions.CheckpointKeyEnvironmentVariable}' is empty or missing.");
+        return (int)ErrorCodes.ConfigurationError;
+    }
+}
+
 var services = new ServiceCollection();
 services.AddLogging(builder => builder.AddSimpleConsole(options => options.SingleLine = true));
 services.AddSingleton<ICommandLogger, CommandLogger>();
@@ -61,7 +74,11 @@ try
                 ConnectionString = connectionString,
                 ExpectedMarkerId = options.MarkerId,
                 ConfigurationFilePath = options.ConfigurationPath,
-                DryRun = options.DryRun
+                DryRun = options.DryRun,
+                Execute = options.Execute,
+                ReportFilePath = options.ReportPath,
+                CheckpointFilePath = options.CheckpointPath,
+                CheckpointFingerprintSecret = checkpointFingerprintSecret
             }),
         _ => (int)ErrorCodes.ConfigurationError
     };

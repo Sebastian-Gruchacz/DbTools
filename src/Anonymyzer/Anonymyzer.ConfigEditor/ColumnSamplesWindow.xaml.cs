@@ -12,7 +12,9 @@ public partial class ColumnSamplesWindow : Window, INotifyPropertyChanged
     private readonly TableProcessingOptions _table;
     private readonly ColumnProcessingOptions _column;
     private readonly ColumnSampleReader _reader = new();
+    private readonly JsonSampleProfiler _jsonProfiler = new();
     private string _status = "Ready to load non-null values.";
+    private string _jsonProfileSummary = "JSON profile: load samples to analyze.";
 
     public ColumnSamplesWindow(
         AnonymizationConfiguration configuration,
@@ -31,6 +33,23 @@ public partial class ColumnSamplesWindow : Window, INotifyPropertyChanged
     public string TargetName => $"{_table.SchemaName}.{_table.TableName}.{_column.ColumnName}";
 
     public ObservableCollection<ColumnSample> Samples { get; } = new();
+
+    public ObservableCollection<JsonPathProfile> JsonPaths { get; } = new();
+
+    public string JsonProfileSummary
+    {
+        get => _jsonProfileSummary;
+        private set
+        {
+            if (_jsonProfileSummary == value)
+            {
+                return;
+            }
+
+            _jsonProfileSummary = value;
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(JsonProfileSummary)));
+        }
+    }
 
     public string Status
     {
@@ -70,6 +89,15 @@ public partial class ColumnSamplesWindow : Window, INotifyPropertyChanged
             {
                 Samples.Add(sample);
             }
+
+            JsonSampleProfile jsonProfile = _jsonProfiler.Profile(samples);
+            JsonPaths.Clear();
+            foreach (JsonPathProfile path in jsonProfile.Paths)
+            {
+                JsonPaths.Add(path);
+            }
+
+            JsonProfileSummary = jsonProfile.Summary;
 
             Status = samples.Count == 0
                 ? "No non-null values found."

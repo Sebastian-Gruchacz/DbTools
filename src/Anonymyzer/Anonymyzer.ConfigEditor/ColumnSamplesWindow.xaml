@@ -36,27 +36,51 @@
             <TextBlock Text="{Binding Status}" />
         </StatusBar>
 
-        <DataGrid ItemsSource="{Binding Samples}"
-                  AutoGenerateColumns="False"
-                  CanUserAddRows="False"
-                  CanUserDeleteRows="False"
-                  IsReadOnly="True"
-                  SelectionMode="Extended"
-                  SelectionUnit="FullRow">
-            <DataGrid.Columns>
-                <DataGridTextColumn Header="#" Binding="{Binding Number}" Width="45" />
-                <DataGridTemplateColumn Header="Value" Width="*">
-                    <DataGridTemplateColumn.CellTemplate>
-                        <DataTemplate>
-                            <TextBox BorderThickness="0"
-                                     Background="Transparent"
-                                     IsReadOnly="True"
-                                     Text="{Binding DisplayValue}"
-                                     TextWrapping="Wrap" />
-                        </DataTemplate>
-                    </DataGridTemplateColumn.CellTemplate>
-                </DataGridTemplateColumn>
-            </DataGrid.Columns>
-        </DataGrid>
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+            <DataGrid Grid.Row="0"
+                      ItemsSource="{Binding Samples}"
+                      AutoGenerateColumns="False"
+                      CanUserAddRows="False"
+                      CanUserDeleteRows="False"
+                      IsReadOnly="True"
+                      SelectionMode="Extended"
+                      SelectionUnit="FullRow">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="#" Binding="{Binding Number}" Width="45" />
+                    <DataGridTemplateColumn Header="Value" Width="*">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <TextBox BorderThickness="0"
+                                         Background="Transparent"
+                                         IsReadOnly="True"
+                                         Text="{Binding DisplayValue}"
+                                         TextWrapping="Wrap" />
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+                </DataGrid.Columns>
+            </DataGrid>
+            <Expander Grid.Row="1"
+                      Margin="0,8,0,0"
+                      Header="{Binding JsonProfileSummary}">
+                <DataGrid Height="160"
+                          ItemsSource="{Binding JsonPaths}"
+                          AutoGenerateColumns="False"
+                          CanUserAddRows="False"
+                          CanUserDeleteRows="False"
+                          IsReadOnly="True">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="JSON path" Binding="{Binding Path}" Width="*" />
+                        <DataGridTextColumn Header="Documents" Binding="{Binding DocumentCount}" Width="85" />
+                        <DataGridTextColumn Header="Values" Binding="{Binding ValueCount}" Width="65" />
+                        <DataGridTextColumn Header="Observed types" Binding="{Binding ValueKindsDisplay}" Width="150" />
+                    </DataGrid.Columns>
+                </DataGrid>
+            </Expander>
+        </Grid>
     </DockPanel>
 </Window>
