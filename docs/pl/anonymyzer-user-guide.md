@@ -25,6 +25,13 @@ string jest przekazywany tylko przez zmienną środowiskową i nie trafia do JSO
    checkpointem.
 8. Sprawdź raport i walidację klona przed przekazaniem go dalej.
 
+Checkpoint formatu 2 obsługuje deterministyczne plany `Row` oraz
+`ReferencePseudonym` czytający niezmienianą tabelę lookup. Plik zawiera HMAC
+granicy PK i zależności środowiskowych, ale nigdy ich sekretów. Zmiana sekretu
+pseudonimizacji między uruchomieniami powoduje odmowę wznowienia przed zapisem.
+`Column`, pełny skan tabeli docelowej i odczyt nadpisywanej wartości pozostają
+wyłączone ze wznowienia.
+
 ## Uruchomienie edytora
 
 ```powershell

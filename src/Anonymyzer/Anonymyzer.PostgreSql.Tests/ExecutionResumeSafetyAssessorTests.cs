@@ -47,6 +47,58 @@ public sealed class ExecutionResumeSafetyAssessorTests
     }
 
     [Fact]
+    public void AcceptsRelationalPlanWithReadOnlyExternalCompleteScan()
+    {
+        var target = new GeneratorTableReference("public", "people");
+        var lookup = new GeneratorTableReference("public", "departments");
+        GeneratorExecutionPlanStep step = CreateStep(
+            GeneratorExecutionScope.Relational,
+            requiresExistingValue: false,
+            outputColumn: "alias",
+            [
+                new GeneratorDataRequirement(
+                    "target-reference",
+                    target,
+                    ["department_id"],
+                    GeneratorValueSource.Original,
+                    RequiresCompleteScan: false),
+                new GeneratorDataRequirement(
+                    "lookup-keys",
+                    lookup,
+                    ["alias"],
+                    GeneratorValueSource.Original,
+                    RequiresCompleteScan: true)
+            ]);
+
+        ExecutionResumeSafetyAssessment result = new ExecutionResumeSafetyAssessor()
+            .Assess(new AnonymizationExecutionPlan(100, [step]));
+
+        Assert.True(result.IsSupported);
+        Assert.Contains("Relational", result.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void RejectsCompleteScanOfTargetTable()
+    {
+        GeneratorExecutionPlanStep step = CreateStep(
+            GeneratorExecutionScope.Relational,
+            requiresExistingValue: false,
+            outputColumn: "alias",
+            [new GeneratorDataRequirement(
+                "target-scan",
+                new GeneratorTableReference("public", "people"),
+                ["department_id"],
+                GeneratorValueSource.Original,
+                RequiresCompleteScan: true)]);
+
+        ExecutionResumeSafetyAssessment result = new ExecutionResumeSafetyAssessor()
+            .Assess(new AnonymizationExecutionPlan(100, [step]));
+
+        Assert.False(result.IsSupported);
+        Assert.Contains("mutable target", result.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public void RejectsOriginalInputThatWasAlreadyOverwritten()
     {
         GeneratorExecutionPlanStep step = CreateStep(

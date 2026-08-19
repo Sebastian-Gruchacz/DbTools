@@ -322,16 +322,51 @@ public sealed class AnonymizationExecutorTests
                 ["public\u001fdepartments"] = "id"
             }
         };
+        var plan = new AnonymizationExecutionPlan(2, [step]);
 
         try
         {
-            long processed = await new AnonymizationExecutor([generator]).ExecuteAsync(
-                new AnonymizationExecutionPlan(2, [step]),
+            await Assert.ThrowsAsync<SimulatedInterruptionException>(() =>
+                new AnonymizationExecutor([generator]).ExecuteWithResultAsync(
+                    plan,
+                    writeSlice,
+                    store,
+                    (_, _) => throw new SimulatedInterruptionException(),
+                    TestContext.Current.CancellationToken));
+            IReadOnlyDictionary<string, string> replayDependencies = ReplayDependencyFingerprint.Compute(
+                plan,
+                [generator],
+                CheckpointSecret);
+            InvalidOperationException changedDependency = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+                new AnonymizationExecutor([generator]).ExecuteWithResumeAsync(
+                    plan,
+                    writeSlice,
+                    store,
+                    new AnonymizationExecutionResumeState(
+                        2,
+                        1,
+                        PrimaryKeyFingerprint.Compute(2, CheckpointSecret),
+                        CheckpointSecret),
+                    cancellationToken: TestContext.Current.CancellationToken));
+            Assert.Contains("dependencies", changedDependency.Message, StringComparison.OrdinalIgnoreCase);
+            Assert.Null(store.TargetRows[2].Values["department_alias"]);
+
+            AnonymizationExecutionResult result = await new AnonymizationExecutor([generator]).ExecuteWithResumeAsync(
+                plan,
                 writeSlice,
                 store,
-                TestContext.Current.CancellationToken);
+                new AnonymizationExecutionResumeState(
+                    2,
+                    1,
+                    PrimaryKeyFingerprint.Compute(2, CheckpointSecret),
+                    CheckpointSecret)
+                {
+                    ReplayDependencyHmacSha256 = replayDependencies
+                },
+                cancellationToken: TestContext.Current.CancellationToken);
 
-            Assert.Equal(3, processed);
+            Assert.Equal(3, result.ProcessedRows);
+            Assert.Equal(2, result.CommittedBatches);
             Assert.Equal(store.TargetRows[0].Values["department_alias"], store.TargetRows[2].Values["department_alias"]);
             Assert.NotEqual(store.TargetRows[0].Values["department_alias"], store.TargetRows[1].Values["department_alias"]);
             Assert.All(store.TargetRows, row => Assert.StartsWith("department-", row.Values["department_alias"] as string));

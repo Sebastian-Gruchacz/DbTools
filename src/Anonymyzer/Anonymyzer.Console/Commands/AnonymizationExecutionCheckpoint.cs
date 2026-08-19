@@ -6,7 +6,7 @@ using Newtonsoft.Json;
 
 internal sealed class AnonymizationExecutionCheckpoint
 {
-    public int FormatVersion { get; init; } = 1;
+    public int FormatVersion { get; init; } = 2;
 
     public string Status { get; set; } = "InProgress";
 
@@ -30,6 +30,9 @@ internal sealed class AnonymizationExecutionCheckpoint
 
     public int BatchSize { get; init; }
 
+    public IReadOnlyDictionary<string, string> ReplayDependencyHmacSha256 { get; init; } =
+        new Dictionary<string, string>(StringComparer.Ordinal);
+
     public long ProcessedRows { get; set; }
 
     public int CommittedBatches { get; set; }
@@ -45,7 +48,8 @@ internal sealed class AnonymizationExecutionCheckpoint
         string databaseName,
         Guid markerId,
         AnonymizationExecutionPlan plan,
-        ExecutionWriteSliceAssessment writeSlice)
+        ExecutionWriteSliceAssessment writeSlice,
+        IReadOnlyDictionary<string, string>? replayDependencyFingerprints = null)
     {
         DateTimeOffset now = DateTimeOffset.UtcNow;
         return new AnonymizationExecutionCheckpoint
@@ -59,7 +63,10 @@ internal sealed class AnonymizationExecutionCheckpoint
             SchemaName = writeSlice.TargetTable!.SchemaName,
             TableName = writeSlice.TargetTable.TableName,
             PrimaryKeyColumn = writeSlice.PrimaryKeyColumn!,
-            BatchSize = plan.BatchSize
+            BatchSize = plan.BatchSize,
+            ReplayDependencyHmacSha256 = new Dictionary<string, string>(
+                replayDependencyFingerprints ?? new Dictionary<string, string>(),
+                StringComparer.Ordinal)
         };
     }
 
@@ -71,7 +78,11 @@ internal sealed class AnonymizationExecutionCheckpoint
             throw new InvalidOperationException("Checkpoint status is invalid.");
         }
 
-        if (FormatVersion != 1
+        bool formatIsCompatible = FormatVersion == 2
+            || (FormatVersion == 1
+                && (ReplayDependencyHmacSha256?.Count ?? 0) == 0
+                && expected.ReplayDependencyHmacSha256.Count == 0);
+        if (!formatIsCompatible
             || !string.Equals(DatabaseEngine, expected.DatabaseEngine, StringComparison.OrdinalIgnoreCase)
             || !string.Equals(DatabaseName, expected.DatabaseName, StringComparison.OrdinalIgnoreCase)
             || DetachedCopyMarkerId != expected.DetachedCopyMarkerId
@@ -79,10 +90,15 @@ internal sealed class AnonymizationExecutionCheckpoint
             || !string.Equals(SchemaName, expected.SchemaName, StringComparison.OrdinalIgnoreCase)
             || !string.Equals(TableName, expected.TableName, StringComparison.OrdinalIgnoreCase)
             || !string.Equals(PrimaryKeyColumn, expected.PrimaryKeyColumn, StringComparison.OrdinalIgnoreCase)
-            || BatchSize != expected.BatchSize)
+            || BatchSize != expected.BatchSize
+            || ReplayDependencyHmacSha256 is null
+            || !ReplayDependencyFingerprint.Matches(
+                ReplayDependencyHmacSha256,
+                expected.ReplayDependencyHmacSha256))
         {
             throw new InvalidOperationException(
-                "Checkpoint does not match the validated clone, configuration, target table, primary key, or batch size.");
+                "Checkpoint does not match the validated clone, configuration, target table, primary key, " +
+                "batch size, or replay dependencies.");
         }
 
         if (ProcessedRows < 0
@@ -102,6 +118,23 @@ internal sealed class AnonymizationExecutionCheckpoint
             catch (FormatException exception)
             {
                 throw new InvalidOperationException("Checkpoint primary-key fingerprint is invalid.", exception);
+            }
+        }
+
+        foreach ((string dependency, string fingerprint) in ReplayDependencyHmacSha256)
+        {
+            if (string.IsNullOrWhiteSpace(dependency) || fingerprint?.Length != 64)
+            {
+                throw new InvalidOperationException("Checkpoint replay dependency fingerprint is invalid.");
+            }
+
+            try
+            {
+                Convert.FromHexString(fingerprint);
+            }
+            catch (FormatException exception)
+            {
+                throw new InvalidOperationException("Checkpoint replay dependency fingerprint is invalid.", exception);
             }
         }
     }

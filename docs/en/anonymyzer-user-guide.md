@@ -24,6 +24,13 @@ never stored in the JSON configuration.
 7. Run `run --execute` with a report and, for a supported plan, a checkpoint.
 8. Review the report and clone validation before releasing the clone.
 
+Checkpoint format 2 supports deterministic `Row` plans and
+`ReferencePseudonym` reading an unchanged lookup table. The file contains HMACs
+of the primary-key boundary and environment dependencies, but never their
+secrets. Changing the pseudonymization secret between runs refuses resume before
+any write. `Column`, complete scans of the target table, and reads of overwritten
+values remain excluded from resume.
+
 ## Starting the editor
 
 ```powershell

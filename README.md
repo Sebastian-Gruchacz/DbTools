@@ -253,7 +253,8 @@ językowe opisuje [docs/anonymyzer-design.md](docs/anonymyzer-design.md).
   PK/FK; `--execute` obsługuje jedną tabelę docelową oraz zewnętrzne pełne skany
   oryginalnych wartości z tabel o pojedynczym PK;
 - checkpointów dla `Column`, generatorów zależnych od nadpisywanej wartości oraz
-  planów wielotabelowych; bezpieczne plany wyłącznie `Row` można już wznawiać;
+  planów wielotabelowych; można wznawiać bezpieczne plany `Row` oraz
+  `ReferencePseudonym` czytający niezmienianą tabelę lookup;
 - pełnej walidacji indeksów, triggerów i constraintów spoza aktywnej tabeli;
 - pozostałych generatorów grupowych;
 - podglądu generatorów `Relational` innych niż `ReferencePseudonym` oraz
@@ -331,14 +332,16 @@ Nieudana walidacja daje kod
 błędu, raport ze statusem `ValidationFailed` i pozostawia checkpoint jako
 nieukończony; klon nie powinien wtedy zostać przekazany dalej.
 
-Opcjonalny `--checkpoint` działa tylko dla deterministycznych planów `Row`, które
-można bezpiecznie odtworzyć od początku. Po każdym commicie zapisuje atomowo
-liczniki oraz HMAC granicznego PK, nigdy sam klucz. Sekret HMAC jest pobierany
-wyłącznie ze zmiennej wskazanej przez `--checkpoint-key-env` i nie trafia do
-checkpointu ani konfiguracji; powinien być losowy i mieć co najmniej 32 znaki.
-Wznowienie ponownie waliduje
-konfigurację, marker, tabelę, PK, batch i hash granicy. Plany `Column` (w tym
+Opcjonalny `--checkpoint` działa dla deterministycznych planów `Row` oraz
+`ReferencePseudonym`, gdy jego pełny skan czyta wyłącznie niezmienianą tabelę
+lookup. Po każdym commicie zapisuje atomowo liczniki oraz HMAC granicznego PK,
+nigdy sam klucz. Format checkpointu 2 zapisuje także HMAC zależności wymaganych
+do odtworzenia sesji, ale nie ich sekrety. Sekret HMAC jest pobierany wyłącznie
+ze zmiennej wskazanej przez `--checkpoint-key-env`; powinien być losowy i mieć
+co najmniej 32 znaki. Wznowienie ponownie waliduje konfigurację, marker, tabelę,
+PK, batch, hash granicy i zależności środowiskowe. Plany `Column` (w tym
 `TextShuffler`) oraz generatory czytające nadpisywaną wartość są jawnie odrzucane.
+Checkpoint formatu 1 pozostaje zgodny wyłącznie z planem bez takich zależności.
 Ukończony checkpoint chroni też przed przypadkowym ponownym wykonaniem; świadomy
 nowy przebieg wymaga nowej ścieżki albo usunięcia starego pliku.
 
@@ -449,6 +452,7 @@ skasowany po wypchnięciu lub zarchiwizowaniu nowego repozytorium.
 4. Ujednolicić historyczne nazwy `Anonymyzer` / `Anonymization` bez zmiany
    zachowania i usunąć nieaktualne refy dopiero po upewnieniu się, że są na GH.
 
-Raport z walidacją, checkpoint dla bezpiecznych planów `Row`, ograniczony
-pamięciowo `TextShuffler` i pierwszy kontrolowany generator `Relational` są już
-dostępne. Pełne skany pozostają celowo wyłączone ze wznowienia.
+Raport z walidacją, checkpoint dla bezpiecznych planów `Row` i kontrolowanego
+`ReferencePseudonym`, ograniczony pamięciowo `TextShuffler` oraz pierwszy
+generator `Relational` są już dostępne. Pełne skany celu pozostają celowo
+wyłączone ze wznowienia.

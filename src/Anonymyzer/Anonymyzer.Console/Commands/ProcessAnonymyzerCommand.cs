@@ -2,6 +2,7 @@
 
 using System.Data;
 using Anonymyzer.Base;
+using Anonymyzer.Base.Generation;
 using Anonymyzer.Configuration;
 using Anonymyzer.Console.CommandLibraryElements;
 using Anonymyzer.Console.InternalInterfaces;
@@ -37,7 +38,8 @@ internal sealed class ProcessAnonymyzerCommand
         AnonymizationConfiguration configuration = LoadConfiguration(parameters.ConfigurationFilePath);
         ConfigurationValidator.EnsureValid(configuration);
         DetachedCopySafetyValidator.EnsureConfigurationDoesNotTargetMarker(configuration);
-        var planner = new AnonymizationExecutionPlanner(_generatorsProvider.GetAllGenerators());
+        IGenerator[] generators = _generatorsProvider.GetAllGenerators().ToArray();
+        var planner = new AnonymizationExecutionPlanner(generators);
         AnonymizationExecutionPlan plan = planner.Build(configuration);
 
         parameters.DatabaseEngine = configuration.Database.DatabaseEngine;
@@ -93,13 +95,20 @@ internal sealed class ProcessAnonymyzerCommand
                     $"Checkpoint execution refused: {resumeSafety.Message}.");
             }
 
+            IReadOnlyDictionary<string, string> replayDependencyFingerprints =
+                ReplayDependencyFingerprint.Compute(
+                    plan,
+                    generators,
+                    parameters.CheckpointFingerprintSecret!);
+
             AnonymizationExecutionCheckpoint expectedCheckpoint = AnonymizationExecutionCheckpoint.Create(
                 parameters.ConfigurationFilePath,
                 configuration.Database.DatabaseEngine,
                 configuration.Database.DatabaseName,
                 marker.MarkerId,
                 plan,
-                writeSlice);
+                writeSlice,
+                replayDependencyFingerprints);
             checkpoint = AnonymizationExecutionCheckpointStore.Load(parameters.CheckpointFilePath)
                 ?? expectedCheckpoint;
             checkpoint.EnsureMatches(expectedCheckpoint);
@@ -138,7 +147,7 @@ internal sealed class ProcessAnonymyzerCommand
 
         var store = new DatabaseExecutionRowStore(connection, configuration.Database.DatabaseEngine);
         DateTimeOffset startedAtUtc = DateTimeOffset.UtcNow;
-        var executor = new AnonymizationExecutor(_generatorsProvider.GetAllGenerators());
+        var executor = new AnonymizationExecutor(generators);
         AnonymizationExecutionResult result;
         if (checkpoint is null)
         {
@@ -156,7 +165,10 @@ internal sealed class ProcessAnonymyzerCommand
                         checkpoint.ProcessedRows,
                         checkpoint.CommittedBatches,
                         checkpoint.LastPrimaryKeyHmacSha256,
-                        parameters.CheckpointFingerprintSecret!),
+                        parameters.CheckpointFingerprintSecret!)
+                    {
+                        ReplayDependencyHmacSha256 = checkpoint.ReplayDependencyHmacSha256
+                    },
                     (progress, _) =>
                     {
                         checkpoint.Advance(progress, parameters.CheckpointFingerprintSecret!);

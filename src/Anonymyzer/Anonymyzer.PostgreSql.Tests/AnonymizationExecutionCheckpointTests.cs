@@ -4,6 +4,7 @@ using Anonymyzer.Base;
 using Anonymyzer.Base.Generation;
 using Anonymyzer.Console.Commands;
 using Anonymyzer.Console.Planning;
+using Newtonsoft.Json;
 
 public sealed class AnonymizationExecutionCheckpointTests
 {
@@ -19,6 +20,11 @@ public sealed class AnonymizationExecutionCheckpointTests
         File.WriteAllText(configurationPath, "{\"database\":\"clone\"}");
         var table = new GeneratorTableReference("public", "people");
         var plan = new AnonymizationExecutionPlan(100, [CreateStep(table)]);
+        var replayDependencies = new Dictionary<string, string>
+        {
+            ["public.people/value\u001fANONYMYZER_TEST_KEY"] =
+                PrimaryKeyFingerprint.Compute("dependency-secret", CheckpointSecret)
+        };
 
         try
         {
@@ -28,7 +34,8 @@ public sealed class AnonymizationExecutionCheckpointTests
                 "detached_clone",
                 Guid.Parse("11111111-2222-3333-4444-555555555555"),
                 plan,
-                new ExecutionWriteSliceAssessment(true, "ready", table, "Id"));
+                new ExecutionWriteSliceAssessment(true, "ready", table, "Id"),
+                replayDependencies);
             checkpoint.Advance(
                 new AnonymizationExecutionProgress(100, 1, "SENSITIVE-KEY", 100),
                 CheckpointSecret);
@@ -39,6 +46,7 @@ public sealed class AnonymizationExecutionCheckpointTests
             Assert.DoesNotContain("SENSITIVE-KEY", json);
             Assert.Contains(PrimaryKeyFingerprint.Compute("SENSITIVE-KEY", CheckpointSecret), json);
             Assert.DoesNotContain(CheckpointSecret, json);
+            Assert.DoesNotContain("dependency-secret", json);
             AnonymizationExecutionCheckpoint loaded = Assert.IsType<AnonymizationExecutionCheckpoint>(
                 AnonymizationExecutionCheckpointStore.Load(checkpointPath));
             loaded.EnsureMatches(AnonymizationExecutionCheckpoint.Create(
@@ -47,9 +55,32 @@ public sealed class AnonymizationExecutionCheckpointTests
                 "detached_clone",
                 Guid.Parse("11111111-2222-3333-4444-555555555555"),
                 plan,
-                new ExecutionWriteSliceAssessment(true, "ready", table, "Id")));
+                new ExecutionWriteSliceAssessment(true, "ready", table, "Id"),
+                replayDependencies));
             Assert.Equal(100, loaded.ProcessedRows);
             Assert.Equal(1, loaded.CommittedBatches);
+            Assert.True(ReplayDependencyFingerprint.Matches(
+                replayDependencies,
+                loaded.ReplayDependencyHmacSha256));
+
+            AnonymizationExecutionCheckpoint rowOnly = AnonymizationExecutionCheckpoint.Create(
+                configurationPath,
+                "PostgreSql",
+                "detached_clone",
+                Guid.Parse("11111111-2222-3333-4444-555555555555"),
+                plan,
+                new ExecutionWriteSliceAssessment(true, "ready", table, "Id"));
+            string legacyJson = JsonConvert.SerializeObject(rowOnly)
+                .Replace("\"FormatVersion\":2", "\"FormatVersion\":1", StringComparison.Ordinal);
+            AnonymizationExecutionCheckpoint legacy = Assert.IsType<AnonymizationExecutionCheckpoint>(
+                JsonConvert.DeserializeObject<AnonymizationExecutionCheckpoint>(legacyJson));
+            legacy.EnsureMatches(rowOnly);
+
+            string unsafeLegacyJson = JsonConvert.SerializeObject(checkpoint)
+                .Replace("\"FormatVersion\":2", "\"FormatVersion\":1", StringComparison.Ordinal);
+            AnonymizationExecutionCheckpoint unsafeLegacy = Assert.IsType<AnonymizationExecutionCheckpoint>(
+                JsonConvert.DeserializeObject<AnonymizationExecutionCheckpoint>(unsafeLegacyJson));
+            Assert.Throws<InvalidOperationException>(() => unsafeLegacy.EnsureMatches(checkpoint));
         }
         finally
         {

@@ -6,6 +6,18 @@ using Anonymyzer.Generators.Simple;
 public sealed class ReferencePseudonymGeneratorTests
 {
     [Fact]
+    public void DeclaresReplaySupportAndSecretDependency()
+    {
+        var generator = new ReferencePseudonymGenerator();
+        ReferencePseudonymGeneratorConfiguration configuration = CreateConfiguration();
+
+        Assert.True(generator.Descriptor.SupportsDeterministicReplay);
+        Assert.Equal(
+            [configuration.KeyEnvironmentVariable],
+            ((IGeneratorReplayDependencyProvider)generator).GetReplayEnvironmentVariables(configuration));
+    }
+
+    [Fact]
     public async Task RequiresSecretFromNamedEnvironmentVariable()
     {
         var generator = new ReferencePseudonymGenerator();

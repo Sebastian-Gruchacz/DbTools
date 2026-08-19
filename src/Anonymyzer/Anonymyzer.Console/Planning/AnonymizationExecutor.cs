@@ -44,6 +44,18 @@ internal sealed class AnonymizationExecutor(IEnumerable<IGenerator> generators)
             throw new InvalidOperationException(safety.Message + ".");
         }
 
+        IReadOnlyDictionary<string, string> currentReplayDependencies = ReplayDependencyFingerprint.Compute(
+            plan,
+            _generators.Values,
+            resumeState.PrimaryKeyFingerprintSecret);
+        if (!ReplayDependencyFingerprint.Matches(
+                resumeState.ReplayDependencyHmacSha256,
+                currentReplayDependencies))
+        {
+            throw new InvalidOperationException(
+                "Checkpoint replay dependencies changed; resume was refused before writing data.");
+        }
+
         if (resumeState.ProcessedRows < 0 || resumeState.CommittedBatches < 0)
         {
             throw new InvalidOperationException("Resume counters cannot be negative.");
@@ -398,4 +410,8 @@ internal sealed record AnonymizationExecutionResumeState(
     long ProcessedRows,
     int CommittedBatches,
     string LastPrimaryKeyHmacSha256,
-    string PrimaryKeyFingerprintSecret);
+    string PrimaryKeyFingerprintSecret)
+{
+    public IReadOnlyDictionary<string, string> ReplayDependencyHmacSha256 { get; init; } =
+        new Dictionary<string, string>(StringComparer.Ordinal);
+}

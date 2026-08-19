@@ -8,11 +8,21 @@ internal sealed class ExecutionResumeSafetyAssessor
     {
         ArgumentNullException.ThrowIfNull(plan);
 
-        GeneratorExecutionPlanStep? nonRowStep = plan.Steps.FirstOrDefault(step =>
-            step.Generator.Scope != GeneratorExecutionScope.Row);
-        if (nonRowStep is not null)
+        GeneratorTableReference[] targetTables = plan.Steps
+            .Select(step => step.TargetTable)
+            .DistinctBy(TableKey, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        if (targetTables.Length != 1)
         {
-            return Unsafe($"step '{nonRowStep.Id}' has scope {nonRowStep.Generator.Scope}");
+            return Unsafe("resume requires exactly one target table");
+        }
+
+        GeneratorTableReference targetTable = targetTables[0];
+        GeneratorExecutionPlanStep? unsupportedScope = plan.Steps.FirstOrDefault(step =>
+            step.Generator.Scope is not GeneratorExecutionScope.Row and not GeneratorExecutionScope.Relational);
+        if (unsupportedScope is not null)
+        {
+            return Unsafe($"step '{unsupportedScope.Id}' has scope {unsupportedScope.Generator.Scope}");
         }
 
         GeneratorExecutionPlanStep? nondeterministicStep = plan.Steps.FirstOrDefault(step =>
@@ -29,12 +39,16 @@ internal sealed class ExecutionResumeSafetyAssessor
             return Unsafe($"step '{existingValueStep.Id}' depends on the value it overwrites");
         }
 
-        GeneratorDataRequirement? completeScan = plan.Steps
+        GeneratorDataRequirement? unsafeCompleteScan = plan.Steps
             .SelectMany(step => step.DataRequirements)
-            .FirstOrDefault(requirement => requirement.RequiresCompleteScan);
-        if (completeScan is not null)
+            .FirstOrDefault(requirement =>
+                requirement.RequiresCompleteScan
+                && (requirement.ValueSource != GeneratorValueSource.Original
+                    || TableKey(requirement.Table).Equals(TableKey(targetTable), StringComparison.OrdinalIgnoreCase)));
+        if (unsafeCompleteScan is not null)
         {
-            return Unsafe($"data requirement '{completeScan.Alias}' needs a complete scan");
+            return Unsafe(
+                $"data requirement '{unsafeCompleteScan.Alias}' needs a complete scan of mutable target data");
         }
 
         var outputColumns = plan.Steps
@@ -44,6 +58,7 @@ internal sealed class ExecutionResumeSafetyAssessor
             .SelectMany(step => step.DataRequirements)
             .FirstOrDefault(requirement =>
                 requirement.ValueSource == GeneratorValueSource.Original
+                && TableKey(requirement.Table).Equals(TableKey(targetTable), StringComparison.OrdinalIgnoreCase)
                 && requirement.Columns.Any(outputColumns.Contains));
         if (overwrittenOriginalInput is not null)
         {
@@ -53,11 +68,14 @@ internal sealed class ExecutionResumeSafetyAssessor
 
         return new ExecutionResumeSafetyAssessment(
             true,
-            "resume-safe: deterministic Row sessions can be replayed from the beginning");
+            "resume-safe: deterministic Row and read-only Relational sessions can be replayed from the beginning");
     }
 
     private static ExecutionResumeSafetyAssessment Unsafe(string reason) =>
         new(false, $"resume is unsafe because {reason}");
+
+    private static string TableKey(GeneratorTableReference table) =>
+        $"{table.SchemaName}\u001f{table.TableName}";
 }
 
 internal sealed record ExecutionResumeSafetyAssessment(bool IsSupported, string Message);

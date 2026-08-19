@@ -31,7 +31,8 @@ transakcji obejmującej całą bazę.
    wierszy oraz górne zużycie pamięci pełnych skanów.
 6. `run --execute` w pierwszym wycinku przetwarza jedną tabelę batchami po PK;
    opcjonalny `--report` zapisuje niesekretny raport końcowy, a `--checkpoint`
-   pozwala wznowić wyłącznie plan, którego sesje `Row` można odtworzyć.
+   pozwala wznowić plan, którego sesje `Row` albo kontrolowane `Relational`
+   można odtworzyć.
 7. Walidacja po wykonaniu sprawdza constrainty, liczbę wierszy i spójność
    relacji. Kopia może dopiero wtedy zostać przekazana dalej.
 
@@ -274,15 +275,18 @@ konfiguracji, marker, czasy, kroki oraz liczbę zatwierdzonych batchy i wierszy,
 ale nie connection string, wartości rekordów ani ostatni klucz. Nie ma jeszcze
 checkpointu dla `Column` ani pełnej walidacji indeksów i triggerów.
 
-Checkpoint planu `Row` przechowuje fingerprint konfiguracji, tożsamość klona,
+Checkpoint formatu 2 przechowuje fingerprint konfiguracji, tożsamość klona,
 target, rozmiar batcha, liczniki i HMAC-SHA-256 granicznego PK, ale nie sam klucz,
-sekret HMAC ani wartości rekordów. Sekret jest przekazywany osobną zmienną
-środowiskową wskazaną przez `--checkpoint-key-env`. Przy wznowieniu executor odczytuje już zatwierdzone wiersze od
-początku i uruchamia sesje bez zapisu, aby deterministycznie odtworzyć ich stan.
-Hash ostatniego odtworzonego PK wykrywa przesunięcie granicy po zmianie zbioru
-wierszy. Scope `Column`, pełny skan, zależność od nadpisanej wartości oryginalnej
-lub `RequiresExistingValue` blokują checkpoint, ponieważ częściowo zmieniona baza
-nie zawiera już danych wystarczających do bezpiecznego odtworzenia.
+sekret HMAC ani wartości rekordów. Dla `ReferencePseudonym` zapisuje również HMAC
+sekretu wskazanego w profilu, obliczony kluczem checkpointu; sam sekret nie trafia
+do pliku. Przy wznowieniu executor odczytuje już zatwierdzone wiersze od początku
+i uruchamia sesje bez zapisu, aby deterministycznie odtworzyć ich stan. Hash
+ostatniego odtworzonego PK wykrywa przesunięcie granicy po zmianie zbioru wierszy.
+Scope `Column`, pełny skan tabeli docelowej, zależność od nadpisanej wartości
+oryginalnej lub `RequiresExistingValue` blokują checkpoint. Pełny skan
+niezmienianej tabeli lookup jest dopuszczony dla deterministycznego generatora
+`Relational`. Format 1 pozostaje akceptowany tylko dla planu bez zależności
+środowiskowych.
 
 `ReferencePseudonym` kanonizuje klucz referencji i liczy skrócony HMAC-SHA-256.
 Profil zawiera nazwę zmiennej środowiskowej, prefiks i długość skrótu, lecz nigdy

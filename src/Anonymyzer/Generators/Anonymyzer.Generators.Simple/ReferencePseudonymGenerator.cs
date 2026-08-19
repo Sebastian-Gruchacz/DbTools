@@ -6,7 +6,8 @@ using System.Text;
 using Anonymyzer.Base;
 using Anonymyzer.Base.Generation;
 
-public sealed class ReferencePseudonymGenerator : GeneratorBase<ReferencePseudonymGeneratorConfiguration>
+public sealed class ReferencePseudonymGenerator : GeneratorBase<ReferencePseudonymGeneratorConfiguration>,
+    IGeneratorReplayDependencyProvider
 {
     public const string GeneratorType = "ReferencePseudonym";
     public const string GeneratorVersion = "1.0.0";
@@ -19,6 +20,7 @@ public sealed class ReferencePseudonymGenerator : GeneratorBase<ReferencePseudon
         GeneratorExecutionScope.Relational,
         DbDataType.Text)
     {
+        SupportsDeterministicReplay = true,
         Outputs =
         [
             new GeneratorOutputDescriptor(ValueOutput, "Value", string.Empty, Required: true)
@@ -30,6 +32,17 @@ public sealed class ReferencePseudonymGenerator : GeneratorBase<ReferencePseudon
     public override GeneratorDescriptor Descriptor => GeneratorDescriptor;
 
     public override IGeneratorConfigurationCodec Configuration => ConfigurationCodec;
+
+    public IReadOnlyList<string> GetReplayEnvironmentVariables(object configuration)
+    {
+        ArgumentNullException.ThrowIfNull(configuration);
+        return configuration is ReferencePseudonymGeneratorConfiguration typed
+            ? [typed.KeyEnvironmentVariable]
+            : throw new ArgumentException(
+                $"Expected configuration type {typeof(ReferencePseudonymGeneratorConfiguration).FullName}, " +
+                $"got {configuration.GetType().FullName}.",
+                nameof(configuration));
+    }
 
     protected override IReadOnlyList<GeneratorDataRequirement> GetDataRequirements(
         GeneratorBinding binding,
