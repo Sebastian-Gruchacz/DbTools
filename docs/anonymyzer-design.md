@@ -244,11 +244,18 @@ zapisem przygotowuje sesje `Column` z pełnego, oryginalnego skanu keyset, potem
 czyta kolejne batche tym samym pagingiem, utrzymuje sesje generatorów między
 batchami i zapisuje batch w jednej transakcji. Aktualizacja innej liczby wierszy
 niż dokładnie jeden dla danego PK powoduje rollback batcha. Pełny skan jest
-buforowany przez generator, dlatego estymata pamięci z `dry-run` jest istotnym
-ostrzeżeniem operatora. Po zakończeniu opcjonalny raport JSON zawiera fingerprint
+buforowany lub spillowany przez generator, dlatego estymata pamięci z `dry-run`
+jest istotnym ostrzeżeniem operatora. Przed pierwszą zmianą executor odrzuca
+tabelę z istniejącymi naruszeniami constraintów. Po zakończeniu ponownie waliduje
+marker i aktywny schemat, porównuje dokładną liczbę wierszy oraz sprawdza `CHECK`
+i wychodzące FK tabeli docelowej. SQL Server korzysta z `DBCC CHECKCONSTRAINTS`,
+a PostgreSQL z odczytowych zapytań zbudowanych na podstawie `pg_constraint`.
+PostgreSQL-owy skan działa w transakcji `REPEATABLE READ, READ ONLY`, aby także
+funkcja użyta przez wyrażenie `CHECK` nie mogła niczego zapisać.
+Opcjonalny raport JSON formatu 2 zawiera wynik tej walidacji, fingerprint
 konfiguracji, marker, czasy, kroki oraz liczbę zatwierdzonych batchy i wierszy,
 ale nie connection string, wartości rekordów ani ostatni klucz. Nie ma jeszcze
-checkpointu dla `Column` ani automatycznej walidacji constraintów po zakończeniu.
+checkpointu dla `Column` ani pełnej walidacji indeksów i triggerów.
 
 Checkpoint planu `Row` przechowuje fingerprint konfiguracji, tożsamość klona,
 target, rozmiar batcha, liczniki i HMAC-SHA-256 granicznego PK, ale nie sam klucz,

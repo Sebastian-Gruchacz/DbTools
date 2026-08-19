@@ -120,6 +120,22 @@ internal sealed class ProcessAnonymyzerCommand
             }
         }
 
+        var postExecutionValidator = new PostExecutionDatabaseValidator();
+        long rowCountBefore = postExecutionValidator.CountRows(
+            connection,
+            configuration.Database.DatabaseEngine,
+            writeSlice.TargetTable!);
+        ConstraintValidationResult constraintBaseline = postExecutionValidator.ValidateConstraints(
+            connection,
+            configuration.Database.DatabaseEngine,
+            writeSlice.TargetTable!);
+        if (constraintBaseline.Issues.Count > 0)
+        {
+            throw new InvalidOperationException(
+                "Pre-execution constraint validation failed; no data was modified: " +
+                string.Join(" ", constraintBaseline.Issues));
+        }
+
         var store = new DatabaseExecutionRowStore(connection, configuration.Database.DatabaseEngine);
         DateTimeOffset startedAtUtc = DateTimeOffset.UtcNow;
         var executor = new AnonymizationExecutor(_generatorsProvider.GetAllGenerators());
@@ -163,6 +179,31 @@ internal sealed class ProcessAnonymyzerCommand
                     })
                 .GetAwaiter()
                 .GetResult();
+        }
+        PostExecutionValidationResult validation = ValidatePostExecution(
+            connection,
+            configuration,
+            plan,
+            engine,
+            marker.MarkerId,
+            writeSlice.TargetTable!,
+            rowCountBefore,
+            constraintBaseline.CheckedConstraints,
+            postExecutionValidator);
+        DateTimeOffset completedAtUtc = DateTimeOffset.UtcNow;
+        _logger.Info(
+            $"Execution completed on detached clone '{configuration.Database.DatabaseName}', " +
+            $"marker {marker.MarkerId:D}. Updated {result.ProcessedRows:N0} row(s) " +
+            $"in {result.CommittedBatches:N0} committed batch(es).");
+        if (validation.Passed)
+        {
+            _logger.Info(
+                $"Post-execution validation passed: marker and schema are valid, row count is " +
+                $"{validation.RowCountAfter:N0}, checked {validation.CheckedConstraints:N0} constraint(s).");
+        }
+
+        if (checkpoint is not null && validation.Passed)
+        {
             checkpoint.Complete(result, parameters.CheckpointFingerprintSecret!);
             try
             {
@@ -171,16 +212,12 @@ internal sealed class ProcessAnonymyzerCommand
             catch (Exception exception)
             {
                 throw new InvalidOperationException(
-                    "Anonymization completed and data was modified, but the checkpoint could not be marked complete. " +
+                    "Anonymization and validation completed, but the checkpoint could not be marked complete. " +
                     "Retry with the same checkpoint path: " + exception.Message,
                     exception);
             }
         }
-        DateTimeOffset completedAtUtc = DateTimeOffset.UtcNow;
-        _logger.Info(
-            $"Execution completed on detached clone '{configuration.Database.DatabaseName}', " +
-            $"marker {marker.MarkerId:D}. Updated {result.ProcessedRows:N0} row(s) " +
-            $"in {result.CommittedBatches:N0} committed batch(es).");
+
         if (!string.IsNullOrWhiteSpace(parameters.ReportFilePath))
         {
             AnonymizationExecutionReport report = AnonymizationExecutionReport.Completed(
@@ -192,7 +229,8 @@ internal sealed class ProcessAnonymyzerCommand
                 marker.MarkerId,
                 plan,
                 writeSlice,
-                result);
+                result,
+                validation);
             try
             {
                 AnonymizationExecutionReportWriter.Write(parameters.ReportFilePath, report);
@@ -208,7 +246,103 @@ internal sealed class ProcessAnonymyzerCommand
             _logger.Info($"Execution report written to '{Path.GetFullPath(parameters.ReportFilePath)}'.");
         }
 
+        if (!validation.Passed)
+        {
+            _logger.Error(
+                "Post-execution validation failed after data was modified. " +
+                "The clone must not be released for use.");
+            foreach (string issue in validation.Issues)
+            {
+                _logger.Error($"Validation issue: {issue}");
+            }
+
+            return (int)ErrorCodes.ConfigurationError;
+        }
+
         return (int)ErrorCodes.Success;
+    }
+
+    private PostExecutionValidationResult ValidatePostExecution(
+        IDbConnection connection,
+        AnonymizationConfiguration configuration,
+        AnonymizationExecutionPlan plan,
+        IAnonymyzerEngine engine,
+        Guid markerId,
+        Anonymyzer.Base.Generation.GeneratorTableReference targetTable,
+        long rowCountBefore,
+        int expectedConstraintCount,
+        PostExecutionDatabaseValidator validator)
+    {
+        var issues = new List<string>();
+        bool markerValid = false;
+        bool schemaValid = false;
+        long? rowCountAfter = null;
+        int checkedConstraints = 0;
+        try
+        {
+            _safetyValidator.Validate(configuration.Database, markerId, connection);
+            markerValid = true;
+        }
+        catch (Exception exception)
+        {
+            issues.Add("Detached-copy marker validation failed: " + exception.Message);
+        }
+
+        try
+        {
+            new ExecutionPlanDatabaseInspector().Inspect(configuration, plan, engine);
+            schemaValid = true;
+        }
+        catch (Exception exception)
+        {
+            issues.Add("Schema validation failed: " + exception.Message);
+        }
+
+        try
+        {
+            rowCountAfter = validator.CountRows(
+                connection,
+                configuration.Database.DatabaseEngine,
+                targetTable);
+            if (rowCountAfter != rowCountBefore)
+            {
+                issues.Add(
+                    $"Target row count changed from {rowCountBefore:N0} to {rowCountAfter:N0}.");
+            }
+        }
+        catch (Exception exception)
+        {
+            issues.Add("Exact row-count validation failed: " + exception.Message);
+        }
+
+        try
+        {
+            ConstraintValidationResult constraints = validator.ValidateConstraints(
+                connection,
+                configuration.Database.DatabaseEngine,
+                targetTable);
+            checkedConstraints = constraints.CheckedConstraints;
+            issues.AddRange(constraints.Issues);
+            if (checkedConstraints != expectedConstraintCount)
+            {
+                issues.Add(
+                    $"Target constraint count changed from {expectedConstraintCount:N0} " +
+                    $"to {checkedConstraints:N0} during execution.");
+            }
+        }
+        catch (Exception exception)
+        {
+            issues.Add("Constraint validation could not be completed: " + exception.Message);
+        }
+
+        return new PostExecutionValidationResult(
+            issues.Count == 0 && markerValid && schemaValid && rowCountAfter == rowCountBefore,
+            markerValid,
+            schemaValid,
+            rowCountBefore,
+            rowCountAfter,
+            checkedConstraints,
+            issues);
     }
 
     private static void EnsureOutputPathsAreDistinct(ProcessAnonymyzerCommandParameters parameters)

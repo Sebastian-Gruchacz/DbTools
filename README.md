@@ -239,7 +239,7 @@ językowe opisuje [docs/anonymyzer-design.md](docs/anonymyzer-design.md).
   jedną tabelę, kroki `Row`/`Column` i pojedynczy niezmieniany PK;
 - checkpointów dla `Column`, generatorów zależnych od nadpisywanej wartości oraz
   planów wielotabelowych; bezpieczne plany wyłącznie `Row` można już wznawiać;
-- walidacji constraintów po zapisie;
+- pełnej walidacji indeksów, triggerów i constraintów spoza aktywnej tabeli;
 - pozostałych generatorów grupowych;
 - podglądu generatorów `Relational` oraz przyszłych generatorów `Column`
   wymagających wielu skanów lub przypisanych przez grupę;
@@ -301,9 +301,19 @@ Komenda kończy bez zapisu danych. `--execute` wymaga jawnego trybu, ponawia te
 same walidacje, odrzuca plan bez statusu `write slice ready`, czyta wiersze
 keyset pagingiem po PK i zapisuje każdy batch w osobnej transakcji. Opcjonalny
 `--report` zapisuje atomowo raport JSON z fingerprintem konfiguracji, markerem,
-czasem, planem oraz liczbą zatwierdzonych batchy i wierszy. Raport nie zawiera
+czasem, planem, liczbą zatwierdzonych batchy i wierszy oraz wynikiem walidacji
+po zapisie. Raport nie zawiera
 connection stringa, wartości rekordów ani ostatniego klucza. Wywołanie
 bez `--dry-run` i `--execute` albo z obiema flagami jest odrzucane.
+
+Przed zapisem CLI odmawia pracy, jeśli tabela już narusza constrainty. Po zapisie
+ponownie sprawdza marker i aktywny schemat, porównuje dokładne
+`COUNT(*)` sprzed i po wykonaniu oraz szuka naruszeń `CHECK` i FK tabeli docelowej.
+SQL Server używa `DBCC CHECKCONSTRAINTS`, a PostgreSQL wykonuje tylko zapytania
+odczytowe zbudowane z katalogów `pg_constraint`, wewnątrz transakcji `READ ONLY`.
+Nieudana walidacja daje kod
+błędu, raport ze statusem `ValidationFailed` i pozostawia checkpoint jako
+nieukończony; klon nie powinien wtedy zostać przekazany dalej.
 
 Opcjonalny `--checkpoint` działa tylko dla deterministycznych planów `Row`, które
 można bezpiecznie odtworzyć od początku. Po każdym commicie zapisuje atomowo
@@ -409,17 +419,17 @@ skasowany po wypchnięciu lub zarchiwizowaniu nowego repozytorium.
 
 ## Proponowana kolejka
 
-1. Dodać walidację po zapisie i rozszerzać checkpoint tylko wraz z trwałym,
-   odtwarzalnym stanem generatorów `Column`/`Relational`.
-2. Zaprojektować pierwszy generator `Relational` oraz planowanie zależności
+1. Zaprojektować pierwszy generator `Relational` oraz planowanie zależności
    między tabelami bez zmiany PK/FK.
+2. Rozszerzać checkpoint tylko wraz z trwałym, odtwarzalnym stanem generatorów
+   `Column`/`Relational`.
 3. Rozszerzyć pakiety regionalne o wersjonowane, ważone dane z opisanym źródłem.
 4. Dopiero po pomiarach dodać mapowanie zmienianych kluczy, obsługę XML oraz
    strategię indeksów, constraintów i triggerów.
 5. Ujednolicić historyczne nazwy `Anonymyzer` / `Anonymization` bez zmiany
    zachowania i usunąć nieaktualne refy dopiero po upewnieniu się, że są na GH.
 
-Raport, checkpoint dla bezpiecznych planów `Row` oraz ograniczony pamięciowo
-`TextShuffler` są już dostępne. Następny opłacalny krok to walidacja po zapisie.
-Pełny skan shufflera pozostaje celowo wyłączony ze wznowienia, dopóki populacja
-oraz stan generatora nie będą utrwalane między procesami.
+Raport z walidacją, checkpoint dla bezpiecznych planów `Row` oraz ograniczony
+pamięciowo `TextShuffler` są już dostępne. Następny opłacalny krok to pierwszy
+generator `Relational` i planowanie jego zależności między tabelami. Pełny skan
+shufflera pozostaje celowo wyłączony ze wznowienia.

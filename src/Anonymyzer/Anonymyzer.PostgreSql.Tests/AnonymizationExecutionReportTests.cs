@@ -49,7 +49,15 @@ public sealed class AnonymizationExecutionReportTests
                 Guid.Parse("11111111-2222-3333-4444-555555555555"),
                 plan,
                 new ExecutionWriteSliceAssessment(true, "ready", table, "Id"),
-                new AnonymizationExecutionResult(3, 2, "SENSITIVE-PRIMARY-KEY"));
+                new AnonymizationExecutionResult(3, 2, "SENSITIVE-PRIMARY-KEY"),
+                new PostExecutionValidationResult(
+                    true,
+                    true,
+                    true,
+                    3,
+                    3,
+                    2,
+                    Array.Empty<string>()));
 
             AnonymizationExecutionReportWriter.Write(reportPath, report);
 
@@ -57,6 +65,8 @@ public sealed class AnonymizationExecutionReportTests
             Assert.Contains("\"ProcessedRows\": 3", json);
             Assert.Contains("\"CommittedBatches\": 2", json);
             Assert.Contains("\"ConfigurationSha256\"", json);
+            Assert.Contains("\"Validation\"", json);
+            Assert.Contains("\"CheckedConstraints\": 2", json);
             Assert.DoesNotContain("SENSITIVE-PRIMARY-KEY", json);
             Assert.False(File.Exists(reportPath + ".tmp"));
         }

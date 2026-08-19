@@ -7,7 +7,7 @@ using Newtonsoft.Json;
 
 internal sealed class AnonymizationExecutionReport
 {
-    public int FormatVersion { get; init; } = 1;
+    public int FormatVersion { get; init; } = 2;
 
     public string Status { get; init; } = "Completed";
 
@@ -37,6 +37,8 @@ internal sealed class AnonymizationExecutionReport
 
     public int CommittedBatches { get; init; }
 
+    public AnonymizationExecutionValidationReport Validation { get; init; } = new();
+
     public IReadOnlyList<AnonymizationExecutionReportStep> Steps { get; init; } =
         Array.Empty<AnonymizationExecutionReportStep>();
 
@@ -49,7 +51,8 @@ internal sealed class AnonymizationExecutionReport
         Guid markerId,
         AnonymizationExecutionPlan plan,
         ExecutionWriteSliceAssessment writeSlice,
-        AnonymizationExecutionResult result)
+        AnonymizationExecutionResult result,
+        PostExecutionValidationResult validation)
     {
         GeneratorTableReference table = writeSlice.TargetTable
             ?? throw new InvalidOperationException("A completed execution must have a target table.");
@@ -68,6 +71,17 @@ internal sealed class AnonymizationExecutionReport
             BatchSize = plan.BatchSize,
             ProcessedRows = result.ProcessedRows,
             CommittedBatches = result.CommittedBatches,
+            Status = validation.Passed ? "Completed" : "ValidationFailed",
+            Validation = new AnonymizationExecutionValidationReport
+            {
+                Passed = validation.Passed,
+                MarkerValid = validation.MarkerValid,
+                SchemaValid = validation.SchemaValid,
+                RowCountBefore = validation.RowCountBefore,
+                RowCountAfter = validation.RowCountAfter,
+                CheckedConstraints = validation.CheckedConstraints,
+                Issues = validation.Issues
+            },
             Steps = plan.Steps.Select(step => new AnonymizationExecutionReportStep
             {
                 Id = step.Id,
@@ -80,6 +94,23 @@ internal sealed class AnonymizationExecutionReport
             }).ToArray()
         };
     }
+}
+
+internal sealed class AnonymizationExecutionValidationReport
+{
+    public bool Passed { get; init; }
+
+    public bool MarkerValid { get; init; }
+
+    public bool SchemaValid { get; init; }
+
+    public long RowCountBefore { get; init; }
+
+    public long? RowCountAfter { get; init; }
+
+    public int CheckedConstraints { get; init; }
+
+    public IReadOnlyList<string> Issues { get; init; } = Array.Empty<string>();
 }
 
 internal sealed class AnonymizationExecutionReportStep

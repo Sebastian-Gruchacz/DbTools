@@ -17,6 +17,69 @@ using Npgsql;
 public sealed class AnonymizationExecutorIntegrationTests
 {
     [Fact]
+    public void PostExecutionValidatorFindsSqlServerCheckViolationWithoutReturningRowValues()
+    {
+        string connectionString = RequireConnectionString("ANONYMYZER_SQLSERVER_CONNECTION", "SQL Server");
+        string tableName = "__AnonymyzerValidation_" + Guid.NewGuid().ToString("N")[..12];
+        string constraintName = "CK_" + tableName;
+        using var connection = new SqlConnection(connectionString);
+        connection.Open();
+        ExecuteNonQuery(
+            connection,
+            $"CREATE TABLE [dbo].[{tableName}] ([Id] int PRIMARY KEY, [Value] int NOT NULL); " +
+            $"INSERT INTO [dbo].[{tableName}] ([Id], [Value]) VALUES (1, -7); " +
+            $"ALTER TABLE [dbo].[{tableName}] WITH NOCHECK ADD CONSTRAINT [{constraintName}] CHECK ([Value] >= 0);");
+
+        try
+        {
+            ConstraintValidationResult result = new PostExecutionDatabaseValidator().ValidateConstraints(
+                connection,
+                "SqlServer",
+                new GeneratorTableReference("dbo", tableName));
+
+            string issue = Assert.Single(result.Issues);
+            Assert.Contains(constraintName, issue, StringComparison.Ordinal);
+            Assert.DoesNotContain("-7", issue, StringComparison.Ordinal);
+        }
+        finally
+        {
+            ExecuteNonQuery(connection, $"DROP TABLE [dbo].[{tableName}];");
+        }
+    }
+
+    [Fact]
+    public void PostExecutionValidatorFindsPostgreSqlCheckViolationWithoutReturningRowValues()
+    {
+        string connectionString = RequireConnectionString("ANONYMYZER_POSTGRES_CONNECTION", "PostgreSQL");
+        string tableName = "__anonymyzer_validation_" + Guid.NewGuid().ToString("N")[..12];
+        string constraintName = "ck_" + tableName;
+        using var connection = new NpgsqlConnection(connectionString);
+        connection.Open();
+        ExecuteNonQuery(
+            connection,
+            $"CREATE TABLE public.\"{tableName}\" (\"Id\" integer PRIMARY KEY, \"Value\" integer NOT NULL); " +
+            $"INSERT INTO public.\"{tableName}\" (\"Id\", \"Value\") VALUES (1, -7); " +
+            $"ALTER TABLE public.\"{tableName}\" ADD CONSTRAINT \"{constraintName}\" " +
+            "CHECK (\"Value\" >= 0) NOT VALID;");
+
+        try
+        {
+            ConstraintValidationResult result = new PostExecutionDatabaseValidator().ValidateConstraints(
+                connection,
+                "PostgreSql",
+                new GeneratorTableReference("public", tableName));
+
+            string issue = Assert.Single(result.Issues);
+            Assert.Contains(constraintName, issue, StringComparison.Ordinal);
+            Assert.DoesNotContain("-7", issue, StringComparison.Ordinal);
+        }
+        finally
+        {
+            ExecuteNonQuery(connection, $"DROP TABLE public.\"{tableName}\";");
+        }
+    }
+
+    [Fact]
     public async Task ExecutesPersonIdentityOnIsolatedSqlServerFixture()
     {
         string connectionString = RequireConnectionString("ANONYMYZER_SQLSERVER_CONNECTION", "SQL Server");
