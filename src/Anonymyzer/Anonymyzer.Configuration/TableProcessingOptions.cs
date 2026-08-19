@@ -14,6 +14,8 @@ public sealed class TableProcessingOptions
 
     public List<ColumnProcessingOptions> Columns { get; set; } = new();
 
+    public List<string> PrimaryKeyColumns { get; set; } = new();
+
     public List<GenerationGroupConfiguration> GenerationGroups { get; set; } = new();
 
     [JsonIgnore]

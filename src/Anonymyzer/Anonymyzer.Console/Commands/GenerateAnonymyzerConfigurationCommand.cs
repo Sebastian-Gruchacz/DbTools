@@ -143,8 +143,8 @@ internal class GenerateAnonymyzerConfigurationCommand// : ICommand<GenerateAnony
         {
             var tableConfig = _columnConfigurationBuilder.CreateTable(engine, tableInfo);
 
-            // Only write tables with at least one anonymyzable column TODO: configurable?
-            if (tableConfig.Columns.Any())
+            // Retain PK-only tables because relational generators may use them as lookup sources.
+            if (tableConfig.Columns.Any() || tableConfig.PrimaryKeyColumns.Any())
             {
                 outputConfigs.Add(tableConfig);
             }

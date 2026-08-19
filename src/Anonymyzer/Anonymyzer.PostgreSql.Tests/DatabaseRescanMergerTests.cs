@@ -28,6 +28,7 @@ public sealed class DatabaseRescanMergerTests
             Detection = new CandidateDetectionConfiguration { IsCandidate = true, SuggestedRole = "Contact.Email" },
             Generator = new ColumnGeneratorConfiguration { GeneratorType = "TextShuffler", ProfileId = "default" }
         });
+        fresh.PrimaryKeyColumns = ["tenant_id", "id"];
 
         DatabaseRescanMergeResult result = new DatabaseRescanMerger().Merge(configuration, [fresh]);
 
@@ -38,6 +39,7 @@ public sealed class DatabaseRescanMergerTests
         Assert.Equal("Contact.Email", configuredColumn.Detection.SuggestedRole);
         Assert.Equal("Custom.Email", configuredColumn.SemanticRole);
         Assert.Equal("FixedText", configuredColumn.Generator.GeneratorType);
+        Assert.Equal(["tenant_id", "id"], configuration.Tables.Single().PrimaryKeyColumns);
     }
 
     [Fact]

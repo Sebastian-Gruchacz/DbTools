@@ -9,4 +9,8 @@ public interface IGeneratorConfigurationEditorFactory
     string GeneratorVersion { get; }
 
     IGeneratorConfigurationEditor Create(JObject options);
+
+    IGeneratorConfigurationEditor Create(
+        JObject options,
+        GeneratorConfigurationEditorContext context) => Create(options);
 }

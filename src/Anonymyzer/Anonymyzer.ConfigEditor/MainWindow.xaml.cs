@@ -181,7 +181,16 @@ public partial class MainWindow : Window
         var dialog = new GeneratorProfilesWindow(
             _viewModel.Configuration.GeneratorProfiles,
             _generatorEditors,
-            _generatorCatalog.CreateProfileTemplates())
+            _generatorCatalog.CreateProfileTemplates(),
+            new GeneratorConfigurationEditorContext(
+                _viewModel.Configuration.Tables.Select(table => new GeneratorConfigurationTableOption(
+                    table.SchemaName,
+                    table.TableName,
+                    table.Columns.OrderBy(column => column.Ordinal).Select(column => column.ColumnName).ToArray())
+                    {
+                        PrimaryKeyColumns = table.PrimaryKeyColumns.ToArray()
+                    })
+                    .ToArray()))
         {
             Owner = this
         };

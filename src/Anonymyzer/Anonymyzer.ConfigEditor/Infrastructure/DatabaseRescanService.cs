@@ -50,7 +50,7 @@ internal sealed class DatabaseRescanService
                 table.SchemaName,
                 table.Name))
             .Select(table => _columnBuilder.CreateTable(engine, table))
-            .Where(table => table.Columns.Count > 0)
+            .Where(table => table.Columns.Count > 0 || table.PrimaryKeyColumns.Count > 0)
             .ToArray();
     }
 

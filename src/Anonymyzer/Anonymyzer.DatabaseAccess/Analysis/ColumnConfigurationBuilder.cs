@@ -10,7 +10,13 @@ public sealed class ColumnConfigurationBuilder(ColumnCandidateDetector candidate
     public TableProcessingOptions CreateTable(IAnonymyzerEngine engine, ITableInfo tableInfo)
     {
         var config = TableProcessingOptions.DefaultForTable(tableInfo.Name, tableInfo.SchemaName);
-        foreach (IColumnInfo column in engine.ListColumns(tableInfo).Where(column => !column.IsPartOfThePrimaryKey))
+        IColumnInfo[] columns = engine.ListColumns(tableInfo).ToArray();
+        config.PrimaryKeyColumns = columns
+            .Where(column => column.IsPartOfThePrimaryKey)
+            .OrderBy(column => column.Ordinal)
+            .Select(column => column.Name)
+            .ToList();
+        foreach (IColumnInfo column in columns.Where(column => !column.IsPartOfThePrimaryKey))
         {
             config.Columns.Add(new ColumnProcessingOptions
             {

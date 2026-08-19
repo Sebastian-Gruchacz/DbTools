@@ -124,7 +124,7 @@ językowe opisuje [docs/anonymyzer-design.md](docs/anonymyzer-design.md).
 - rejestracja generatorów i eksport ich domyślnej konfiguracji;
 - model konfiguracji `0.4.0`: marker odłączonej kopii, role semantyczne,
   wykryci kandydaci, profile
-  generatorów oraz grupy wiążące kilka kolumn;
+  generatorów, niesekretne nazwy kolumn PK oraz grupy wiążące kilka kolumn;
 - edytor WPF: New/Open/Save/Save As, wybór tabeli, grid kolumn, dwupoziomowe
   menu ról semantycznych, edycja profili oraz grup wielokolumnowych z mapowaniem
   wyjść generatora na kolumny;
@@ -190,6 +190,11 @@ językowe opisuje [docs/anonymyzer-design.md](docs/anonymyzer-design.md).
   tylko z ponownie zwalidowanego klona, po czym prawdziwa sesja generatora działa
   wyłącznie w pamięci; wartości są ograniczone do 32 768 znaków, a connection
   string pochodzi ze zmiennej środowiskowej;
+- podgląd bezpośrednio przypisanego `ReferencePseudonym`: do 50 rzeczywistych
+  kluczy z tabeli lookup jest odczytywanych z ponownie zwalidowanego klona, a
+  panel pokazuje wyłącznie wygenerowane pseudonimy; lista konfiguracji profilu
+  podpowiada schematy, tabele, kolumny oraz klucze główne zapisane w otwartym
+  dokumencie;
 - podgląd `JsonPathRedactor` na kompletnych, nieobciętych wartościach z tej samej
   bezpiecznej ścieżki próbkowania; dokumenty są zmieniane wyłącznie w pamięci;
 - niemodalne, tylko-odczytowe okna wartości `non-null` dla dowolnej kolumny z
@@ -213,7 +218,8 @@ językowe opisuje [docs/anonymyzer-design.md](docs/anonymyzer-design.md).
 - niedestruktywny `File -> Rescan detached clone`, który ponownie waliduje nazwę
   i marker klona, odświeża metadane oraz detekcję, dodaje nowe obiekty i zachowuje
   decyzje operatora; niewidoczne już tabele i kolumny pozostają w pliku z czerwonym
-  oznaczeniem `⚠` do ręcznego przeglądu;
+  oznaczeniem `⚠` do ręcznego przeglądu; rescan uzupełnia też `PrimaryKeyColumns`
+  w konfiguracjach utworzonych przez starszą wersję;
 - klasyfikacja typów SQL Server/PostgreSQL oraz kandydaci wykrywani po nazwie
   także dla pól liczbowych, np. PESEL, NIP i telefonów;
 - zgodność roli z typem oraz negatywne tokeny odrzucające m.in. booleanowe
@@ -248,8 +254,9 @@ językowe opisuje [docs/anonymyzer-design.md](docs/anonymyzer-design.md).
   planów wielotabelowych; bezpieczne plany wyłącznie `Row` można już wznawiać;
 - pełnej walidacji indeksów, triggerów i constraintów spoza aktywnej tabeli;
 - pozostałych generatorów grupowych;
-- podglądu generatorów `Relational` oraz przyszłych generatorów `Column`
-  wymagających wielu skanów lub przypisanych przez grupę;
+- podglądu generatorów `Relational` innych niż `ReferencePseudonym` oraz
+  przyszłych generatorów `Column` wymagających wielu skanów lub przypisanych
+  przez grupę;
 - pełnych, ważonych zbiorów danych regionalnych;
 - automatycznej analizy semantyki niestabilnych kolekcji, XML i tekstu swobodnego;
 - obsługi XML oraz zmian PK/FK;
@@ -426,8 +433,8 @@ skasowany po wypchnięciu lub zarchiwizowaniu nowego repozytorium.
 
 ## Proponowana kolejka
 
-1. Dodać ograniczony podgląd `ReferencePseudonym` na małej próbce zwalidowanego
-   klona i czytelny wybór tabeli/kolumny lookup w edytorze.
+1. Rozszerzyć `ReferencePseudonym` o opcjonalny szyfrowany spill mapy lookup dla
+   baz przekraczających bezpieczny limit pamięci.
 2. Rozszerzać checkpoint tylko wraz z trwałym, odtwarzalnym stanem generatorów
    `Column`/`Relational`.
 3. Rozszerzyć pakiety regionalne o wersjonowane, ważone dane z opisanym źródłem.

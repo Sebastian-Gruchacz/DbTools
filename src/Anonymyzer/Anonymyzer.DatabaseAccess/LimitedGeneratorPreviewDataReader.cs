@@ -117,7 +117,8 @@ public sealed class LimitedGeneratorPreviewDataReader : IGeneratorDataReader
         foreach (string columnName in requirement.Columns)
         {
             if (!table.Columns.Any(column =>
-                    column.ColumnName.Equals(columnName, StringComparison.OrdinalIgnoreCase)))
+                    column.ColumnName.Equals(columnName, StringComparison.OrdinalIgnoreCase))
+                && !table.PrimaryKeyColumns.Contains(columnName, StringComparer.OrdinalIgnoreCase))
             {
                 throw new InvalidOperationException(
                     $"Preview column '{columnName}' does not belong to the configured table.");

@@ -23,13 +23,17 @@
             <TextBlock Grid.Row="0" Grid.ColumnSpan="2" Margin="0,0,0,14" TextWrapping="Wrap"
                        Text="Creates the same deterministic text for every row with the same reference key. The lookup table is read only and its key is verified before the target table is changed." />
             <TextBlock Grid.Row="1" VerticalAlignment="Center" Text="Reference column:" />
-            <TextBox x:Name="ReferenceColumnTextBox" Grid.Row="1" Grid.Column="1" Margin="0,2" />
+            <ComboBox x:Name="ReferenceColumnComboBox" Grid.Row="1" Grid.Column="1" Margin="0,2"
+                      IsEditable="True" IsTextSearchEnabled="True" />
             <TextBlock Grid.Row="2" VerticalAlignment="Center" Text="Lookup schema:" />
-            <TextBox x:Name="LookupSchemaTextBox" Grid.Row="2" Grid.Column="1" Margin="0,2" />
+            <ComboBox x:Name="LookupSchemaComboBox" Grid.Row="2" Grid.Column="1" Margin="0,2"
+                      IsEditable="True" IsTextSearchEnabled="True" SelectionChanged="LookupSchema_SelectionChanged" />
             <TextBlock Grid.Row="3" VerticalAlignment="Center" Text="Lookup table:" />
-            <TextBox x:Name="LookupTableTextBox" Grid.Row="3" Grid.Column="1" Margin="0,2" />
+            <ComboBox x:Name="LookupTableComboBox" Grid.Row="3" Grid.Column="1" Margin="0,2"
+                      IsEditable="True" IsTextSearchEnabled="True" SelectionChanged="LookupTable_SelectionChanged" />
             <TextBlock Grid.Row="4" VerticalAlignment="Center" Text="Lookup key column:" />
-            <TextBox x:Name="LookupKeyColumnTextBox" Grid.Row="4" Grid.Column="1" Margin="0,2" />
+            <ComboBox x:Name="LookupKeyColumnComboBox" Grid.Row="4" Grid.Column="1" Margin="0,2"
+                      IsEditable="True" IsTextSearchEnabled="True" />
             <TextBlock Grid.Row="5" VerticalAlignment="Center" Text="Output prefix:" />
             <TextBox x:Name="PrefixTextBox" Grid.Row="5" Grid.Column="1" Margin="0,2" />
             <TextBlock Grid.Row="6" VerticalAlignment="Center" Text="Key environment variable:" />

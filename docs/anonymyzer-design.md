@@ -166,7 +166,9 @@ nowym schemacie. Takie elementy dostają `SchemaStatus = Missing` i czerwone `�
 Ustawienia z flagami `OperatorOverrides` są zachowywane; konfiguracje starszego
 formatu są chronione konserwatywnie, jeśli zawierają aktywne ustawienia bez flag.
 Rescan zmienia wyłącznie dokument w pamięci i ustawia flagę dirty — zapis nadal
-wymaga jawnej decyzji operatora.
+wymaga jawnej decyzji operatora. Zapisane w tabeli `PrimaryKeyColumns` są
+metadanymi pomocniczymi dla edytorów generatorów relacyjnych; starszy dokument
+może mieć pustą listę, którą następny rescan uzupełni niedestruktywnie.
 
 Podgląd generatorów `Row` uruchamia ich rzeczywistą sesję w pamięci. Generatory
 syntetyczne nie wymagają dostępu do bazy. Generator z flagą
@@ -182,8 +184,11 @@ wskazuje zmienną środowiskową połączenia i limit 2–50 wierszy. Reader pon
 waliduje marker odłączonej kopii, pobiera próbkę razem z pozycjami `NULL`, a
 następnie prawdziwa sesja shuffle działa wyłącznie w pamięci. Wynik jest jawnie
 oznaczony jako próbka, a nie symulacja pełnego rozkładu kolumny; pojedyncza
-wartość jest ograniczona w zapytaniu do 32 768 znaków. Generatory
-`Relational`, wieloskanowe i `Column` użyte przez grupę nadal nie mają podglądu.
+wartość jest ograniczona w zapytaniu do 32 768 znaków. Bezpośrednio przypisany
+`ReferencePseudonym` używa tej samej walidowanej ścieżki, pobiera do 50 kluczy
+lookup i pokazuje wyłącznie wynik HMAC, bez wyświetlania kluczy źródłowych.
+Pozostałe generatory `Relational`, wieloskanowe i `Column` użyte przez grupę nadal
+nie mają podglądu.
 Żaden wariant podglądu nie może modyfikować bazy.
 
 Grid pokazuje początkowo kandydatów oraz kolumny już skonfigurowane. `Add column`
@@ -210,6 +215,11 @@ Rdzeń nie zależy od WPF. Dokładna wersja generatora może dostarczyć osobny
 adapter `IGeneratorConfigurationEditorFactory`. Adapter otwiera dedykowany panel,
 ale zapisuje ustawienia przez ten sam codec. Gdy panelu nie ma, edytor pozwala
 zmienić należący do generatora obiekt `Options` jako surowy JSON.
+Opcjonalny `GeneratorConfigurationEditorContext` przekazuje panelowi wyłącznie
+niesekretne nazwy schematów, tabel, kolumn i PK z otwartego dokumentu. Panel
+`ReferencePseudonym` wykorzystuje je jako podpowiedzi w edytowalnych listach,
+umieszczając kolumny PK na początku listy kluczy lookup;
+nie otrzymuje połączenia ani dostępu do bazy.
 
 ### Zakresy wykonania
 

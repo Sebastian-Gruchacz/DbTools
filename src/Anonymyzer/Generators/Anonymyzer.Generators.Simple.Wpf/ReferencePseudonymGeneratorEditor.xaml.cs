@@ -8,15 +8,29 @@ using Newtonsoft.Json.Linq;
 public partial class ReferencePseudonymGeneratorEditor : UserControl, IGeneratorConfigurationEditor
 {
     private readonly ReferencePseudonymGeneratorConfigurationCodec _codec = new();
+    private readonly GeneratorConfigurationEditorContext _context;
 
-    public ReferencePseudonymGeneratorEditor(JObject options)
+    public ReferencePseudonymGeneratorEditor(
+        JObject options,
+        GeneratorConfigurationEditorContext? context = null)
     {
         InitializeComponent();
+        _context = context ?? GeneratorConfigurationEditorContext.Empty;
         var configuration = (ReferencePseudonymGeneratorConfiguration)_codec.Deserialize(options);
-        ReferenceColumnTextBox.Text = configuration.ReferenceColumn;
-        LookupSchemaTextBox.Text = configuration.LookupSchema;
-        LookupTableTextBox.Text = configuration.LookupTable;
-        LookupKeyColumnTextBox.Text = configuration.LookupKeyColumn;
+        ReferenceColumnComboBox.ItemsSource = _context.Tables
+            .SelectMany(table => table.Columns)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Order(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        LookupSchemaComboBox.ItemsSource = _context.Tables
+            .Select(table => table.SchemaName)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Order(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        ReferenceColumnComboBox.Text = configuration.ReferenceColumn;
+        LookupSchemaComboBox.Text = configuration.LookupSchema;
+        RefreshLookupTables(configuration.LookupTable);
+        RefreshLookupColumns(configuration.LookupKeyColumn);
         PrefixTextBox.Text = configuration.Prefix;
         KeyEnvironmentVariableTextBox.Text = configuration.KeyEnvironmentVariable;
         HashLengthTextBox.Text = configuration.HashLength.ToString(System.Globalization.CultureInfo.InvariantCulture);
@@ -26,6 +40,12 @@ public partial class ReferencePseudonymGeneratorEditor : UserControl, IGenerator
     }
 
     public FrameworkElement View => this;
+
+    private void LookupSchema_SelectionChanged(object sender, SelectionChangedEventArgs e) =>
+        RefreshLookupTables(string.Empty);
+
+    private void LookupTable_SelectionChanged(object sender, SelectionChangedEventArgs e) =>
+        RefreshLookupColumns(string.Empty);
 
     public IReadOnlyList<string> Validate()
     {
@@ -67,10 +87,10 @@ public partial class ReferencePseudonymGeneratorEditor : UserControl, IGenerator
             return false;
         }
 
-        configuration.ReferenceColumn = ReferenceColumnTextBox.Text.Trim();
-        configuration.LookupSchema = LookupSchemaTextBox.Text.Trim();
-        configuration.LookupTable = LookupTableTextBox.Text.Trim();
-        configuration.LookupKeyColumn = LookupKeyColumnTextBox.Text.Trim();
+        configuration.ReferenceColumn = CurrentText(ReferenceColumnComboBox);
+        configuration.LookupSchema = CurrentText(LookupSchemaComboBox);
+        configuration.LookupTable = CurrentText(LookupTableComboBox);
+        configuration.LookupKeyColumn = CurrentText(LookupKeyColumnComboBox);
         configuration.Prefix = PrefixTextBox.Text;
         configuration.KeyEnvironmentVariable = KeyEnvironmentVariableTextBox.Text.Trim();
         configuration.HashLength = hashLength;
@@ -79,4 +99,36 @@ public partial class ReferencePseudonymGeneratorEditor : UserControl, IGenerator
         error = null;
         return true;
     }
+
+    private void RefreshLookupTables(string selectedTable)
+    {
+        string schema = CurrentText(LookupSchemaComboBox);
+        LookupTableComboBox.ItemsSource = _context.Tables
+            .Where(table => table.SchemaName.Equals(schema, StringComparison.OrdinalIgnoreCase))
+            .Select(table => table.TableName)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Order(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        LookupTableComboBox.Text = selectedTable;
+    }
+
+    private void RefreshLookupColumns(string selectedColumn)
+    {
+        string schema = CurrentText(LookupSchemaComboBox);
+        string tableName = CurrentText(LookupTableComboBox);
+        LookupKeyColumnComboBox.ItemsSource = _context.Tables
+            .Where(table => table.SchemaName.Equals(schema, StringComparison.OrdinalIgnoreCase)
+                            && table.TableName.Equals(tableName, StringComparison.OrdinalIgnoreCase))
+            .SelectMany(table => table.PrimaryKeyColumns
+                .OrderBy(column => column, StringComparer.OrdinalIgnoreCase)
+                .Concat(table.Columns
+                    .Where(column => !table.PrimaryKeyColumns.Contains(column, StringComparer.OrdinalIgnoreCase))
+                    .OrderBy(column => column, StringComparer.OrdinalIgnoreCase)))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        LookupKeyColumnComboBox.Text = selectedColumn;
+    }
+
+    private static string CurrentText(ComboBox comboBox) =>
+        (comboBox.SelectedItem as string ?? comboBox.Text).Trim();
 }

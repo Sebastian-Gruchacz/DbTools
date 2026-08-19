@@ -6,6 +6,7 @@ using Anonymyzer.Base.Generation;
 using Anonymyzer.Configuration;
 using Anonymyzer.Configuration.Safety;
 using Anonymyzer.Console.Planning;
+using Anonymyzer.DatabaseAccess;
 using Anonymyzer.Generators.Person;
 using Anonymyzer.Generators.Simple;
 using Anonymyzer.LanguagePack.Polish;
@@ -240,6 +241,28 @@ public sealed class AnonymizationExecutorIntegrationTests
                 targetTable,
                 lookupTable,
                 keyEnvironmentVariable);
+            var previewBinding = new GeneratorBinding(
+                new GeneratorTableReference("public", targetTable),
+                new Dictionary<string, string>
+                {
+                    [ReferencePseudonymGenerator.ValueOutput] = "Alias"
+                });
+            var previewReader = new LimitedGeneratorPreviewDataReader(
+                configuration,
+                "ANONYMYZER_POSTGRES_CONNECTION",
+                maximumRows: 2);
+            await using (IGeneratorSession previewSession = await generator.PrepareAsync(
+                             new GeneratorPreparationContext(previewBinding, previewReader),
+                             generator.Configuration.Deserialize(configuration.GeneratorProfiles.Single().Options),
+                             TestContext.Current.CancellationToken))
+            {
+                Assert.Equal(2, previewReader.LoadedRows.Count);
+                var previewRow = new MutableGeneratorRow();
+                previewRow.SetValue("DepartmentId", previewReader.LoadedRows[0].GetValue("Id"));
+                await previewSession.ApplyAsync(previewRow, TestContext.Current.CancellationToken);
+                Assert.StartsWith("department-", previewRow.GetValue("Alias") as string);
+            }
+
             long processed = await ExecutePlanAsync(
                 connection,
                 new PostgreSqlAnonymyzerEngine(connection),
@@ -469,6 +492,23 @@ public sealed class AnonymizationExecutorIntegrationTests
                             }
                         }
                     }
+                },
+                new TableProcessingOptions
+                {
+                    SchemaName = "public",
+                    TableName = lookupTable,
+                    Enabled = false,
+                    PrimaryKeyColumns = { "Id" },
+                    Columns =
+                    {
+                        new ColumnProcessingOptions
+                        {
+                            Ordinal = 1,
+                            ColumnName = "Id",
+                            DataType = DbDataType.Integer.ToString(),
+                            Enabled = false
+                        }
+                    }
                 }
             }
         };
@@ -664,5 +704,15 @@ public sealed class AnonymizationExecutorIntegrationTests
         }
 
         return connectionString;
+    }
+
+    private sealed class MutableGeneratorRow : IGeneratorRow
+    {
+        private readonly Dictionary<string, object?> _values = new(StringComparer.OrdinalIgnoreCase);
+
+        public object? GetValue(string columnName) =>
+            _values.TryGetValue(columnName, out object? value) ? value : null;
+
+        public void SetValue(string columnName, object? value) => _values[columnName] = value;
     }
 }

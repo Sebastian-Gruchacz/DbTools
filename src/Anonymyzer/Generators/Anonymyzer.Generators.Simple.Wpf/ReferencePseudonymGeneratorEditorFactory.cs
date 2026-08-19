@@ -10,4 +10,8 @@ public sealed class ReferencePseudonymGeneratorEditorFactory : IGeneratorConfigu
     public string GeneratorVersion => ReferencePseudonymGenerator.GeneratorVersion;
 
     public IGeneratorConfigurationEditor Create(JObject options) => new ReferencePseudonymGeneratorEditor(options);
+
+    public IGeneratorConfigurationEditor Create(
+        JObject options,
+        GeneratorConfigurationEditorContext context) => new ReferencePseudonymGeneratorEditor(options, context);
 }

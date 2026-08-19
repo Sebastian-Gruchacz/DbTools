@@ -27,6 +27,7 @@ public sealed class ColumnConfigurationBuilderTests
         var result = new ColumnConfigurationBuilder(detector).CreateTable(engine, table);
 
         Assert.Equal(3, result.Columns.Count);
+        Assert.Equal(["id"], result.PrimaryKeyColumns);
         var pesel = Assert.Single(result.Columns, column => column.ColumnName == "PESEL");
         Assert.Equal(2, pesel.Ordinal);
         Assert.Equal(nameof(DbDataType.Integer), pesel.DataType);

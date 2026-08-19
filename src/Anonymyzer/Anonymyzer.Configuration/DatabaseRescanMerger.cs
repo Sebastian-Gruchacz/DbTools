@@ -36,6 +36,7 @@ public sealed class DatabaseRescanMerger
             }
 
             existingTable.SchemaStatus = "Current";
+            existingTable.PrimaryKeyColumns = freshTable.PrimaryKeyColumns.ToList();
             foreach (ColumnProcessingOptions freshColumn in freshTable.Columns)
             {
                 ColumnProcessingOptions? existingColumn = existingTable.Columns.FirstOrDefault(column =>

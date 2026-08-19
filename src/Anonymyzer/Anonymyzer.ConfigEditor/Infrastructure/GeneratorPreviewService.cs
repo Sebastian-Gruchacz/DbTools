@@ -113,8 +113,7 @@ internal sealed class GeneratorPreviewService(GeneratorCatalog catalog)
                 continue;
             }
 
-            if (generator.Descriptor.Scope == GeneratorExecutionScope.Relational
-                || generator.Descriptor.Outputs.Count != 1)
+            if (generator.Descriptor.Outputs.Count != 1)
             {
                 samples[column.ColumnName] = "requires generation group";
                 continue;
@@ -142,6 +141,21 @@ internal sealed class GeneratorPreviewService(GeneratorCatalog catalog)
                     new Dictionary<string, string> { [output.Name] = column.ColumnName });
                 IReadOnlyList<GeneratorDataRequirement> requirements =
                     generator.GetDataRequirements(binding, configuration);
+                if (generator.Descriptor.Scope == GeneratorExecutionScope.Relational)
+                {
+                    samples[column.ColumnName] = await GenerateRelationalPreviewAsync(
+                        anonymizationConfiguration,
+                        generator,
+                        configuration,
+                        binding,
+                        requirements,
+                        output,
+                        connectionEnvironmentVariable,
+                        maximumRows,
+                        cancellationToken);
+                    continue;
+                }
+
                 if (generator.Descriptor.Scope == GeneratorExecutionScope.Column)
                 {
                     samples[column.ColumnName] = await GenerateColumnPreviewAsync(
@@ -217,7 +231,71 @@ internal sealed class GeneratorPreviewService(GeneratorCatalog catalog)
         return profileIds.Any(profileId =>
             profilesById.TryGetValue(profileId, out GeneratorProfileConfiguration? profile)
             && catalog.Find(profile.GeneratorType, profile.GeneratorVersion)?.Descriptor is { } descriptor
-            && (descriptor.Scope == GeneratorExecutionScope.Column || descriptor.RequiresExistingValue));
+            && (descriptor.Scope is GeneratorExecutionScope.Column or GeneratorExecutionScope.Relational
+                || descriptor.RequiresExistingValue));
+    }
+
+    private static async Task<string> GenerateRelationalPreviewAsync(
+        AnonymizationConfiguration anonymizationConfiguration,
+        IGenerator generator,
+        object generatorConfiguration,
+        GeneratorBinding binding,
+        IReadOnlyList<GeneratorDataRequirement> requirements,
+        GeneratorOutputDescriptor output,
+        string? connectionEnvironmentVariable,
+        int maximumRows,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(connectionEnvironmentVariable))
+        {
+            return "requires cloned data";
+        }
+
+        GeneratorDataRequirement? targetReference = requirements.SingleOrDefault(requirement =>
+            requirement.Table == binding.Table
+            && !requirement.RequiresCompleteScan
+            && requirement.Columns.Count == 1);
+        GeneratorDataRequirement? lookup = requirements.SingleOrDefault(requirement =>
+            requirement.Table != binding.Table
+            && requirement.RequiresCompleteScan
+            && requirement.ValueSource == GeneratorValueSource.Original
+            && requirement.Columns.Count == 1);
+        if (targetReference is null || lookup is null)
+        {
+            return "relational preview not supported";
+        }
+
+        var reader = new LimitedGeneratorPreviewDataReader(
+            anonymizationConfiguration,
+            connectionEnvironmentVariable,
+            maximumRows);
+        await using IGeneratorSession session = await generator.PrepareAsync(
+            new GeneratorPreparationContext(binding, reader),
+            generatorConfiguration,
+            cancellationToken);
+        if (reader.LoadedRows.Count == 0)
+        {
+            return "no rows in lookup sample";
+        }
+
+        string targetColumn = targetReference.Columns[0];
+        string lookupColumn = lookup.Columns[0];
+        var generatedValues = new List<string>(reader.LoadedRows.Count);
+        foreach (GeneratorDataRow lookupRow in reader.LoadedRows)
+        {
+            var row = new PreviewRow();
+            row.SetValue(targetColumn, lookupRow.GetValue(lookupColumn));
+            await session.ApplyAsync(row, cancellationToken);
+            generatedValues.Add(FormatSample(row.GetBoundValue(binding.GetRequiredOutput(output.Name)), output.Name));
+        }
+
+        string displayedValues = string.Join(" | ", generatedValues.Take(3));
+        if (generatedValues.Count > 3)
+        {
+            displayedValues += " | …";
+        }
+
+        return $"{displayedValues} [{generatedValues.Count}-row lookup sample]";
     }
 
     private static async Task<string> GenerateExistingValuePreviewAsync(
