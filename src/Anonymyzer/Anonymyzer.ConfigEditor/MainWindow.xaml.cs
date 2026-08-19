@@ -365,7 +365,9 @@ public partial class MainWindow : Window
             "● in the table list means that the latest saved analysis found at least one anonymization candidate.\n" +
             "The adjacent number is the candidate-column count. An empty marker means no automatic candidate was found.\n\n" +
             "The same ● in the column grid marks an automatically detected candidate; hover it to see the suggested " +
-            "semantic role, confidence and matched rule. Markers are suggestions only and never enable anonymization.",
+            "semantic role, confidence and matched rule. Markers are suggestions only and never enable anonymization.\n\n" +
+            "A blue ◆ marks a table or column containing explicit operator choices. Hover it to see which settings " +
+            "are protected from a future database rescan.",
             "Table and column markings",
             MessageBoxButton.OK,
             MessageBoxImage.Information);

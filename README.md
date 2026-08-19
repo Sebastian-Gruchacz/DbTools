@@ -190,6 +190,8 @@ językowe opisuje [docs/anonymyzer-design.md](docs/anonymyzer-design.md).
 - prezentacja tekstowego typu kolumny wraz z długością albo `MAX`;
 - menu `Help` z legendą oznaczeń tabel i kolumn, dokumentacją oraz oknem `About`
   pokazującym wersję, autora i odnośniki do projektu oraz zgłoszeń;
+- trwałe flagi `OperatorOverrides` dla ręcznej zmiany włączenia kolumny, roli,
+  generatora/profilu i grupy; niebieski `◆` wyróżnia takie kolumny oraz tabele;
 - klasyfikacja typów SQL Server/PostgreSQL oraz kandydaci wykrywani po nazwie
   także dla pól liczbowych, np. PESEL, NIP i telefonów;
 - zgodność roli z typem oraz negatywne tokeny odrzucające m.in. booleanowe

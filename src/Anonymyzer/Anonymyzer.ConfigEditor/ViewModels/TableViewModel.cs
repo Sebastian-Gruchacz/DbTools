@@ -1,9 +1,11 @@
 ﻿namespace Anonymyzer.ConfigEditor.ViewModels;
 
 using System.Collections.ObjectModel;
+using System.ComponentModel;
+using System.Runtime.CompilerServices;
 using Anonymyzer.Configuration;
 
-internal sealed class TableViewModel
+internal sealed class TableViewModel : INotifyPropertyChanged
 {
     private readonly IReadOnlyList<GeneratorProfileConfiguration> _profiles;
     private readonly IReadOnlyList<SemanticRoleGroup> _semanticRoleGroups;
@@ -33,6 +35,7 @@ internal sealed class TableViewModel
     }
 
     public event EventHandler? ConfigurationChanged;
+    public event PropertyChangedEventHandler? PropertyChanged;
 
     public TableProcessingOptions Model { get; }
     public ObservableCollection<ColumnViewModel> Columns { get; } = new();
@@ -40,6 +43,11 @@ internal sealed class TableViewModel
     public int CandidateCount => Model.Columns.Count(column => column.Detection.IsCandidate);
     public string CandidateMark => CandidateCount > 0 ? "●" : string.Empty;
     public string CandidateCountText => CandidateCount > 0 ? CandidateCount.ToString() : string.Empty;
+    public int ManualOverrideCount => Model.Columns.Count(column => column.OperatorOverrides?.HasAny == true);
+    public string ManualMark => ManualOverrideCount > 0 ? "◆" : string.Empty;
+    public string ManualDetails => ManualOverrideCount > 0
+        ? $"Columns with operator choices: {ManualOverrideCount}."
+        : "No explicit operator choices.";
     public string CandidateDetails => CandidateCount > 0
         ? $"Automatic candidates: {CandidateCount}."
         : "No automatic candidates.";
@@ -74,7 +82,13 @@ internal sealed class TableViewModel
     private ColumnViewModel CreateColumnViewModel(ColumnProcessingOptions column)
     {
         var viewModel = new ColumnViewModel(column, _profiles, _semanticRoleGroups);
-        viewModel.ConfigurationChanged += (_, _) => OnConfigurationChanged();
+        viewModel.ConfigurationChanged += (_, _) =>
+        {
+            OnPropertyChanged(nameof(ManualOverrideCount));
+            OnPropertyChanged(nameof(ManualMark));
+            OnPropertyChanged(nameof(ManualDetails));
+            OnConfigurationChanged();
+        };
         return viewModel;
     }
 
@@ -99,4 +113,7 @@ internal sealed class TableViewModel
     {
         ConfigurationChanged?.Invoke(this, EventArgs.Empty);
     }
+
+    private void OnPropertyChanged([CallerMemberName] string? propertyName = null) =>
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 }

@@ -63,6 +63,7 @@
                             <Grid MinWidth="380" ToolTip="{Binding CandidateDetails}">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="18" />
+                                    <ColumnDefinition Width="18" />
                                     <ColumnDefinition Width="34" />
                                     <ColumnDefinition Width="*" />
                                 </Grid.ColumnDefinitions>
@@ -70,12 +71,17 @@
                                            Foreground="DarkOrange"
                                            Text="{Binding CandidateMark}" />
                                 <TextBlock Grid.Column="1"
+                                           HorizontalAlignment="Center"
+                                           Foreground="SteelBlue"
+                                           Text="{Binding ManualMark}"
+                                           ToolTip="{Binding ManualDetails}" />
+                                <TextBlock Grid.Column="2"
                                            Margin="0,0,8,0"
                                            HorizontalAlignment="Right"
                                            Foreground="DarkOrange"
                                            FontWeight="SemiBold"
                                            Text="{Binding CandidateCountText}" />
-                                <TextBlock Grid.Column="2"
+                                <TextBlock Grid.Column="3"
                                            Text="{Binding QualifiedName}"
                                            TextTrimming="CharacterEllipsis" />
                             </Grid>
@@ -105,7 +111,7 @@
                     <Button Width="120" Margin="0,0,14,0" Content="Refresh sample" Click="RefreshSample_Click" />
                     <TextBlock VerticalAlignment="Center"
                                Foreground="DimGray"
-                               Text="● + count = automatic candidates; every table remains available" />
+                               Text="● + count = automatic candidates; ◆ = operator choices; every table remains available" />
                 </StackPanel>
             </Grid>
 
@@ -118,13 +124,18 @@
                       IsReadOnly="False"
                       SelectionUnit="FullRow">
                 <DataGrid.Columns>
-                    <DataGridTemplateColumn Header="" IsReadOnly="True" Width="28">
+                    <DataGridTemplateColumn Header="" IsReadOnly="True" Width="48">
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
-                                <TextBlock HorizontalAlignment="Center"
-                                           Foreground="DarkOrange"
-                                           Text="{Binding CandidateMark}"
-                                           ToolTip="{Binding CandidateDetails}" />
+                                <StackPanel HorizontalAlignment="Center" Orientation="Horizontal">
+                                    <TextBlock Foreground="DarkOrange"
+                                               Text="{Binding CandidateMark}"
+                                               ToolTip="{Binding CandidateDetails}" />
+                                    <TextBlock Margin="4,0,0,0"
+                                               Foreground="SteelBlue"
+                                               Text="{Binding ManualMark}"
+                                               ToolTip="{Binding ManualDetails}" />
+                                </StackPanel>
                             </DataTemplate>
                         </DataGridTemplateColumn.CellTemplate>
                     </DataGridTemplateColumn>

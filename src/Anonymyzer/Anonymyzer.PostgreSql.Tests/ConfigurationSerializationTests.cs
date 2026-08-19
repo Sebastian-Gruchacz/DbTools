@@ -56,6 +56,11 @@ public class ConfigurationSerializationTests
                             ColumnName = "first_name",
                             SemanticRole = "Person.FirstName",
                             GenerationGroupId = "person",
+                            OperatorOverrides = new ColumnOperatorOverrides
+                            {
+                                SemanticRole = true,
+                                GenerationGroup = true
+                            },
                             Detection = new CandidateDetectionConfiguration
                             {
                                 IsCandidate = true,
@@ -88,6 +93,8 @@ public class ConfigurationSerializationTests
         Assert.NotNull(restored);
         Assert.Equal("0.4.0", restored.Version);
         Assert.True(restored.Tables[0].HasCandidates);
+        Assert.True(restored.Tables[0].Columns[0].OperatorOverrides.SemanticRole);
+        Assert.True(restored.Tables[0].Columns[0].OperatorOverrides.GenerationGroup);
         Assert.Equal("first_name", restored.Tables[0].GenerationGroups[0].Bindings["FirstName"]);
         Assert.DoesNotContain("HasCandidates", json);
     }

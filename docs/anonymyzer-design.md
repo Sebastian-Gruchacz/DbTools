@@ -149,6 +149,14 @@ JSON nie zmieniają dokumentu. `New`, `Open` i zamknięcie aplikacji wymagają w
 decyzji `Save / Don't Save / Cancel`. Flaga jest czyszczona dopiero po udanym
 zapisie albo załadowaniu innego dokumentu.
 
+Każda jawna zmiana operatora zapisuje również odpowiednią flagę w
+`ColumnProcessingOptions.OperatorOverrides`: `Enabled`, `SemanticRole`,
+`Generator` albo `GenerationGroup`. Pomarańczowy `●` nadal oznacza automatyczną
+propozycję detektora, natomiast niebieski `◆` oznacza co najmniej jedną decyzję
+operatora chronioną przed przyszłym rescanem. Tabela pokazuje `◆`, jeśli zawiera
+choć jedną taką kolumnę. Starsze pliki bez flag pozostają poprawne; niedestruktywny
+merge skanu musi dodatkowo zachowywać ich istniejące ustawienia konserwatywnie.
+
 Podgląd generatorów `Row` uruchamia ich rzeczywistą sesję w pamięci. Generatory
 syntetyczne nie wymagają dostępu do bazy. Generator z flagą
 `RequiresExistingValue`, obecnie `JsonPathRedactor`, pobiera małą próbkę po
