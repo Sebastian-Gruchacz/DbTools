@@ -25,16 +25,19 @@ public sealed class GeneratorProfileMerger
         foreach (GeneratorProfileConfiguration template in builtInProfiles)
         {
             GeneratorProfileConfiguration? existingBuiltIn = target.FirstOrDefault(profile =>
-                profile.Origin.Equals("Built-in", StringComparison.OrdinalIgnoreCase)
+                IsManagedOrigin(profile.Origin)
                 && profile.GeneratorType.Equals(template.GeneratorType, StringComparison.OrdinalIgnoreCase)
-                && profile.GeneratorVersion.Equals(template.GeneratorVersion, StringComparison.Ordinal));
+                && profile.GeneratorVersion.Equals(template.GeneratorVersion, StringComparison.Ordinal)
+                && EffectiveLocale(profile).Equals(template.Locale, StringComparison.OrdinalIgnoreCase));
             if (existingBuiltIn is not null)
             {
                 bool changed = !existingBuiltIn.DisplayName.Equals(template.DisplayName, StringComparison.Ordinal)
                                || !existingBuiltIn.Locale.Equals(template.Locale, StringComparison.Ordinal)
+                               || !existingBuiltIn.Origin.Equals(template.Origin, StringComparison.Ordinal)
                                || !JToken.DeepEquals(existingBuiltIn.Options, template.Options);
                 existingBuiltIn.DisplayName = template.DisplayName;
                 existingBuiltIn.Locale = template.Locale;
+                existingBuiltIn.Origin = template.Origin;
                 existingBuiltIn.Options = (JObject)template.Options.DeepClone();
                 if (changed)
                 {
@@ -70,6 +73,15 @@ public sealed class GeneratorProfileMerger
         return candidate;
     }
 
+    private static bool IsManagedOrigin(string origin) =>
+        origin.Equals("Built-in", StringComparison.OrdinalIgnoreCase)
+        || origin.StartsWith("Language pack:", StringComparison.OrdinalIgnoreCase);
+
+    private static string EffectiveLocale(GeneratorProfileConfiguration profile) =>
+        string.IsNullOrWhiteSpace(profile.Locale)
+            ? profile.Options.Value<string>("Locale") ?? string.Empty
+            : profile.Locale;
+
     private static GeneratorProfileConfiguration Clone(GeneratorProfileConfiguration source, string id) => new()
     {
         Id = id,
@@ -77,7 +89,7 @@ public sealed class GeneratorProfileMerger
         GeneratorType = source.GeneratorType,
         GeneratorVersion = source.GeneratorVersion,
         Locale = source.Locale,
-        Origin = "Built-in",
+        Origin = source.Origin,
         Options = (JObject)source.Options.DeepClone()
     };
 }

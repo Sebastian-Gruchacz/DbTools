@@ -2,6 +2,7 @@
 
 using Anonymyzer.Base;
 using Anonymyzer.Base.Generation;
+using Anonymyzer.Base.LanguagePacks;
 using Anonymyzer.Console;
 using Anonymyzer.Generators.Address;
 using Anonymyzer.Generators.Person;
@@ -71,5 +72,8 @@ public class DatabaseEngineRegistrationTests
             provider.GetServices<ICompanyNameLocaleDataProvider>()
                 .Select(localeProvider => localeProvider.Locale)
                 .OrderBy(locale => locale));
+        LanguagePackCatalog languagePacks = provider.GetRequiredService<LanguagePackCatalog>();
+        Assert.Equal(2, languagePacks.Packs.Count);
+        Assert.Equal(12, languagePacks.Profiles.Count);
     }
 }

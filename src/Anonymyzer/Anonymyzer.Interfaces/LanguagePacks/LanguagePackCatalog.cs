@@ -13,6 +13,10 @@ public sealed class LanguagePackCatalog
 
     public IReadOnlyList<ILanguagePack> Packs => _packs;
 
+    public IReadOnlyList<(ILanguagePack Pack, LanguagePackProfileDefinition Profile)> Profiles => _packs
+        .SelectMany(pack => pack.ProfileDefinitions.Select(profile => (pack, profile)))
+        .ToArray();
+
     public IReadOnlyList<TProvider> CreateProviders<TProvider>() where TProvider : class =>
         _packs
             .SelectMany(pack => pack.ProviderTypes.Select(type => CreateProvider<TProvider>(pack, type)))
@@ -54,7 +58,8 @@ public sealed class LanguagePackCatalog
                 || string.IsNullOrWhiteSpace(descriptor.DisplayName)
                 || string.IsNullOrWhiteSpace(descriptor.Version)
                 || descriptor.Locales is null
-                || pack.ProviderTypes is null)
+                || pack.ProviderTypes is null
+                || pack.ProfileDefinitions is null)
             {
                 throw new InvalidOperationException("Language pack id, display name and version are required.");
             }
@@ -68,6 +73,29 @@ public sealed class LanguagePackCatalog
             {
                 throw new InvalidOperationException($"Language pack '{descriptor.Id}' contains an invalid provider type.");
             }
+
+            foreach (LanguagePackProfileDefinition profile in pack.ProfileDefinitions)
+            {
+                if (string.IsNullOrWhiteSpace(profile.Id)
+                    || string.IsNullOrWhiteSpace(profile.GeneratorType)
+                    || string.IsNullOrWhiteSpace(profile.GeneratorVersion)
+                    || string.IsNullOrWhiteSpace(profile.Locale)
+                    || !descriptor.Locales.Contains(profile.Locale, StringComparer.OrdinalIgnoreCase))
+                {
+                    throw new InvalidOperationException(
+                        $"Language pack '{descriptor.Id}' contains invalid profile '{profile.Id}'.");
+                }
+            }
+        }
+
+
+        string? duplicateProfileId = packs
+            .SelectMany(pack => pack.ProfileDefinitions)
+            .GroupBy(profile => profile.Id, StringComparer.OrdinalIgnoreCase)
+            .FirstOrDefault(group => group.Count() > 1)?.Key;
+        if (duplicateProfileId is not null)
+        {
+            throw new InvalidOperationException($"Duplicate language-pack profile id '{duplicateProfileId}'.");
         }
     }
 }

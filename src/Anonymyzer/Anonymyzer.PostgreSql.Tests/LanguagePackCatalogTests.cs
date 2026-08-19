@@ -40,6 +40,26 @@ public sealed class LanguagePackCatalogTests
     }
 
     [Fact]
+    public void ExposesDistinctLocaleSpecificProfiles()
+    {
+        var catalog = new LanguagePackCatalog(
+        [
+            new EnglishLanguagePack(),
+            new PolishLanguagePack()
+        ]);
+
+        var personProfiles = catalog.Profiles
+            .Where(item => item.Profile.GeneratorType == "PersonIdentity")
+            .Select(item => item.Profile)
+            .ToArray();
+
+        Assert.Equal(2, personProfiles.Length);
+        Assert.Equal(2, personProfiles.Select(profile => profile.Id).Distinct(StringComparer.OrdinalIgnoreCase).Count());
+        Assert.Equal(["en-US", "pl-PL"], personProfiles.Select(profile => profile.Locale).OrderBy(value => value));
+        Assert.All(personProfiles, profile => Assert.Equal(profile.Locale, profile.Options.Value<string>("Locale")));
+    }
+
+    [Fact]
     public void InstallsAndPersistsDisabledState()
     {
         string directory = Path.Combine(Path.GetTempPath(), "anonymyzer-language-pack-tests", Guid.NewGuid().ToString("N"));
@@ -71,5 +91,7 @@ public sealed class LanguagePackCatalogTests
         public LanguagePackDescriptor Descriptor { get; } = new("English", "Duplicate", "1.0.0", ["en"]);
 
         public IReadOnlyList<Type> ProviderTypes { get; } = [];
+
+        public IReadOnlyList<LanguagePackProfileDefinition> ProfileDefinitions { get; } = [];
     }
 }

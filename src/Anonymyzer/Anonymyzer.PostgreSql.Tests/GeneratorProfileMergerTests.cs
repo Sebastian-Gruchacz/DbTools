@@ -44,6 +44,47 @@ public sealed class GeneratorProfileMergerTests
         Assert.Equal("new", profiles[0].Options.Value<string>("Value"));
     }
 
+    [Fact]
+    public void KeepsManagedProfilesForDifferentLocales()
+    {
+        GeneratorProfileConfiguration polish = Create("PersonIdentity:Default", "Polish", "Language pack: Polish 1.0.0", "pl");
+        polish.Locale = "pl-PL";
+        GeneratorProfileConfiguration english = Create("PersonIdentity:en-US:Default", "English", "Language pack: English 1.0.0", "en");
+        english.Locale = "en-US";
+        var profiles = new List<GeneratorProfileConfiguration>();
+
+        GeneratorProfileMergeResult result = new GeneratorProfileMerger().Merge(profiles, [polish, english]);
+
+        Assert.Equal(2, result.AddedProfiles);
+        Assert.Equal(2, profiles.Count);
+        Assert.Contains(profiles, profile => profile.Locale == "pl-PL");
+        Assert.Contains(profiles, profile => profile.Locale == "en-US");
+        Assert.All(profiles, profile => Assert.StartsWith("Language pack:", profile.Origin));
+    }
+
+    [Fact]
+    public void MigratesLegacyBuiltInLocaleStoredOnlyInOptions()
+    {
+        GeneratorProfileConfiguration legacy = Create("PersonIdentity:Default", "Legacy", "Built-in", "old");
+        legacy.Options["Locale"] = "pl-PL";
+        GeneratorProfileConfiguration current = Create(
+            "PersonIdentity:Default",
+            "Polish",
+            "Language pack: Polish 1.0.0",
+            "new");
+        current.Locale = "pl-PL";
+        current.Options["Locale"] = "pl-PL";
+        var profiles = new List<GeneratorProfileConfiguration> { legacy };
+
+        GeneratorProfileMergeResult result = new GeneratorProfileMerger().Merge(profiles, [current]);
+
+        Assert.Equal(0, result.AddedProfiles);
+        Assert.Equal(1, result.UpdatedProfiles);
+        Assert.Single(profiles);
+        Assert.Equal("pl-PL", legacy.Locale);
+        Assert.Equal("Language pack: Polish 1.0.0", legacy.Origin);
+    }
+
     private static GeneratorProfileConfiguration Create(
         string id,
         string displayName,

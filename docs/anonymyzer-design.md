@@ -524,7 +524,8 @@ samego kontraktu; nie dokładamy ich do rdzenia bez osoby zdolnej zweryfikować
 znaczenie i fałszywe dopasowania.
 
 Kontrakt DLL `ILanguagePack` udostępnia stabilny deskryptor (`Id`, nazwa, wersja,
-locale) oraz listę publicznych typów providerów. `LanguagePackCatalog` waliduje
+locale), listę publicznych typów providerów oraz gotowe, wersjonowane profile
+generatorów. `LanguagePackCatalog` waliduje
 unikalność identyfikatorów i tworzy wyłącznie providery zgodne z kontraktem
 żądanym przez konsumenta. Wbudowane pakiety English i Polish używają dokładnie
 tej samej ścieżki co przyszłe biblioteki instalowane. Provider musi być publiczną,
@@ -541,6 +542,15 @@ Wyłączenie pakietu nie usuwa profili ani ręcznych ustawień z otwartego JSON-
 użycie profilu wymagającego nieaktywnego locale zakończy się błędem walidacji.
 Zewnętrzna biblioteka powinna być samowystarczalna poza kontraktami dostarczanymi
 razem z aplikacją.
+
+Profile `pl-PL` zachowują historyczne identyfikatory `GeneratorType:Default`.
+Profile `en-US` używają `GeneratorType:en-US:Default`, dzięki czemu oba zestawy
+mogą współistnieć. Pochodzenie ma postać `Language pack: Nazwa Wersja`. Merge
+rozpoznaje również starsze profile wbudowane, w których locale znajdowało się
+tylko wewnątrz `Options`, i migruje je bez tworzenia trzeciej kopii. Edytor przy
+otwarciu pliku i po edycji profili zgłasza profile wymagające locale, którego nie
+udostępnia żaden aktywny pakiet. CLI i nowy dokument generują profile wyłącznie z
+aktywnych/wbudowanych pakietów oraz neutralne profile generatorów nieregionalnych.
 
 Słownik służy do wykrywania kandydatów, a nie do automatycznego włączania
 anonimizacji. Wynik powinien zawierać kategorię semantyczną, język, dopasowaną

@@ -110,6 +110,8 @@ public partial class MainWindow : Window
                                     $"{merge.AddedProfiles} added, {merge.UpdatedProfiles} updated, " +
                                     $"{merge.IdCollisions} id collision(s). Save to persist the merge.";
             }
+
+            ReportUnavailableProfileLocales(configuration.GeneratorProfiles);
         });
     }
 
@@ -191,7 +193,22 @@ public partial class MainWindow : Window
                 _viewModel.MarkDirty();
                 _viewModel.Status = "Generator profiles updated. Save the configuration to persist changes.";
             }
+
+            ReportUnavailableProfileLocales(_viewModel.Configuration.GeneratorProfiles);
         }
+    }
+
+    private void ReportUnavailableProfileLocales(IEnumerable<GeneratorProfileConfiguration> profiles)
+    {
+        IReadOnlyList<string> errors = _generatorCatalog.ValidateProfileLocales(profiles);
+        if (errors.Count == 0)
+        {
+            return;
+        }
+
+        string message = string.Join(Environment.NewLine, errors);
+        _viewModel.Status = $"Language-pack validation: {errors.Count} profile(s) require an inactive locale.";
+        MessageBox.Show(this, message, "Inactive language-pack locale", MessageBoxButton.OK, MessageBoxImage.Warning);
     }
 
     private void LanguagePacks_Click(object sender, RoutedEventArgs e)

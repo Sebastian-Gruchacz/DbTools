@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 namespace Anonymyzer.Console;
 
 using Anonymyzer.Base;
+using Anonymyzer.Base.LanguagePacks;
 using Anonymyzer.Console.Commands;
 using Anonymyzer.Console.Implementation;
 using Anonymyzer.Console.InternalInterfaces;
@@ -44,6 +45,7 @@ internal static class LocalExtensions
     {
         services.AddEnglishLanguagePack();
         services.AddPolishLanguagePack();
+        services.AddSingleton(provider => new LanguagePackCatalog(provider.GetServices<ILanguagePack>()));
         return services.AddGenerators(builder =>
         {
             builder.AddLoader<SimpleGeneratorsLoader>();

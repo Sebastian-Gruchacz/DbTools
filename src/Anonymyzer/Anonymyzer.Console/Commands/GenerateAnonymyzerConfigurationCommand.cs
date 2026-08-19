@@ -4,6 +4,7 @@ using System.Data;
 using System.Text;
 using Anonymyzer.Base;
 using Anonymyzer.Base.Generation;
+using Anonymyzer.Base.LanguagePacks;
 using Anonymyzer.Configuration;
 using Anonymyzer.Console.CommandLibraryElements;
 using Anonymyzer.Console.Commands;
@@ -18,6 +19,7 @@ internal class GenerateAnonymyzerConfigurationCommand// : ICommand<GenerateAnony
     private readonly ColumnConfigurationBuilder _columnConfigurationBuilder;
     private readonly IEngineFactory _engineFactory;
     private readonly IGeneratorsProvider _generatorsProvider;
+    private readonly LanguagePackCatalog _languagePacks;
     private readonly ICommandLogger _logger;
     private readonly DetachedCopySafetyValidator _safetyValidator;
     private readonly JsonSerializer _serializer = new JsonSerializer()
@@ -30,6 +32,7 @@ internal class GenerateAnonymyzerConfigurationCommand// : ICommand<GenerateAnony
         ColumnCandidateDetector candidateDetector,
         IEngineFactory engineFactory,
         IGeneratorsProvider generatorsProvider,
+        LanguagePackCatalog languagePacks,
         ICommandLogger logger,
         DetachedCopySafetyValidator safetyValidator)
     {
@@ -38,6 +41,7 @@ internal class GenerateAnonymyzerConfigurationCommand// : ICommand<GenerateAnony
             candidateDetector ?? throw new ArgumentNullException(nameof(candidateDetector)));
         _engineFactory = engineFactory ?? throw new ArgumentNullException(nameof(engineFactory));
         _generatorsProvider = generatorsProvider ?? throw new ArgumentNullException(nameof(generatorsProvider));
+        _languagePacks = languagePacks ?? throw new ArgumentNullException(nameof(languagePacks));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _safetyValidator = safetyValidator ?? throw new ArgumentNullException(nameof(safetyValidator));
     }
@@ -165,7 +169,11 @@ internal class GenerateAnonymyzerConfigurationCommand// : ICommand<GenerateAnony
 
     private List<GeneratorProfileConfiguration> BuildDefaultGeneratorProfiles()
     {
-        return _generatorsProvider.GetAllGenerators()
+        HashSet<string> localizedGeneratorTypes = _languagePacks.Profiles
+            .Select(item => item.Profile.GeneratorType)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        IEnumerable<GeneratorProfileConfiguration> generatorProfiles = _generatorsProvider.GetAllGenerators()
+            .Where(generator => !localizedGeneratorTypes.Contains(generator.Descriptor.Type))
             .Select(generator => new GeneratorProfileConfiguration
             {
                 Id = $"{generator.Descriptor.Type}:{DEFAULT}",
@@ -174,8 +182,19 @@ internal class GenerateAnonymyzerConfigurationCommand// : ICommand<GenerateAnony
                 GeneratorVersion = generator.Descriptor.Version,
                 Origin = "Built-in",
                 Options = generator.Configuration.Serialize(generator.Configuration.CreateDefault())
-            })
-            .ToList();
+            });
+        IEnumerable<GeneratorProfileConfiguration> languageProfiles = _languagePacks.Profiles.Select(item =>
+            new GeneratorProfileConfiguration
+            {
+                Id = item.Profile.Id,
+                DisplayName = item.Profile.DisplayName,
+                GeneratorType = item.Profile.GeneratorType,
+                GeneratorVersion = item.Profile.GeneratorVersion,
+                Locale = item.Profile.Locale,
+                Origin = $"Language pack: {item.Pack.Descriptor.DisplayName} {item.Pack.Descriptor.Version}",
+                Options = (Newtonsoft.Json.Linq.JObject)item.Profile.Options.DeepClone()
+            });
+        return generatorProfiles.Concat(languageProfiles).ToList();
     }
 
 }

@@ -1,6 +1,7 @@
 ﻿namespace Anonymyzer.LanguagePack.Polish;
 
 using Anonymyzer.Base.Detection;
+using Anonymyzer.Base.LanguagePacks;
 using Anonymyzer.Generators.Address;
 using Anonymyzer.Generators.Person;
 using Anonymyzer.Generators.Simple;
@@ -10,6 +11,7 @@ public static class PolishLanguagePackLoader
 {
     public static IServiceCollection AddPolishLanguagePack(this IServiceCollection services)
     {
+        services.AddSingleton<ILanguagePack, PolishLanguagePack>();
         services.AddSingleton<IPersonLocaleDataProvider, PolishPersonLocaleDataProvider>();
         services.AddSingleton<IPostalAddressLocaleDataProvider, PolishPostalAddressLocaleDataProvider>();
         services.AddSingleton<IPhoneNumberLocaleDataProvider, PolishPhoneNumberLocaleDataProvider>();
