@@ -334,12 +334,10 @@ internal sealed class AnonymizationExecutionPlanner
         ColumnProcessingOptions column,
         GeneratorDescriptor descriptor)
     {
-        if (!string.IsNullOrWhiteSpace(column.DataType)
-            && descriptor.SupportedDataTypes.All(dataType =>
-                !column.DataType.Equals(dataType.ToString(), StringComparison.OrdinalIgnoreCase)))
+        if (!GeneratorColumnCompatibility.Supports(descriptor, column.DataType))
         {
             throw new InvalidOperationException(
-                $"Generator {descriptor.Type} supports {string.Join(" or ", descriptor.SupportedDataTypes)}, "
+                $"Generator {descriptor.Type} supports {GeneratorColumnCompatibility.DescribeSupportedTypes(descriptor)}, "
                 + $"but column '{column.ColumnName}' is {column.DataType}.");
         }
     }

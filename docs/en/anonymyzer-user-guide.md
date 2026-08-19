@@ -81,14 +81,17 @@ To configure a group:
 3. Click `Add group`; its identifier must be unique within the table.
 4. Select a profile. Outputs are restricted to that generator, and columns with
    matching semantic roles are mapped automatically.
-5. Add, remove, or correct `Generator output → Table column` mappings.
+5. Add, remove, or correct `Generator output → Table column` mappings. The lists
+   show required/optional outputs and each column's type and activation state.
 6. Optional `Locale override` replaces the profile option named `Locale` for
    this group only.
 7. Accept the dialog and enable `Anonymize` for every bound column.
 8. Use `Refresh sample` to inspect one coherent in-memory result.
 
 A column cannot belong to two groups. Every required output must be mapped.
-Assigning a column to a group clears its direct generator; after removing the
+The editor rejects mappings to unsupported types and warns before saving a group
+with a disabled table or column. Assigning a column to a group clears its direct
+generator; after removing the
 group, deliberately select another generator or leave the column disabled.
 
 ## Samples and rescan

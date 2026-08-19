@@ -81,14 +81,17 @@ Sposób konfiguracji:
 3. Kliknij `Add group`; identyfikator musi być unikalny w tabeli.
 4. Wybierz profil. Lista wyjść zostanie ograniczona do tego generatora, a kolumny
    o zgodnych rolach semantycznych zostaną dopasowane automatycznie.
-5. Dodaj, usuń lub popraw mapowania `Generator output → Table column`.
+5. Dodaj, usuń lub popraw mapowania `Generator output → Table column`. Lista
+   pokazuje wyjścia wymagane/opcjonalne oraz typ i stan aktywacji kolumny.
 6. Opcjonalny `Locale override` zastępuje `Locale` z opcji profilu tylko dla tej
    grupy.
 7. Zatwierdź okno i włącz `Anonymize` dla każdej związanej kolumny.
 8. Użyj `Refresh sample`, aby sprawdzić jeden spójny wynik w pamięci.
 
 Jedna kolumna nie może należeć do dwóch grup. Wszystkie wymagane wyjścia muszą być
-zmapowane. Przypisanie kolumny do grupy usuwa jej generator bezpośredni; po
+zmapowane. Edytor odrzuca mapowanie do nieobsługiwanego typu i ostrzega przed
+zapisem grupy z wyłączoną tabelą lub kolumną. Przypisanie kolumny do grupy usuwa
+jej generator bezpośredni; po
 usunięciu grupy trzeba świadomie wybrać nowy generator albo pozostawić kolumnę
 wyłączoną.
 

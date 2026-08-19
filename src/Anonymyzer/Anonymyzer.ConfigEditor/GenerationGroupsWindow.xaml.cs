@@ -35,7 +35,12 @@ public partial class GenerationGroupsWindow : Window, INotifyPropertyChanged
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .OrderBy(value => value)
             .ToArray();
-        ColumnNames = table.Columns.Select(column => column.ColumnName).ToArray();
+        ColumnOptions = table.Columns
+            .OrderBy(column => column.Ordinal)
+            .Select(column => new ColumnOption(
+                column.ColumnName,
+                $"{column.ColumnName} — {column.DataType}" + (column.Enabled ? string.Empty : " [disabled]")))
+            .ToArray();
         DataContext = this;
         SelectedGroup = Groups.FirstOrDefault();
     }
@@ -44,11 +49,15 @@ public partial class GenerationGroupsWindow : Window, INotifyPropertyChanged
 
     public ObservableCollection<GroupRow> Groups { get; }
     public IReadOnlyList<string> ProfileIds { get; }
-    public IReadOnlyList<string> ColumnNames { get; }
-    public IReadOnlyList<string> SelectedOutputNames => SelectedGroup is null
-        ? Array.Empty<string>()
-        : GetDescriptor(SelectedGroup.ProfileId)?.Outputs.Select(output => output.Name).ToArray()
-          ?? Array.Empty<string>();
+    public IReadOnlyList<ColumnOption> ColumnOptions { get; }
+    public IReadOnlyList<OutputOption> SelectedOutputOptions => SelectedGroup is null
+        ? Array.Empty<OutputOption>()
+        : GetDescriptor(SelectedGroup.ProfileId)?.Outputs
+            .Select(output => new OutputOption(
+                output.Name,
+                $"{output.Name} — {output.DisplayName}" + (output.Required ? " [required]" : " [optional]")))
+            .ToArray()
+          ?? Array.Empty<OutputOption>();
 
     public GroupRow? SelectedGroup
     {
@@ -62,7 +71,7 @@ public partial class GenerationGroupsWindow : Window, INotifyPropertyChanged
 
             _selectedGroup = value;
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(SelectedGroup)));
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(SelectedOutputNames)));
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(SelectedOutputOptions)));
             BindingsGrid.ItemsSource = value?.Bindings;
         }
     }
@@ -129,7 +138,7 @@ public partial class GenerationGroupsWindow : Window, INotifyPropertyChanged
         AddMissingBindings(row);
         if (ReferenceEquals(SelectedGroup, row))
         {
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(SelectedOutputNames)));
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(SelectedOutputOptions)));
         }
 
         GroupsGrid.Items.Refresh();
@@ -156,8 +165,9 @@ public partial class GenerationGroupsWindow : Window, INotifyPropertyChanged
             .FirstOrDefault(name => SelectedGroup.Bindings.All(binding =>
                 !binding.Output.Equals(name, StringComparison.OrdinalIgnoreCase)))
             ?? string.Empty;
-        string columnName = ColumnNames.FirstOrDefault(name => Groups.SelectMany(group => group.Bindings).All(binding =>
-            !binding.ColumnName.Equals(name, StringComparison.OrdinalIgnoreCase))) ?? string.Empty;
+        string columnName = ColumnOptions.Select(option => option.Name).FirstOrDefault(name =>
+            Groups.SelectMany(group => group.Bindings).All(binding =>
+                !binding.ColumnName.Equals(name, StringComparison.OrdinalIgnoreCase))) ?? string.Empty;
         var bindingRow = new BindingRow { Output = output, ColumnName = columnName };
         SelectedGroup.Bindings.Add(bindingRow);
         BindingsGrid.SelectedItem = bindingRow;
@@ -181,6 +191,19 @@ public partial class GenerationGroupsWindow : Window, INotifyPropertyChanged
         try
         {
             List<GenerationGroupConfiguration> groups = BuildValidatedGroups();
+            string? activationWarning = BuildActivationWarning(groups);
+            if (activationWarning is not null
+                && MessageBox.Show(
+                    this,
+                    activationWarning + Environment.NewLine + Environment.NewLine +
+                    "Save the group configuration anyway?",
+                    "Inactive group bindings",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Warning) != MessageBoxResult.Yes)
+            {
+                return;
+            }
+
             ApplyGroups(groups);
             DialogResult = true;
         }
@@ -217,9 +240,19 @@ public partial class GenerationGroupsWindow : Window, INotifyPropertyChanged
                     throw new InvalidOperationException($"Group '{row.Id}' contains unknown output '{binding.Output}'.");
                 }
 
-                if (!ColumnNames.Contains(binding.ColumnName, StringComparer.OrdinalIgnoreCase))
+                ColumnProcessingOptions? column = _table.Columns.FirstOrDefault(candidate =>
+                    candidate.ColumnName.Equals(binding.ColumnName, StringComparison.OrdinalIgnoreCase));
+                if (column is null)
                 {
                     throw new InvalidOperationException($"Group '{row.Id}' references missing column '{binding.ColumnName}'.");
+                }
+
+                if (!GeneratorColumnCompatibility.Supports(descriptor, column.DataType))
+                {
+                    throw new InvalidOperationException(
+                        $"Generator {descriptor.Type} supports " +
+                        $"{GeneratorColumnCompatibility.DescribeSupportedTypes(descriptor)}, but column " +
+                        $"'{column.ColumnName}' is {column.DataType}.");
                 }
 
                 if (!bindings.TryAdd(binding.Output, binding.ColumnName))
@@ -258,6 +291,36 @@ public partial class GenerationGroupsWindow : Window, INotifyPropertyChanged
         }
 
         return result;
+    }
+
+    private string? BuildActivationWarning(IEnumerable<GenerationGroupConfiguration> groups)
+    {
+        string[] disabledColumns = groups
+            .SelectMany(group => group.Bindings.Values)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Where(columnName => _table.Columns.Any(column =>
+                column.ColumnName.Equals(columnName, StringComparison.OrdinalIgnoreCase) && !column.Enabled))
+            .OrderBy(columnName => columnName, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        if (_table.Enabled && disabledColumns.Length == 0)
+        {
+            return null;
+        }
+
+        var messages = new List<string>();
+        if (!_table.Enabled)
+        {
+            messages.Add($"Table {_table.SchemaName}.{_table.TableName} is not enabled.");
+        }
+
+        if (disabledColumns.Length > 0)
+        {
+            messages.Add($"Bound columns not enabled: {string.Join(", ", disabledColumns)}.");
+        }
+
+        messages.Add(
+            "Inactive bindings are not planned; an inactive required output makes dry-run fail.");
+        return string.Join(Environment.NewLine, messages);
     }
 
     private void ApplyGroups(List<GenerationGroupConfiguration> groups)
@@ -377,4 +440,8 @@ public partial class GenerationGroupsWindow : Window, INotifyPropertyChanged
         public string Output { get; set; } = string.Empty;
         public string ColumnName { get; set; } = string.Empty;
     }
+
+    public sealed record OutputOption(string Name, string DisplayName);
+
+    public sealed record ColumnOption(string Name, string DisplayName);
 }
