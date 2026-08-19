@@ -91,6 +91,26 @@ public sealed class CliParserTests
         Assert.True(options.Execute);
         Assert.False(options.DryRun);
         Assert.Null(options.ReportPath);
+        Assert.Null(options.CheckpointPath);
+    }
+
+    [Fact]
+    public void ParsesCheckpointPathForExecute()
+    {
+        CliParseResult result = CliParser.Parse(
+        [
+            "run",
+            "--config", "config.json",
+            "--connection-env", "ANONYMYZER_CONNECTION",
+            "--marker-id", MarkerId.ToString("D"),
+            "--execute",
+            "--checkpoint", "execution.checkpoint.json",
+            "--checkpoint-key-env", "ANONYMYZER_CHECKPOINT_KEY"
+        ]);
+
+        var options = Assert.IsType<RunCliOptions>(result.Command);
+        Assert.Equal("execution.checkpoint.json", options.CheckpointPath);
+        Assert.Equal("ANONYMYZER_CHECKPOINT_KEY", options.CheckpointKeyEnvironmentVariable);
     }
 
     [Fact]

@@ -33,7 +33,7 @@ internal sealed class ProcessAnonymyzerCommand
 
     public int Process(ProcessAnonymyzerCommandParameters parameters)
     {
-        EnsureReportDoesNotOverwriteConfiguration(parameters);
+        EnsureOutputPathsAreDistinct(parameters);
         AnonymizationConfiguration configuration = LoadConfiguration(parameters.ConfigurationFilePath);
         ConfigurationValidator.EnsureValid(configuration);
         DetachedCopySafetyValidator.EnsureConfigurationDoesNotTargetMarker(configuration);
@@ -81,12 +81,101 @@ internal sealed class ProcessAnonymyzerCommand
             return (int)ErrorCodes.ConfigurationError;
         }
 
+        AnonymizationExecutionCheckpoint? checkpoint = null;
+        if (!string.IsNullOrWhiteSpace(parameters.CheckpointFilePath))
+        {
+            PrimaryKeyFingerprint.EnsureSecretIsValid(parameters.CheckpointFingerprintSecret);
+
+            ExecutionResumeSafetyAssessment resumeSafety = new ExecutionResumeSafetyAssessor().Assess(plan);
+            if (!resumeSafety.IsSupported)
+            {
+                throw new InvalidOperationException(
+                    $"Checkpoint execution refused: {resumeSafety.Message}.");
+            }
+
+            AnonymizationExecutionCheckpoint expectedCheckpoint = AnonymizationExecutionCheckpoint.Create(
+                parameters.ConfigurationFilePath,
+                configuration.Database.DatabaseEngine,
+                configuration.Database.DatabaseName,
+                marker.MarkerId,
+                plan,
+                writeSlice);
+            checkpoint = AnonymizationExecutionCheckpointStore.Load(parameters.CheckpointFilePath)
+                ?? expectedCheckpoint;
+            checkpoint.EnsureMatches(expectedCheckpoint);
+            if (checkpoint.IsCompleted)
+            {
+                _logger.Info(
+                    $"Checkpoint '{Path.GetFullPath(parameters.CheckpointFilePath)}' is already completed. " +
+                    "No data was modified.");
+                return (int)ErrorCodes.Success;
+            }
+
+            AnonymizationExecutionCheckpointStore.Write(parameters.CheckpointFilePath, checkpoint);
+            if (checkpoint.ProcessedRows > 0)
+            {
+                _logger.Info(
+                    $"Resuming after {checkpoint.ProcessedRows:N0} row(s) in " +
+                    $"{checkpoint.CommittedBatches:N0} committed batch(es).");
+            }
+        }
+
         var store = new DatabaseExecutionRowStore(connection, configuration.Database.DatabaseEngine);
         DateTimeOffset startedAtUtc = DateTimeOffset.UtcNow;
-        AnonymizationExecutionResult result = new AnonymizationExecutor(_generatorsProvider.GetAllGenerators())
-            .ExecuteWithResultAsync(plan, writeSlice, store)
-            .GetAwaiter()
-            .GetResult();
+        var executor = new AnonymizationExecutor(_generatorsProvider.GetAllGenerators());
+        AnonymizationExecutionResult result;
+        if (checkpoint is null)
+        {
+            result = executor.ExecuteWithResultAsync(plan, writeSlice, store)
+                .GetAwaiter()
+                .GetResult();
+        }
+        else
+        {
+            result = executor.ExecuteWithResumeAsync(
+                    plan,
+                    writeSlice,
+                    store,
+                    new AnonymizationExecutionResumeState(
+                        checkpoint.ProcessedRows,
+                        checkpoint.CommittedBatches,
+                        checkpoint.LastPrimaryKeyHmacSha256,
+                        parameters.CheckpointFingerprintSecret!),
+                    (progress, _) =>
+                    {
+                        checkpoint.Advance(progress, parameters.CheckpointFingerprintSecret!);
+                        try
+                        {
+                            AnonymizationExecutionCheckpointStore.Write(
+                                parameters.CheckpointFilePath!,
+                                checkpoint);
+                        }
+                        catch (Exception exception)
+                        {
+                            throw new InvalidOperationException(
+                                "A batch was committed, but its checkpoint could not be written. " +
+                                "Retry with the same checkpoint path to reproduce that batch safely: " +
+                                exception.Message,
+                                exception);
+                        }
+
+                        return Task.CompletedTask;
+                    })
+                .GetAwaiter()
+                .GetResult();
+            checkpoint.Complete(result, parameters.CheckpointFingerprintSecret!);
+            try
+            {
+                AnonymizationExecutionCheckpointStore.Write(parameters.CheckpointFilePath!, checkpoint);
+            }
+            catch (Exception exception)
+            {
+                throw new InvalidOperationException(
+                    "Anonymization completed and data was modified, but the checkpoint could not be marked complete. " +
+                    "Retry with the same checkpoint path: " + exception.Message,
+                    exception);
+            }
+        }
         DateTimeOffset completedAtUtc = DateTimeOffset.UtcNow;
         _logger.Info(
             $"Execution completed on detached clone '{configuration.Database.DatabaseName}', " +
@@ -122,18 +211,32 @@ internal sealed class ProcessAnonymyzerCommand
         return (int)ErrorCodes.Success;
     }
 
-    private static void EnsureReportDoesNotOverwriteConfiguration(ProcessAnonymyzerCommandParameters parameters)
+    private static void EnsureOutputPathsAreDistinct(ProcessAnonymyzerCommandParameters parameters)
     {
-        if (string.IsNullOrWhiteSpace(parameters.ReportFilePath))
-        {
-            return;
-        }
-
         string configurationPath = Path.GetFullPath(parameters.ConfigurationFilePath);
-        string reportPath = Path.GetFullPath(parameters.ReportFilePath);
-        if (configurationPath.Equals(reportPath, StringComparison.OrdinalIgnoreCase))
+        string? reportPath = string.IsNullOrWhiteSpace(parameters.ReportFilePath)
+            ? null
+            : Path.GetFullPath(parameters.ReportFilePath);
+        string? checkpointPath = string.IsNullOrWhiteSpace(parameters.CheckpointFilePath)
+            ? null
+            : Path.GetFullPath(parameters.CheckpointFilePath);
+        if (reportPath is not null
+            && configurationPath.Equals(reportPath, StringComparison.OrdinalIgnoreCase))
         {
             throw new InvalidOperationException("The execution report must not overwrite the configuration file.");
+        }
+
+        if (checkpointPath is not null
+            && configurationPath.Equals(checkpointPath, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException("The checkpoint must not overwrite the configuration file.");
+        }
+
+        if (reportPath is not null
+            && checkpointPath is not null
+            && reportPath.Equals(checkpointPath, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException("The report and checkpoint must use different files.");
         }
     }
 
@@ -162,4 +265,8 @@ internal sealed class ProcessAnonymyzerCommandParameters : DbParameters
     public bool Execute { get; set; }
 
     public string? ReportFilePath { get; set; }
+
+    public string? CheckpointFilePath { get; set; }
+
+    public string? CheckpointFingerprintSecret { get; set; }
 }

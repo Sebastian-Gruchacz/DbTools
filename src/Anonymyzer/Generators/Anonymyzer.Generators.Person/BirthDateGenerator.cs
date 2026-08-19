@@ -16,6 +16,7 @@ public sealed class BirthDateGenerator : GeneratorBase<BirthDateGeneratorConfigu
         GeneratorExecutionScope.Row,
         DbDataType.Date)
     {
+        SupportsDeterministicReplay = true,
         Outputs = [new GeneratorOutputDescriptor(ValueOutput, "Birth date", "Person.BirthDate", Required: true)],
         SupportedDataTypes = [DbDataType.Date, DbDataType.DateTime]
     };

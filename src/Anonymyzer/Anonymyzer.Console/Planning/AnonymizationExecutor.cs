@@ -20,7 +20,51 @@ internal sealed class AnonymizationExecutor(IEnumerable<IGenerator> generators)
         ExecutionWriteSliceAssessment writeSlice,
         IExecutionRowStore store,
         Func<AnonymizationExecutionProgress, CancellationToken, Task>? batchCommitted = null,
+        CancellationToken cancellationToken = default) =>
+        await ExecuteCoreAsync(
+            plan,
+            writeSlice,
+            store,
+            resumeState: null,
+            batchCommitted,
+            cancellationToken);
+
+    public async Task<AnonymizationExecutionResult> ExecuteWithResumeAsync(
+        AnonymizationExecutionPlan plan,
+        ExecutionWriteSliceAssessment writeSlice,
+        IExecutionRowStore store,
+        AnonymizationExecutionResumeState resumeState,
+        Func<AnonymizationExecutionProgress, CancellationToken, Task>? batchCommitted = null,
         CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(resumeState);
+        ExecutionResumeSafetyAssessment safety = new ExecutionResumeSafetyAssessor().Assess(plan);
+        if (!safety.IsSupported)
+        {
+            throw new InvalidOperationException(safety.Message + ".");
+        }
+
+        if (resumeState.ProcessedRows < 0 || resumeState.CommittedBatches < 0)
+        {
+            throw new InvalidOperationException("Resume counters cannot be negative.");
+        }
+
+        return await ExecuteCoreAsync(
+            plan,
+            writeSlice,
+            store,
+            resumeState,
+            batchCommitted,
+            cancellationToken);
+    }
+
+    private async Task<AnonymizationExecutionResult> ExecuteCoreAsync(
+        AnonymizationExecutionPlan plan,
+        ExecutionWriteSliceAssessment writeSlice,
+        IExecutionRowStore store,
+        AnonymizationExecutionResumeState? resumeState,
+        Func<AnonymizationExecutionProgress, CancellationToken, Task>? batchCommitted,
+        CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(plan);
         ArgumentNullException.ThrowIfNull(writeSlice);
@@ -50,9 +94,18 @@ internal sealed class AnonymizationExecutor(IEnumerable<IGenerator> generators)
                 .Concat(plan.Steps.SelectMany(step => step.DataRequirements).SelectMany(requirement => requirement.Columns))
                 .Distinct(StringComparer.OrdinalIgnoreCase)
                 .ToArray();
-            object? afterPrimaryKey = null;
-            long processedRows = 0;
-            int committedBatches = 0;
+            object? afterPrimaryKey = resumeState is null
+                ? null
+                : await ReplayCommittedRowsAsync(
+                    plan,
+                    writeSlice,
+                    store,
+                    sessions,
+                    sourceColumns,
+                    resumeState,
+                    cancellationToken);
+            long processedRows = resumeState?.ProcessedRows ?? 0;
+            int committedBatches = resumeState?.CommittedBatches ?? 0;
 
             while (true)
             {
@@ -72,22 +125,12 @@ internal sealed class AnonymizationExecutor(IEnumerable<IGenerator> generators)
                         afterPrimaryKey);
                 }
 
-                var updatedRows = new List<ExecutionUpdatedRow>(sourceRows.Count);
-                foreach (ExecutionSourceRow sourceRow in sourceRows)
-                {
-                    var row = new MutableExecutionRow(sourceRow);
-                    for (int index = 0; index < plan.Steps.Count; index++)
-                    {
-                        await sessions[index].ApplyAsync(row.ForStep(plan.Steps[index]), cancellationToken);
-                    }
-
-                    updatedRows.Add(new ExecutionUpdatedRow(
-                        sourceRow.PrimaryKey,
-                        outputColumns.ToDictionary(
-                            column => column.Name,
-                            column => row.GetCurrentValue(column.Name),
-                            StringComparer.OrdinalIgnoreCase)));
-                }
+                List<ExecutionUpdatedRow> updatedRows = await ApplyRowsAsync(
+                    plan,
+                    sessions,
+                    sourceRows,
+                    outputColumns,
+                    cancellationToken);
 
                 await store.WriteBatchAsync(
                     writeSlice.TargetTable,
@@ -117,6 +160,87 @@ internal sealed class AnonymizationExecutor(IEnumerable<IGenerator> generators)
                 await session.DisposeAsync();
             }
         }
+    }
+
+    private static async Task<object?> ReplayCommittedRowsAsync(
+        AnonymizationExecutionPlan plan,
+        ExecutionWriteSliceAssessment writeSlice,
+        IExecutionRowStore store,
+        IReadOnlyList<IGeneratorSession> sessions,
+        IReadOnlyList<string> sourceColumns,
+        AnonymizationExecutionResumeState resumeState,
+        CancellationToken cancellationToken)
+    {
+        long remainingRows = resumeState.ProcessedRows;
+        int replayedBatches = 0;
+        object? afterPrimaryKey = null;
+        while (remainingRows > 0)
+        {
+            IReadOnlyList<ExecutionSourceRow> rows = await store.ReadNextBatchAsync(
+                writeSlice.TargetTable!,
+                writeSlice.PrimaryKeyColumn!,
+                sourceColumns,
+                afterPrimaryKey,
+                plan.BatchSize,
+                cancellationToken);
+            if (rows.Count == 0 || rows.Count > remainingRows)
+            {
+                throw new InvalidOperationException(
+                    "Checkpoint counters do not match the current target rows and cannot be resumed safely.");
+            }
+
+            await ApplyRowsAsync(plan, sessions, rows, outputColumns: null, cancellationToken);
+            remainingRows -= rows.Count;
+            replayedBatches++;
+            afterPrimaryKey = rows[^1].PrimaryKey;
+        }
+
+        if (replayedBatches != resumeState.CommittedBatches)
+        {
+            throw new InvalidOperationException(
+                "Checkpoint batch count does not match the replayed target rows and cannot be resumed safely.");
+        }
+
+        if (resumeState.ProcessedRows > 0
+            && !PrimaryKeyFingerprint.Compute(afterPrimaryKey, resumeState.PrimaryKeyFingerprintSecret).Equals(
+                resumeState.LastPrimaryKeyHmacSha256,
+                StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException(
+                "Checkpoint primary-key boundary does not match the current target rows and cannot be resumed safely.");
+        }
+
+        return afterPrimaryKey;
+    }
+
+    private static async Task<List<ExecutionUpdatedRow>> ApplyRowsAsync(
+        AnonymizationExecutionPlan plan,
+        IReadOnlyList<IGeneratorSession> sessions,
+        IReadOnlyList<ExecutionSourceRow> sourceRows,
+        IReadOnlyList<ExecutionOutputColumn>? outputColumns,
+        CancellationToken cancellationToken)
+    {
+        var updatedRows = new List<ExecutionUpdatedRow>(outputColumns is null ? 0 : sourceRows.Count);
+        foreach (ExecutionSourceRow sourceRow in sourceRows)
+        {
+            var row = new MutableExecutionRow(sourceRow);
+            for (int index = 0; index < plan.Steps.Count; index++)
+            {
+                await sessions[index].ApplyAsync(row.ForStep(plan.Steps[index]), cancellationToken);
+            }
+
+            if (outputColumns is not null)
+            {
+                updatedRows.Add(new ExecutionUpdatedRow(
+                    sourceRow.PrimaryKey,
+                    outputColumns.ToDictionary(
+                        column => column.Name,
+                        column => row.GetCurrentValue(column.Name),
+                        StringComparer.OrdinalIgnoreCase)));
+            }
+        }
+
+        return updatedRows;
     }
 
     private async Task<IGeneratorSession[]> PrepareSessionsAsync(
@@ -255,3 +379,9 @@ internal sealed record AnonymizationExecutionResult(
     long ProcessedRows,
     int CommittedBatches,
     object? LastPrimaryKey);
+
+internal sealed record AnonymizationExecutionResumeState(
+    long ProcessedRows,
+    int CommittedBatches,
+    string LastPrimaryKeyHmacSha256,
+    string PrimaryKeyFingerprintSecret);

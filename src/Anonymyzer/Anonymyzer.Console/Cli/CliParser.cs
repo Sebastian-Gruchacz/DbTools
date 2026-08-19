@@ -74,7 +74,7 @@ internal static class CliParser
     {
         string? error = RequireOnly(
             parsed,
-            valueOptions: ["config", "connection-env", "marker-id", "report"],
+            valueOptions: ["config", "connection-env", "marker-id", "report", "checkpoint", "checkpoint-key-env"],
             flags: ["dry-run", "execute"]);
         if (error is not null)
         {
@@ -99,11 +99,21 @@ internal static class CliParser
         }
 
         parsed.Values.TryGetValue("report", out string? reportPath);
-        if (dryRun && reportPath is not null)
+        parsed.Values.TryGetValue("checkpoint", out string? checkpointPath);
+        parsed.Values.TryGetValue("checkpoint-key-env", out string? checkpointKeyEnvironment);
+        if ((checkpointPath is null) != (checkpointKeyEnvironment is null))
         {
             return new CliParseResult(
                 null,
-                "Option '--report' is available only with --execute.",
+                "Options '--checkpoint' and '--checkpoint-key-env' must be specified together.",
+                ShowHelp: false);
+        }
+
+        if (dryRun && (reportPath is not null || checkpointPath is not null))
+        {
+            return new CliParseResult(
+                null,
+                "Options '--report' and '--checkpoint' are available only with --execute.",
                 ShowHelp: false);
         }
 
@@ -114,7 +124,9 @@ internal static class CliParser
                 config,
                 dryRun,
                 execute,
-                reportPath),
+                reportPath,
+                checkpointPath,
+                checkpointKeyEnvironment),
             null,
             ShowHelp: false);
     }

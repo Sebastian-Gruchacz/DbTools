@@ -22,6 +22,7 @@ public sealed class EmailAddressGenerator : GeneratorBase<EmailAddressGeneratorC
         GeneratorExecutionScope.Row,
         DbDataType.Text)
     {
+        SupportsDeterministicReplay = true,
         Outputs = [new GeneratorOutputDescriptor(ValueOutput, "E-mail", "Contact.Email", Required: true)]
     };
 

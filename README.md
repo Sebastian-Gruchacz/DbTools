@@ -236,7 +236,9 @@ językowe opisuje [docs/anonymyzer-design.md](docs/anonymyzer-design.md).
 
 - wykonania planów wielotabelowych i `Relational`; `--execute` obsługuje obecnie
   jedną tabelę, kroki `Row`/`Column` i pojedynczy niezmieniany PK;
-- checkpointów, wznawiania przerwanego wykonania i walidacji constraintów po zapisie;
+- checkpointów dla `Column`, generatorów zależnych od nadpisywanej wartości oraz
+  planów wielotabelowych; bezpieczne plany wyłącznie `Row` można już wznawiać;
+- walidacji constraintów po zapisie;
 - pozostałych generatorów grupowych;
 - podglądu generatorów `Relational` oraz przyszłych generatorów `Column`
   wymagających wielu skanów lub przypisanych przez grupę;
@@ -283,7 +285,9 @@ dotnet run --project .\src\Anonymyzer\Anonymyzer.Console -- run `
 dotnet run --project .\src\Anonymyzer\Anonymyzer.Console -- run `
   --config .\anonymyzer-config.json `
   --connection-env ANONYMYZER_CONNECTION --marker-id $marker --execute `
-  --report .\anonymyzer-execution-report.json
+  --report .\anonymyzer-execution-report.json `
+  --checkpoint .\anonymyzer-execution.checkpoint.json `
+  --checkpoint-key-env ANONYMYZER_CHECKPOINT_KEY
 ```
 
 Obie komendy sprawdzają nazwę bazy i marker. `generate-config` tylko czyta
@@ -299,6 +303,17 @@ keyset pagingiem po PK i zapisuje każdy batch w osobnej transakcji. Opcjonalny
 czasem, planem oraz liczbą zatwierdzonych batchy i wierszy. Raport nie zawiera
 connection stringa, wartości rekordów ani ostatniego klucza. Wywołanie
 bez `--dry-run` i `--execute` albo z obiema flagami jest odrzucane.
+
+Opcjonalny `--checkpoint` działa tylko dla deterministycznych planów `Row`, które
+można bezpiecznie odtworzyć od początku. Po każdym commicie zapisuje atomowo
+liczniki oraz HMAC granicznego PK, nigdy sam klucz. Sekret HMAC jest pobierany
+wyłącznie ze zmiennej wskazanej przez `--checkpoint-key-env` i nie trafia do
+checkpointu ani konfiguracji; powinien być losowy i mieć co najmniej 32 znaki.
+Wznowienie ponownie waliduje
+konfigurację, marker, tabelę, PK, batch i hash granicy. Plany `Column` (w tym
+`TextShuffler`) oraz generatory czytające nadpisywaną wartość są jawnie odrzucane.
+Ukończony checkpoint chroni też przed przypadkowym ponownym wykonaniem; świadomy
+nowy przebieg wymaga nowej ścieżki albo usunięcia starego pliku.
 
 Edytor konfiguracji można uruchomić poleceniem:
 
@@ -393,8 +408,8 @@ skasowany po wypchnięciu lub zarchiwizowaniu nowego repozytorium.
 
 ## Proponowana kolejka
 
-1. Dodać checkpoint/wznowienie i walidację po zapisie, zanim
-   executor zostanie rozszerzony poza jedną tabelę.
+1. Dodać walidację po zapisie i rozszerzać checkpoint tylko wraz z trwałym,
+   odtwarzalnym stanem generatorów `Column`/`Relational`.
 2. Dodać limit pamięci i strategię spill/alternatywnego losowania dla dużych
    kolumn `TextShuffler`.
 3. Zaprojektować pierwszy generator `Relational` oraz planowanie zależności
@@ -405,7 +420,7 @@ skasowany po wypchnięciu lub zarchiwizowaniu nowego repozytorium.
 6. Ujednolicić historyczne nazwy `Anonymyzer` / `Anonymization` bez zmiany
    zachowania i usunąć nieaktualne refy dopiero po upewnieniu się, że są na GH.
 
-Najbardziej opłacalny następny krok to checkpoint i bezpieczne wznowienie. Raport
-po wykonaniu jest już dostępny przez `--report`, a executor emituje postęp dopiero
-po zatwierdzeniu batcha. Trzeba jeszcze jawnie rozwiązać odtwarzanie stanu
-generatorów oraz pełnych skanów, zanim przerwane wykonanie będzie można wznowić.
+Raport i checkpoint dla bezpiecznych planów `Row` są już dostępne. Następny
+opłacalny krok to limit pamięci i strategia spill dla `TextShuffler`; jego pełny
+skan pozostaje celowo wyłączony ze wznowienia, dopóki populacja oraz stan
+generatora nie będą utrwalane bez korzystania z częściowo zmienionych danych.

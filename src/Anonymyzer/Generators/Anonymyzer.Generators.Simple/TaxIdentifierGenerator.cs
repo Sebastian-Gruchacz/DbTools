@@ -16,6 +16,7 @@ public sealed class TaxIdentifierGenerator : GeneratorBase<TaxIdentifierGenerato
         GeneratorExecutionScope.Row,
         DbDataType.Text)
     {
+        SupportsDeterministicReplay = true,
         Outputs = [new GeneratorOutputDescriptor(ValueOutput, "Tax identifier", "Company.TaxId", Required: true)]
     };
 

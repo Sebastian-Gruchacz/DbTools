@@ -13,6 +13,7 @@ public sealed class AccountLoginGenerator : GeneratorBase<AccountLoginGeneratorC
     private static readonly GeneratorDescriptor GeneratorDescriptor = new(
         GeneratorType, GeneratorVersion, "Account login", GeneratorExecutionScope.Row, DbDataType.Text)
     {
+        SupportsDeterministicReplay = true,
         Outputs = [new GeneratorOutputDescriptor(ValueOutput, "Login", "Account.Login", Required: true)]
     };
     private static readonly AccountLoginGeneratorConfigurationCodec ConfigurationCodec = new();

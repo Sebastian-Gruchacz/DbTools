@@ -16,7 +16,9 @@ internal sealed record RunCliOptions(
     string ConfigurationPath,
     bool DryRun,
     bool Execute,
-    string? ReportPath) : CliCommandOptions(ConnectionEnvironmentVariable);
+    string? ReportPath,
+    string? CheckpointPath,
+    string? CheckpointKeyEnvironmentVariable) : CliCommandOptions(ConnectionEnvironmentVariable);
 
 internal sealed record CliParseResult(CliCommandOptions? Command, string? Error, bool ShowHelp)
 {

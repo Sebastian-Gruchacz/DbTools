@@ -16,6 +16,7 @@ public sealed class CompanyNameGenerator : GeneratorBase<CompanyNameGeneratorCon
         GeneratorExecutionScope.Row,
         DbDataType.Text)
     {
+        SupportsDeterministicReplay = true,
         Outputs = [new GeneratorOutputDescriptor(ValueOutput, "Company name", "Company.Name", Required: true)]
     };
 

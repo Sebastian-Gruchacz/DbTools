@@ -18,6 +18,7 @@ public sealed class JsonPathRedactorGenerator : GeneratorBase<JsonPathRedactorGe
         GeneratorExecutionScope.Row,
         DbDataType.Text)
     {
+        SupportsDeterministicReplay = true,
         Outputs = [new GeneratorOutputDescriptor(ValueOutput, "JSON value", string.Empty, Required: true)],
         SupportedDataTypes = [DbDataType.Text, DbDataType.Json],
         RequiresExistingValue = true

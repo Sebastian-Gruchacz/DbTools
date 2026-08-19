@@ -30,8 +30,8 @@ transakcji obejmującej całą bazę.
    aktywne kolumny z bieżącym schematem klona i raportuje estymowaną liczbę
    wierszy oraz górne zużycie pamięci pełnych skanów.
 6. `run --execute` w pierwszym wycinku przetwarza jedną tabelę batchami po PK;
-   opcjonalny `--report` zapisuje niesekretny raport końcowy, a checkpointy
-   pozostają kolejnym etapem.
+   opcjonalny `--report` zapisuje niesekretny raport końcowy, a `--checkpoint`
+   pozwala wznowić wyłącznie plan, którego sesje `Row` można odtworzyć.
 7. Walidacja po wykonaniu sprawdza constrainty, liczbę wierszy i spójność
    relacji. Kopia może dopiero wtedy zostać przekazana dalej.
 
@@ -246,7 +246,17 @@ buforowany przez generator, dlatego estymata pamięci z `dry-run` jest istotnym
 ostrzeżeniem operatora. Po zakończeniu opcjonalny raport JSON zawiera fingerprint
 konfiguracji, marker, czasy, kroki oraz liczbę zatwierdzonych batchy i wierszy,
 ale nie connection string, wartości rekordów ani ostatni klucz. Nie ma jeszcze
-checkpointu ani automatycznej walidacji constraintów po zakończeniu.
+checkpointu dla `Column` ani automatycznej walidacji constraintów po zakończeniu.
+
+Checkpoint planu `Row` przechowuje fingerprint konfiguracji, tożsamość klona,
+target, rozmiar batcha, liczniki i HMAC-SHA-256 granicznego PK, ale nie sam klucz,
+sekret HMAC ani wartości rekordów. Sekret jest przekazywany osobną zmienną
+środowiskową wskazaną przez `--checkpoint-key-env`. Przy wznowieniu executor odczytuje już zatwierdzone wiersze od
+początku i uruchamia sesje bez zapisu, aby deterministycznie odtworzyć ich stan.
+Hash ostatniego odtworzonego PK wykrywa przesunięcie granicy po zmianie zbioru
+wierszy. Scope `Column`, pełny skan, zależność od nadpisanej wartości oryginalnej
+lub `RequiresExistingValue` blokują checkpoint, ponieważ częściowo zmieniona baza
+nie zawiera już danych wystarczających do bezpiecznego odtworzenia.
 
 Reader przekazuje dane strumieniowo, natomiast generator decyduje, co buforuje.
 Dokładny shuffle ma koszt pamięci `O(n)` i nie nadaje się bezpośrednio do każdej

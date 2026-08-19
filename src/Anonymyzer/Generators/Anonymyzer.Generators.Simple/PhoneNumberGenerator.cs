@@ -16,6 +16,7 @@ public sealed class PhoneNumberGenerator : GeneratorBase<PhoneNumberGeneratorCon
         GeneratorExecutionScope.Row,
         DbDataType.Text)
     {
+        SupportsDeterministicReplay = true,
         Outputs = [new GeneratorOutputDescriptor(ValueOutput, "Phone number", "Contact.Phone", Required: true)]
     };
 

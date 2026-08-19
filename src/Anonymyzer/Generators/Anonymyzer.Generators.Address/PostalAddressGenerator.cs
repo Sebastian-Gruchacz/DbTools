@@ -20,6 +20,7 @@ public sealed class PostalAddressGenerator : GeneratorBase<PostalAddressGenerato
         GeneratorExecutionScope.Row,
         DbDataType.Text)
     {
+        SupportsDeterministicReplay = true,
         Outputs =
         [
             new GeneratorOutputDescriptor(CountryOutput, "Country", "Address.Country", Required: false),

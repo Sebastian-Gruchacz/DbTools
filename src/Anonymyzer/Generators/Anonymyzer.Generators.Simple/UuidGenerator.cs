@@ -20,6 +20,7 @@ public sealed class UuidGenerator : GeneratorBase<UuidGeneratorConfiguration>
         GeneratorExecutionScope.Row,
         DbDataType.Text)
     {
+        SupportsDeterministicReplay = true,
         Outputs = [new GeneratorOutputDescriptor(ValueOutput, "UUID", string.Empty, Required: true)]
     };
 

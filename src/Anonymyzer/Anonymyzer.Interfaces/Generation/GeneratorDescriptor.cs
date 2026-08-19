@@ -12,4 +12,6 @@ public sealed record GeneratorDescriptor(
     public IReadOnlyList<DbDataType> SupportedDataTypes { get; init; } = [SupportedDataType];
 
     public bool RequiresExistingValue { get; init; }
+
+    public bool SupportsDeterministicReplay { get; init; }
 }

@@ -19,6 +19,7 @@ public sealed class PersonIdentityGenerator : GeneratorBase<PersonIdentityGenera
         GeneratorExecutionScope.Row,
         DbDataType.Text)
     {
+        SupportsDeterministicReplay = true,
         Outputs = new[]
         {
             new GeneratorOutputDescriptor(FirstNameOutput, "First name", "Person.FirstName", Required: false),

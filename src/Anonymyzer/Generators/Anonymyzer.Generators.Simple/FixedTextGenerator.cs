@@ -16,6 +16,7 @@ public sealed class FixedTextGenerator : GeneratorBase<FixedTextGeneratorConfigu
         GeneratorExecutionScope.Row,
         DbDataType.Text)
     {
+        SupportsDeterministicReplay = true,
         Outputs = [new GeneratorOutputDescriptor(ValueOutput, "Value", string.Empty, Required: true)]
     };
 

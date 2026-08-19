@@ -16,6 +16,7 @@ public sealed class NationalIdentifierGenerator : GeneratorBase<NationalIdentifi
         GeneratorExecutionScope.Row,
         DbDataType.Text)
     {
+        SupportsDeterministicReplay = true,
         Outputs = [new GeneratorOutputDescriptor(ValueOutput, "National identifier", "Person.NationalId", Required: true)]
     };
 
